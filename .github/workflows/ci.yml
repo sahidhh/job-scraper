@@ -1,0 +1,22 @@
+name: CI
+
+# security-audit.md #3 / post-merge-audit.md P3 -- enforces that
+# SUPABASE_SERVICE_ROLE_KEY / createSupabaseServiceClient() stay confined to
+# scripts/** and src/shared/infrastructure/supabaseClient.ts (AD-12).
+on:
+  push:
+  pull_request:
+
+jobs:
+  service-role-boundary:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - run: npm ci
+
+      - run: npm run check:service-role-boundary

@@ -1,0 +1,49 @@
+name: Scrape pipeline
+
+# AD-04: scrape -> score -> notify, run with the Supabase service-role key
+# (AD-12 -- bypasses RLS for cron scripts only).
+#
+# The recurring schedule is commented out pending the Phase 4 go-live
+# decision (docs/agent-workflow.md -- enabling the cron schedule has
+# cost/security implications and requires human approval). Until then this
+# workflow only runs on manual dispatch.
+on:
+  workflow_dispatch: {}
+  # schedule:
+  #   - cron: "0 */2 * * *"
+
+jobs:
+  pipeline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - run: npm ci
+
+      - run: npm run scrape
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          # AD-10/docs/scrapers.md §5 -- optional; if unset, Wellfound
+          # adapter degrades to zero jobs per run (not a failure).
+          WELLFOUND_FEED_URL: ${{ secrets.WELLFOUND_FEED_URL }}
+
+      - run: npm run score
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          OPENROUTER_MODEL: ${{ secrets.OPENROUTER_MODEL }}
+          KEYWORD_THRESHOLD: ${{ vars.KEYWORD_THRESHOLD }}
+
+      - run: npm run notify
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          NOTIFY_THRESHOLD: ${{ vars.NOTIFY_THRESHOLD }}

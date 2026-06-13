@@ -1,0 +1,62 @@
+import type { JobSource, LocationTag } from "@/shared/domain/enums";
+import type { NotificationRepository } from "@/features/notifications/domain/NotificationRepository";
+import type { JobMatch } from "@/features/notifications/domain/types";
+import type { TypedSupabaseClient } from "@/shared/infrastructure/supabaseClient";
+
+// Shape returned by the embedded select in findUnnotifiedMatches --
+// `job_scores!inner` narrows to jobs with a matching score row, and
+// `notifications_log` is embedded (left join) so we can filter out jobs
+// already notified.
+interface UnnotifiedMatchRow {
+  id: string;
+  title: string;
+  company_name: string;
+  location_tags: LocationTag[];
+  source: JobSource;
+  url: string;
+  job_scores: { ai_score: number | null; ai_reasoning: string | null }[];
+  notifications_log: { id: string }[];
+}
+
+// repositories.md §6.
+export class SupabaseNotificationRepository implements NotificationRepository {
+  constructor(private readonly client: TypedSupabaseClient) {}
+
+  async findUnnotifiedMatches(roleSelectionId: string, threshold: number): Promise<JobMatch[]> {
+    const { data, error } = await this.client
+      .from("jobs")
+      .select(
+        "id, title, company_name, location_tags, source, url, job_scores!inner(ai_score, ai_reasoning), notifications_log(id)",
+      )
+      .eq("job_scores.role_selection_id", roleSelectionId)
+      .gte("job_scores.ai_score", threshold)
+      .returns<UnnotifiedMatchRow[]>();
+
+    if (error) throw error;
+
+    return (data ?? [])
+      .filter((row) => row.notifications_log.length === 0)
+      .map((row) => {
+        // non-null: `job_scores!inner` guarantees at least one matching row.
+        const score = row.job_scores[0]!;
+        return {
+          jobId: row.id,
+          title: row.title,
+          companyName: row.company_name,
+          locationTags: row.location_tags,
+          source: row.source,
+          url: row.url,
+          aiScore: score.ai_score!, // non-null: filtered by the gte("job_scores.ai_score", threshold) clause
+          aiReasoning: score.ai_reasoning,
+        };
+      });
+  }
+
+  async markNotified(jobId: string): Promise<void> {
+    const { error } = await this.client
+      .from("notifications_log")
+      .upsert({ job_id: jobId }, { onConflict: "job_id", ignoreDuplicates: true });
+
+    if (error) throw error;
+  }
+}
