@@ -9,8 +9,8 @@ name: Scrape pipeline
 # workflow only runs on manual dispatch.
 on:
   workflow_dispatch: {}
-  # schedule:
-  #   - cron: "0 */2 * * *"
+  schedule:
+    - cron: "0 */6 * * *"
 
 jobs:
   pipeline:
