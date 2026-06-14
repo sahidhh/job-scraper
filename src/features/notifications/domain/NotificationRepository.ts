@@ -1,4 +1,4 @@
-import type { JobMatch } from "./types";
+import type { JobMatch, NotificationLogItem } from "./types";
 
 export interface NotificationRepository {
   /**
@@ -10,4 +10,7 @@ export interface NotificationRepository {
 
   /** Idempotent (unique(job_id), on-conflict-do-nothing). */
   markNotified(jobId: string): Promise<void>;
+
+  /** Most recently sent notifications, joined with their job, for /settings. */
+  listRecent(limit: number): Promise<NotificationLogItem[]>;
 }

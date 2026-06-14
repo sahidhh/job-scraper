@@ -1,4 +1,4 @@
-import { pdf } from "pdf-parse";
+import pdf from "pdf-parse";
 
 // Extracts whitespace-normalized plain text from a PDF buffer
 // (scoring.md §1.3). pdf-parse import is infrastructure-only

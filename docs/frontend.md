@@ -37,7 +37,7 @@ src/app/
 | `JobRow` (expandable) | inside `JobsTable` | `Collapsible` — reveals `ai_reasoning` text |
 | `FilterBar` | `/dashboard` | `Select` (location tag, source), `Slider` or `Input` (min score) |
 | `RoleSelectorForm` | `/roles` | `Input`, `Button` |
-| `ExpandedRolesCard` | `/roles` | `Card`, `Badge` (chips for each related role), confirm `Button` |
+| `ExpandedRolesCard` | `/roles` | `Card`, `Badge` (toggleable chips per related role, click to include/exclude from selection), confirm `Button` |
 | `ResumeUploadCard` | `/resume` | `Card`, `Input type=file`, `Button` |
 | `SkillsEditor` | `/resume` | `Badge` (removable chips) + `Input` for adding new skills |
 | `CompaniesTable` | `/settings` | `Table`, `Button` (edit/delete), `Dialog` |

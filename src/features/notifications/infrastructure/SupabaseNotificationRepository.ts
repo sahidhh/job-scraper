@@ -1,6 +1,6 @@
 import type { JobSource, LocationTag } from "@/shared/domain/enums";
 import type { NotificationRepository } from "@/features/notifications/domain/NotificationRepository";
-import type { JobMatch } from "@/features/notifications/domain/types";
+import type { JobMatch, NotificationLogItem } from "@/features/notifications/domain/types";
 import type { TypedSupabaseClient } from "@/shared/infrastructure/supabaseClient";
 
 // Shape returned by the embedded select in findUnnotifiedMatches --
@@ -16,6 +16,15 @@ interface UnnotifiedMatchRow {
   url: string;
   job_scores: { ai_score: number | null; ai_reasoning: string | null }[];
   notifications_log: { id: string }[];
+}
+
+// Shape returned by the embedded select in listRecent -- `jobs` is a
+// to-one embed (notifications_log.job_id has a unique FK to jobs.id).
+interface NotificationLogRow {
+  id: string;
+  job_id: string;
+  sent_at: string;
+  jobs: { title: string; company_name: string; source: JobSource } | null;
 }
 
 // repositories.md §6.
@@ -58,5 +67,27 @@ export class SupabaseNotificationRepository implements NotificationRepository {
       .upsert({ job_id: jobId }, { onConflict: "job_id", ignoreDuplicates: true });
 
     if (error) throw error;
+  }
+
+  async listRecent(limit: number): Promise<NotificationLogItem[]> {
+    const { data, error } = await this.client
+      .from("notifications_log")
+      .select("id, job_id, sent_at, jobs(title, company_name, source)")
+      .order("sent_at", { ascending: false })
+      .limit(limit)
+      .returns<NotificationLogRow[]>();
+
+    if (error) throw error;
+
+    return (data ?? [])
+      .filter((row) => row.jobs !== null)
+      .map((row) => ({
+        id: row.id,
+        jobId: row.job_id,
+        jobTitle: row.jobs!.title,
+        companyName: row.jobs!.company_name,
+        source: row.jobs!.source,
+        sentAt: row.sent_at,
+      }));
   }
 }

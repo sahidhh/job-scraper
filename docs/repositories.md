@@ -123,10 +123,11 @@ interface ScoreRepository {
 interface NotificationRepository {
   findUnnotifiedMatches(roleSelectionId: string, threshold: number): Promise<JobMatch[]>;
   markNotified(jobId: string): Promise<void>;
+  listRecent(limit: number): Promise<NotificationLogItem[]>;
 }
 ```
 
-**Responsibilities:** finds jobs that crossed the AI-score notification threshold and haven't been sent yet; records the send.
+**Responsibilities:** finds jobs that crossed the AI-score notification threshold and haven't been sent yet; records the send; lists recent sends for `/settings`.
 
 **Query patterns:**
 - `findUnnotifiedMatches(roleSelectionId, threshold)` →
@@ -140,6 +141,7 @@ interface NotificationRepository {
     and n.id is null
   ```
 - `markNotified(jobId)` → `insert into notifications_log (job_id) values ($jobId) on conflict (job_id) do nothing`.
+- `listRecent(limit)` → `select n.id, n.job_id, n.sent_at, j.title, j.company_name, j.source from notifications_log n join jobs j on j.id = n.job_id order by n.sent_at desc limit $limit` (same shape as `ScrapeRunRepository.listRecent`, §7 below). Backs the read-only `NotificationsLogList` on `/settings`.
 
 **Transaction boundaries:** `notify.ts` processes matches one at a time: send Telegram message, then `markNotified`. If the process crashes between send and mark, the next run could re-send that one job — acceptable for a personal tool (rare, and `on conflict do nothing` keeps `markNotified` itself idempotent). No DB transaction needed since each row's mark is independent and the external Telegram call can't be part of a DB transaction anyway.
 

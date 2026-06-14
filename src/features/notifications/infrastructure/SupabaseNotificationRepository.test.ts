@@ -57,4 +57,40 @@ describe("SupabaseNotificationRepository", () => {
 
     expect(builder.upsert).toHaveBeenCalledWith({ job_id: "job-1" }, { onConflict: "job_id", ignoreDuplicates: true });
   });
+
+  it("listRecent orders by sent_at desc, maps rows, and skips entries with no matching job", async () => {
+    const { client, builder } = mockSupabaseClient({
+      data: [
+        {
+          id: "notif-1",
+          job_id: "job-1",
+          sent_at: "2026-01-02T00:00:00Z",
+          jobs: { title: "Senior React Developer", company_name: "Acme", source: "greenhouse" },
+        },
+        {
+          id: "notif-2",
+          job_id: "job-2",
+          sent_at: "2026-01-01T00:00:00Z",
+          jobs: null,
+        },
+      ],
+      error: null,
+    });
+    const repo = new SupabaseNotificationRepository(client);
+
+    const result = await repo.listRecent(20);
+
+    expect(result).toEqual([
+      {
+        id: "notif-1",
+        jobId: "job-1",
+        jobTitle: "Senior React Developer",
+        companyName: "Acme",
+        source: "greenhouse",
+        sentAt: "2026-01-02T00:00:00Z",
+      },
+    ]);
+    expect(builder.order).toHaveBeenCalledWith("sent_at", { ascending: false });
+    expect(builder.limit).toHaveBeenCalledWith(20);
+  });
 });
