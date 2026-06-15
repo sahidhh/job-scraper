@@ -21,7 +21,7 @@ No AI is used in resume parsing — extraction is purely dictionary lookup.
 
 ## 2. Keyword Scoring Algorithm (`features/scoring`, stage 1 — always runs)
 
-For each job returned by `JobRepository.findUnscored()` (already title-filtered against `expanded_roles`, and now also including previously-inserted rows with `ai_score IS NULL` — see §3):
+For each job returned by `JobRepository.findUnscored()` (already filtered by title or description against `expanded_roles` — consistent with the scrape-time role filter, AD-15 — and now also including previously-inserted rows with `ai_score IS NULL` — see §3):
 
 1. Run the **same skill-dictionary extraction** used for resumes against `job.title + "\n" + job.description` → `jobSkills: Set<string>` (canonical skill names mentioned in the posting).
 2. `keyword_score = |resumeSkills ∩ jobSkills| / |jobSkills|`, clamped to `[0, 1]`.
