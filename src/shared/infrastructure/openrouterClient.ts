@@ -3,7 +3,7 @@ import { fetchWithRetry } from "./http";
 
 const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
 
-// scoring.md §3: requests have a timeout and one retry on timeout/5xx.
+// scoring.md §3: requests have a timeout and one retry on timeout/5xx/429.
 const REQUEST_TIMEOUT_MS = 15_000;
 
 export interface OpenRouterMessage {
@@ -23,8 +23,9 @@ interface OpenRouterChatResponse {
 
 // Issues a single OpenRouter chat completion request constrained to a JSON
 // schema and returns the parsed JSON payload. Throws on timeout/non-2xx
-// (after fetchWithRetry's one retry) or a malformed response -- callers
-// decide how to handle failure (scoring.md §3 vs role expansion fallback).
+// (after fetchWithRetry's one retry on 5xx/429) or a malformed response --
+// callers decide how to handle failure (scoring.md §3 vs role expansion
+// fallback).
 export async function callOpenRouterJson(request: OpenRouterJsonRequest): Promise<unknown> {
   const apiKey = requireEnv("OPENROUTER_API_KEY");
   const model = requireEnv("OPENROUTER_MODEL");

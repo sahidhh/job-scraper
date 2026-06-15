@@ -1,9 +1,14 @@
 // Shared fetch helper (scrapers.md §4): one retry with a short fixed
-// backoff, only for network errors and 5xx responses. 4xx responses are
-// returned as-is (not retried) so callers can log-and-skip immediately.
+// backoff, for network errors, 5xx responses, and 429 (rate limit)
+// responses. Other 4xx responses are returned as-is (not retried) so
+// callers can log-and-skip immediately.
 export interface FetchWithRetryOptions {
   retries?: number; // default 1
   retryDelayMs?: number; // default 2000
+}
+
+function isRetryableStatus(status: number): boolean {
+  return status >= 500 || status === 429;
 }
 
 export async function fetchWithRetry(
@@ -18,7 +23,7 @@ export async function fetchWithRetry(
   while (true) {
     try {
       const response = await fetch(url, init);
-      if (response.status < 500 || attempt >= retries) {
+      if (!isRetryableStatus(response.status) || attempt >= retries) {
         return response;
       }
     } catch (error) {
