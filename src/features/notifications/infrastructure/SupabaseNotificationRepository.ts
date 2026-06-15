@@ -15,7 +15,7 @@ interface UnnotifiedMatchRow {
   source: JobSource;
   url: string;
   job_scores: { ai_score: number | null; ai_reasoning: string | null }[];
-  notifications_log: { id: string }[];
+  notifications_log: { id: string }[] | null;
 }
 
 // Shape returned by the embedded select in listRecent -- `jobs` is a
@@ -44,7 +44,7 @@ export class SupabaseNotificationRepository implements NotificationRepository {
     if (error) throw error;
 
     return (data ?? [])
-      .filter((row) => row.notifications_log.length === 0)
+      .filter((row) => (row.notifications_log?.length ?? 0) === 0)
       .map((row) => {
         // non-null: `job_scores!inner` guarantees at least one matching row.
         const score = row.job_scores[0]!;
