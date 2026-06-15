@@ -45,7 +45,7 @@ describe("ashbyScraper", () => {
     );
     vi.stubGlobal("fetch", fetchMock);
 
-    const result = await ashbyScraper.fetchJobs([makeCompany()]);
+    const result = await ashbyScraper.fetchJobs([makeCompany()], []);
 
     expect(result).toEqual([
       {
@@ -66,12 +66,43 @@ describe("ashbyScraper", () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ message: "Not Found" }, 404));
     vi.stubGlobal("fetch", fetchMock);
 
-    const result = await ashbyScraper.fetchJobs([
-      makeCompany({ id: "broken-co", boardToken: "broken" }),
-      makeCompany({ id: "ok-co", boardToken: "ok" }),
-    ]);
+    const result = await ashbyScraper.fetchJobs(
+      [makeCompany({ id: "broken-co", boardToken: "broken" }), makeCompany({ id: "ok-co", boardToken: "ok" })],
+      [],
+    );
 
     expect(result).toEqual([]);
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("filters results to jobs matching the given roles", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({
+        jobs: [
+          {
+            id: "job-1",
+            title: "Platform Engineer",
+            location: "Remote - UAE",
+            descriptionHtml: "<p>Own infra.</p>",
+            applyUrl: "https://jobs.ashbyhq.com/acme/job-1",
+            publishedAt: "2026-06-05T12:00:00.000Z",
+          },
+          {
+            id: "job-2",
+            title: "Sales Representative",
+            location: "Remote - UAE",
+            descriptionHtml: "<p>Close deals.</p>",
+            applyUrl: "https://jobs.ashbyhq.com/acme/job-2",
+            publishedAt: "2026-06-05T12:00:00.000Z",
+          },
+        ],
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await ashbyScraper.fetchJobs([makeCompany()], ["Platform Engineer"]);
+
+    expect(result).toHaveLength(1);
+    expect(result[0]?.sourceJobId).toBe("job-1");
   });
 });

@@ -23,10 +23,46 @@ interface JobSourceScraper {
   readonly source: JobSource;            // 'greenhouse' | 'lever' | 'ashby' | 'wellfound' | 'remoteok'
   readonly requiresCompanyConfig: boolean; // true for greenhouse/lever/ashby
 
-  fetchJobs(companies: Company[]): Promise<RawJob[]>;
+  fetchJobs(companies: Company[], roles: readonly string[]): Promise<RawJob[]>;
   // companies is [] for sources where requiresCompanyConfig === false
+  // roles is the active role selection's expandedRoles (architecture.md
+  // §3.4, decisions.md AD-15) -- see "Role-aware fetching" below.
 }
 ```
+
+### Role-aware fetching (`roles` parameter, AD-15)
+
+`fetchJobs` takes a second argument, `roles: readonly string[]` -- the active
+role selection's `expandedRoles`. This constrains *what gets fetched and
+ingested* by role, not just how it's scored:
+
+- **No upstream ATS API in this project supports a role/keyword query
+  parameter** (Greenhouse, Lever, Ashby, RemoteOK, Wellfound all return
+  full feeds/boards). Every adapter therefore fetches its normal full
+  set, then filters the resulting `RawJob[]` client-side using the shared
+  pure helper `features/sources/domain/roleMatch.ts`:
+  - `hasRoleFilter(roles)` -- true if at least one role sanitizes to a
+    non-empty term.
+  - `jobMatchesRoles(job, roles)` -- true if any role term (after
+    stripping the same unsafe characters `,.()%*` that
+    `SupabaseJobRepository.sanitizeRoleForFilter` strips for the
+    equivalent scoring-time ILIKE match) appears as a case-insensitive
+    substring of `title` or `description`.
+- **Empty `roles` array = no filter** (current/legacy behavior, preserved
+  as the safe default): every adapter returns everything it fetched.
+  This is what makes `roles: []` backward-compatible for any caller that
+  doesn't (yet) have a role selection.
+- Each adapter applies `jobMatchesRoles` as the last step before
+  returning, after normalization (so filtering sees the same
+  `title`/`description` text that's persisted).
+
+`scripts/scrape.ts` loads the active role selection via
+`SupabaseRoleRepository.getActiveSelection()` (same call `scripts/score.ts`
+already makes) and passes `roleSelection.expandedRoles` to every adapter's
+`fetchJobs`. **If there is no active role selection, `scrape.ts` logs and
+returns without scraping any source** -- it does not fall back to fetching
+everything, since that would re-introduce the "most scraped jobs are
+irrelevant" problem this change fixes.
 
 Each adapter lives in its own folder and exports one object implementing this interface:
 

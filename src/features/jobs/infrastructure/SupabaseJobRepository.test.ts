@@ -82,9 +82,9 @@ describe("SupabaseJobRepository", () => {
   });
 
   describe("findUnscored", () => {
-    it("excludes already-scored job ids and filters by title", async () => {
+    it("excludes only jobs with an existing ai_score and filters by title", async () => {
       const { client, builders } = queuedSupabaseClient([
-        { data: [{ job_id: "job-2" }], error: null }, // scored job ids
+        { data: [{ job_id: "job-2" }], error: null }, // job_scores rows with ai_score set
         { data: [jobRow], error: null }, // matching jobs
       ]);
       const repo = new SupabaseJobRepository(client);
@@ -115,8 +115,31 @@ describe("SupabaseJobRepository", () => {
         Record<string, ReturnType<typeof vi.fn>>,
       ];
       expect(scoredBuilder.eq).toHaveBeenCalledWith("role_selection_id", "role-selection-1");
+      expect(scoredBuilder.not).toHaveBeenCalledWith("ai_score", "is", null);
       expect(jobsBuilder.or).toHaveBeenCalledWith("title.ilike.%React Developer%,title.ilike.%Frontend Engineer%");
       expect(jobsBuilder.not).toHaveBeenCalledWith("id", "in", "(job-2)");
+    });
+
+    it("includes jobs whose job_scores row has ai_score IS NULL (retry)", async () => {
+      // The "ai_score is not null" filter excludes only fully-scored rows,
+      // so a job whose previous run left ai_score null is not in the
+      // exclusion set and is re-fetched here for retry.
+      const { client, builders } = queuedSupabaseClient([
+        { data: [], error: null }, // no job_scores rows with ai_score set
+        { data: [jobRow], error: null }, // matching jobs, including the null-ai_score one
+      ]);
+      const repo = new SupabaseJobRepository(client);
+
+      const result = await repo.findUnscored("role-selection-1", ["React Developer"]);
+
+      expect(result).toEqual([expect.objectContaining({ id: "job-1" })]);
+
+      const [, jobsBuilder] = builders as [
+        Record<string, ReturnType<typeof vi.fn>>,
+        Record<string, ReturnType<typeof vi.fn>>,
+      ];
+      // No exclusion filter applied when there are no fully-scored ids.
+      expect(jobsBuilder.not).not.toHaveBeenCalledWith("id", "in", expect.anything());
     });
 
     it("returns an empty array without querying when there are no expanded roles", async () => {

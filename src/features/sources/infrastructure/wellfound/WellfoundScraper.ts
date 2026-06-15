@@ -1,5 +1,6 @@
 import type { Company } from "@/features/companies/domain/types";
 import type { JobSourceScraper } from "@/features/sources/domain/JobSourceScraper";
+import { jobMatchesRoles } from "@/features/sources/domain/roleMatch";
 import type { RawJob } from "@/features/sources/domain/types";
 import { optionalEnv } from "@/shared/infrastructure/env";
 import { fetchWithRetry } from "@/shared/infrastructure/http";
@@ -52,7 +53,10 @@ export const wellfoundScraper: JobSourceScraper = {
   source: "wellfound",
   requiresCompanyConfig: false,
 
-  async fetchJobs(_companies: Company[]): Promise<RawJob[]> {
+  // Wellfound's feed (scrapers.md §1, §5) has no role/keyword query
+  // parameter -- fetch the whole feed, then filter client-side via the
+  // shared `jobMatchesRoles` helper.
+  async fetchJobs(_companies: Company[], roles: readonly string[]): Promise<RawJob[]> {
     const feedUrl = optionalEnv(WELLFOUND_FEED_URL_VAR, "");
     if (!feedUrl) {
       console.warn(`[wellfound] ${WELLFOUND_FEED_URL_VAR} not configured; skipping`);
@@ -72,7 +76,10 @@ export const wellfoundScraper: JobSourceScraper = {
         return [];
       }
 
-      return body.filter(isWellfoundEntry).map(toRawJob);
+      return body
+        .filter(isWellfoundEntry)
+        .map(toRawJob)
+        .filter((job) => jobMatchesRoles(job, roles));
     } catch (error) {
       console.warn(`[wellfound] ${error instanceof Error ? error.message : String(error)}`);
       return [];

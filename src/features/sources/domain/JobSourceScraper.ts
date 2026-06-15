@@ -14,5 +14,13 @@ export interface JobSourceScraper {
   // For requiresCompanyConfig === true, the adapter loops `companies`
   // internally (per-company error isolation, scrapers.md §4) and returns
   // one combined RawJob[]. For false, `companies` is [].
-  fetchJobs(companies: Company[]): Promise<RawJob[]>;
+  //
+  // `roles` is the active role selection's expandedRoles (architecture.md
+  // §3.4, decisions.md AD-14). None of the supported ATS APIs accept a
+  // role/keyword query parameter, so every adapter fetches its normal set
+  // and filters the resulting RawJob[] client-side via
+  // `domain/roleMatch.jobMatchesRoles` before returning. An empty `roles`
+  // array means "no role filter" -- adapters return everything fetched, the
+  // pre-existing behavior (safe default, scrapers.md §2).
+  fetchJobs(companies: Company[], roles: readonly string[]): Promise<RawJob[]>;
 }

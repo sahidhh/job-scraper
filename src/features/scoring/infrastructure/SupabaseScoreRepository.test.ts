@@ -3,7 +3,7 @@ import { mockSupabaseClient } from "@/shared/infrastructure/testing/supabaseQuer
 import { SupabaseScoreRepository } from "./SupabaseScoreRepository";
 
 describe("SupabaseScoreRepository", () => {
-  it("insertScore upserts on (job_id, role_selection_id) and ignores duplicates", async () => {
+  it("insertScore upserts on (job_id, role_selection_id) and updates on conflict (retryable null ai_score)", async () => {
     const { client, builder } = mockSupabaseClient({ data: null, error: null });
     const repo = new SupabaseScoreRepository(client);
 
@@ -23,7 +23,7 @@ describe("SupabaseScoreRepository", () => {
         ai_score: 0.85,
         ai_reasoning: "Strong match",
       },
-      { onConflict: "job_id,role_selection_id", ignoreDuplicates: true },
+      { onConflict: "job_id,role_selection_id", ignoreDuplicates: false },
     );
   });
 

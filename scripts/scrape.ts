@@ -3,6 +3,7 @@ import { hasAllowedLocation } from "@/features/filtering/domain/validation";
 import { ingestJobs } from "@/features/jobs/application/ingestJobs";
 import { SupabaseJobRepository } from "@/features/jobs/infrastructure/SupabaseJobRepository";
 import { SupabaseCompanyRepository } from "@/features/companies/infrastructure/SupabaseCompanyRepository";
+import { SupabaseRoleRepository } from "@/features/roles/infrastructure/SupabaseRoleRepository";
 import { sourceScrapers } from "@/features/sources/infrastructure/registry";
 import { SupabaseScrapeRunRepository } from "@/features/sources/infrastructure/SupabaseScrapeRunRepository";
 import { createSupabaseServiceClient } from "@/shared/infrastructure/supabaseClient";
@@ -11,11 +12,27 @@ import { createSupabaseServiceClient } from "@/shared/infrastructure/supabaseCli
 // filters jobs by location (architecture.md §3.1 steps 4-5), and ingests
 // the survivors via jobs.application.ingestJobs (step 6). One scrape_runs
 // row is written per source (scrapers.md §4).
+//
+// Role-aware fetching (decisions.md AD-14): the active role selection's
+// expandedRoles are passed to every adapter's fetchJobs so jobs are
+// constrained by role at fetch/ingest time, not only at scoring time. If
+// there is no active role selection, scraping is skipped entirely --
+// fetching/ingesting everything with no role constraint would defeat the
+// purpose of this change.
 async function main(): Promise<void> {
   const client = createSupabaseServiceClient();
   const companyRepository = new SupabaseCompanyRepository(client);
   const jobRepository = new SupabaseJobRepository(client);
+  const roleRepository = new SupabaseRoleRepository(client);
   const scrapeRunRepository = new SupabaseScrapeRunRepository(client);
+
+  const roleSelection = await roleRepository.getActiveSelection();
+  if (!roleSelection) {
+    console.log("[scrape] no active role selection, skipping");
+    return;
+  }
+
+  const roles = roleSelection.expandedRoles;
 
   for (const scraper of sourceScrapers) {
     const companies = scraper.requiresCompanyConfig ? await companyRepository.listActive(scraper.source) : [];
@@ -26,7 +43,7 @@ async function main(): Promise<void> {
     }
 
     try {
-      const rawJobs = await scraper.fetchJobs(companies);
+      const rawJobs = await scraper.fetchJobs(companies, roles);
 
       const filtered = tagLocations(rawJobs).filter((job) => hasAllowedLocation(job.locationTags));
       const result = await ingestJobs(filtered, { jobRepository });

@@ -30,20 +30,41 @@ async function main(): Promise<void> {
     return;
   }
 
-  const keywordThreshold = Number(optionalEnv("KEYWORD_THRESHOLD", "0.5"));
+  // Lowered from 0.5 (decisions.md AD-07 follow-up): the prior default left
+  // ai_score null for nearly all jobs because real skill-overlap rarely
+  // reaches 0.5. 0.25 still bounds AI spend to skill-relevant jobs while
+  // letting the AI stage actually run. Override via KEYWORD_THRESHOLD.
+  const keywordThreshold = Number(optionalEnv("KEYWORD_THRESHOLD", "0.25"));
 
   const jobs = await jobRepository.findUnscored(roleSelection.id, roleSelection.expandedRoles);
-  console.log(`[score] scoring ${jobs.length} unscored job(s) for role selection ${roleSelection.id}`);
+  console.log(`[score] scoring ${jobs.length} unscored/retry job(s) for role selection ${roleSelection.id}`);
 
   let scored = 0;
+  let skippedBelowGate = 0;
+  let aiCallFailed = 0;
   for (const job of jobs) {
     try {
-      await scoreJob(job, resume, roleSelection.id, {
+      const result = await scoreJob(job, resume, roleSelection.id, {
         scoreRepository,
         aiScoreProvider,
         skillsDictionary: SKILLS_DICTIONARY,
         keywordThreshold,
       });
+
+      if (result.keywordScore < keywordThreshold) {
+        skippedBelowGate += 1;
+        console.log(
+          `[score] job ${job.id}: skipped AI (keyword score ${result.keywordScore.toFixed(2)} < threshold ${keywordThreshold})`,
+        );
+      } else if (result.aiScore == null) {
+        aiCallFailed += 1;
+        console.warn(
+          `[score] job ${job.id}: AI provider returned null (call failed or malformed response); ai_score left null for retry`,
+        );
+      } else {
+        console.log(`[score] job ${job.id}: scored (keyword=${result.keywordScore.toFixed(2)}, ai=${result.aiScore.toFixed(2)})`);
+      }
+
       scored += 1;
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -51,7 +72,9 @@ async function main(): Promise<void> {
     }
   }
 
-  console.log(`[score] scored ${scored}/${jobs.length} job(s)`);
+  console.log(
+    `[score] scored ${scored}/${jobs.length} job(s) (${skippedBelowGate} below keyword gate, ${aiCallFailed} AI call failures left for retry)`,
+  );
 }
 
 main().catch((err) => {

@@ -137,18 +137,24 @@ export class SupabaseJobRepository implements JobRepository {
     const sanitizedRoles = expandedRoles.map(sanitizeRoleForFilter).filter((role) => role.length > 0);
     if (sanitizedRoles.length === 0) return [];
 
-    const { data: scored, error: scoredError } = await this.client
+    // Jobs with a job_scores row whose ai_score is already set are fully
+    // scored for this role selection and excluded. Jobs with NO row, or a
+    // row with ai_score IS NULL (stage 2 never ran or failed), are
+    // included so the AI step gets (re)tried (scoring.md §3, decisions.md
+    // AD-07 follow-up).
+    const { data: aiScored, error: scoredError } = await this.client
       .from("job_scores")
       .select("job_id")
-      .eq("role_selection_id", roleSelectionId);
+      .eq("role_selection_id", roleSelectionId)
+      .not("ai_score", "is", null);
     if (scoredError) throw scoredError;
 
-    const scoredIds = (scored ?? []).map((row) => row.job_id);
+    const aiScoredIds = (aiScored ?? []).map((row) => row.job_id);
 
     const titleFilter = sanitizedRoles.map((role) => `title.ilike.%${role}%`).join(",");
     let query = this.client.from("jobs").select("*").or(titleFilter);
-    if (scoredIds.length > 0) {
-      query = query.not("id", "in", `(${scoredIds.join(",")})`);
+    if (aiScoredIds.length > 0) {
+      query = query.not("id", "in", `(${aiScoredIds.join(",")})`);
     }
 
     const { data, error } = await query;

@@ -32,7 +32,7 @@ describe("remoteokScraper", () => {
     );
     vi.stubGlobal("fetch", fetchMock);
 
-    const result = await remoteokScraper.fetchJobs([]);
+    const result = await remoteokScraper.fetchJobs([], []);
 
     expect(result).toEqual([
       {
@@ -53,6 +53,38 @@ describe("remoteokScraper", () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ error: "not found" }, 404));
     vi.stubGlobal("fetch", fetchMock);
 
-    await expect(remoteokScraper.fetchJobs([])).rejects.toThrow("RemoteOK API returned 404");
+    await expect(remoteokScraper.fetchJobs([], [])).rejects.toThrow("RemoteOK API returned 404");
+  });
+
+  it("filters results to jobs matching the given roles", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse([
+        { legal: "Use of this API is..." },
+        {
+          id: 1,
+          company: "Remote Co",
+          position: "Full Stack Developer",
+          location: "Worldwide",
+          description: "<p>Work from anywhere.</p>",
+          url: "https://remoteok.com/remote-jobs/1",
+          date: "2026-06-10T08:00:00+00:00",
+        },
+        {
+          id: 2,
+          company: "Remote Co",
+          position: "Graphic Designer",
+          location: "Worldwide",
+          description: "<p>Design things.</p>",
+          url: "https://remoteok.com/remote-jobs/2",
+          date: "2026-06-10T08:00:00+00:00",
+        },
+      ]),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await remoteokScraper.fetchJobs([], ["Full Stack Developer"]);
+
+    expect(result).toHaveLength(1);
+    expect(result[0]?.sourceJobId).toBe("1");
   });
 });

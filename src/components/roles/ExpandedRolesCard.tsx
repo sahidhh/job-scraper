@@ -44,7 +44,7 @@ export function ExpandedRolesCard({
               <button
                 type="button"
                 aria-pressed={isSelected}
-                disabled={isPending || isActive}
+                disabled={isPending}
                 onClick={() => onToggleRole(role)}
               >
                 {role}

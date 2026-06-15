@@ -43,7 +43,7 @@ describe("leverScraper", () => {
     );
     vi.stubGlobal("fetch", fetchMock);
 
-    const result = await leverScraper.fetchJobs([makeCompany()]);
+    const result = await leverScraper.fetchJobs([makeCompany()], []);
 
     expect(result).toEqual([
       {
@@ -74,7 +74,7 @@ describe("leverScraper", () => {
     );
     vi.stubGlobal("fetch", fetchMock);
 
-    const [job] = await leverScraper.fetchJobs([makeCompany()]);
+    const [job] = await leverScraper.fetchJobs([makeCompany()], []);
 
     expect(job?.description).toBe("Design things.");
     expect(job?.locationRaw).toBe("");
@@ -85,12 +85,41 @@ describe("leverScraper", () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ message: "Not Found" }, 404));
     vi.stubGlobal("fetch", fetchMock);
 
-    const result = await leverScraper.fetchJobs([
-      makeCompany({ id: "broken-co", boardToken: "broken" }),
-      makeCompany({ id: "ok-co", boardToken: "ok" }),
-    ]);
+    const result = await leverScraper.fetchJobs(
+      [makeCompany({ id: "broken-co", boardToken: "broken" }), makeCompany({ id: "ok-co", boardToken: "ok" })],
+      [],
+    );
 
     expect(result).toEqual([]);
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("filters results to jobs matching the given roles", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse([
+        {
+          id: "posting-1",
+          text: "Backend Engineer",
+          categories: { location: "Singapore" },
+          descriptionPlain: "Work on APIs.",
+          hostedUrl: "https://jobs.lever.co/acme/posting-1",
+          createdAt: 1748736000000,
+        },
+        {
+          id: "posting-2",
+          text: "Office Manager",
+          categories: { location: "Singapore" },
+          descriptionPlain: "Manage the office.",
+          hostedUrl: "https://jobs.lever.co/acme/posting-2",
+          createdAt: 1748736000000,
+        },
+      ]),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await leverScraper.fetchJobs([makeCompany()], ["Backend Engineer"]);
+
+    expect(result).toHaveLength(1);
+    expect(result[0]?.sourceJobId).toBe("posting-1");
   });
 });
