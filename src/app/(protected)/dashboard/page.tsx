@@ -74,7 +74,13 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       </div>
 
       {activeSelection ? (
-        <DashboardContent roleSelectionId={activeSelection.id} filters={parseFilters(params)} params={params} />
+        <DashboardContent
+          roleSelectionId={activeSelection.id}
+          primaryRole={activeSelection.primaryRole}
+          expandedRoles={activeSelection.expandedRoles}
+          filters={parseFilters(params)}
+          params={params}
+        />
       ) : (
         <Button asChild>
           <Link href="/roles">Choose a role</Link>
@@ -89,10 +95,14 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 // when only the filter-dependent JobsSection re-renders (P1 #2).
 async function DashboardContent({
   roleSelectionId,
+  primaryRole,
+  expandedRoles,
   filters,
   params,
 }: {
   roleSelectionId: string;
+  primaryRole: string;
+  expandedRoles: string[];
   filters: JobFilters;
   params: DashboardSearchParams;
 }) {
@@ -115,7 +125,14 @@ async function DashboardContent({
         </div>
       )}
       <Suspense fallback={<JobsSectionFallback />}>
-        <JobsSection roleSelectionId={roleSelectionId} filters={filters} params={params} scrapeRuns={scrapeRuns} />
+        <JobsSection
+          roleSelectionId={roleSelectionId}
+          primaryRole={primaryRole}
+          expandedRoles={expandedRoles}
+          filters={filters}
+          params={params}
+          scrapeRuns={scrapeRuns}
+        />
       </Suspense>
     </div>
   );
@@ -132,11 +149,15 @@ function JobsSectionFallback() {
 
 async function JobsSection({
   roleSelectionId,
+  primaryRole,
+  expandedRoles,
   filters,
   params,
   scrapeRuns,
 }: {
   roleSelectionId: string;
+  primaryRole: string;
+  expandedRoles: string[];
   filters: JobFilters;
   params: DashboardSearchParams;
   scrapeRuns: ScrapeRun[];
@@ -145,7 +166,10 @@ async function JobsSection({
   const jobRepository = new SupabaseJobRepository(client);
   const limit = parseLimit(params);
 
-  const { jobs, hasMore } = await jobRepository.findForDashboard(roleSelectionId, filters, limit);
+  const [{ jobs, hasMore }, matchingRoleCount] = await Promise.all([
+    jobRepository.findForDashboard(roleSelectionId, filters, limit),
+    jobRepository.countMatchingExpandedRoles(expandedRoles),
+  ]);
 
   const scoredCount = jobs.filter((job) => job.aiScore !== null).length;
   const pendingCount = jobs.length - scoredCount;
@@ -155,7 +179,9 @@ async function JobsSection({
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
         {lastRun ? `Last scraped ${new Date(lastRun.runAt).toLocaleString()} — ` : ""}
-        {jobs.length} job{jobs.length === 1 ? "" : "s"} matched, {scoredCount} scored by AI, {pendingCount} pending.
+        {jobs.length} job{jobs.length === 1 ? "" : "s"} found, {scoredCount} scored by AI, {pendingCount} pending.{" "}
+        {matchingRoleCount} job{matchingRoleCount === 1 ? "" : "s"} match &ldquo;{primaryRole}&rdquo; and{" "}
+        {matchingRoleCount === 1 ? "is" : "are"} eligible for AI scoring under the current role selection.
       </p>
       {jobs.length === 0 ? (
         <div className="rounded-md border border-border bg-muted/50 p-3 text-sm text-muted-foreground">

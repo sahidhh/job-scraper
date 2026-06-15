@@ -86,6 +86,16 @@ function sanitizeRoleForFilter(role: string): string {
   return role.replace(FILTER_UNSAFE_CHARS, "").trim();
 }
 
+// Shared by findUnscored and countMatchingExpandedRoles: a PostgREST
+// .or() filter matching title OR description against any expandedRoles term
+// (decisions.md AD-15), or null if no usable terms remain after sanitizing.
+function buildRoleFilter(expandedRoles: string[]): string | null {
+  const sanitizedRoles = expandedRoles.map(sanitizeRoleForFilter).filter((role) => role.length > 0);
+  if (sanitizedRoles.length === 0) return null;
+
+  return sanitizedRoles.flatMap((role) => [`title.ilike.%${role}%`, `description.ilike.%${role}%`]).join(",");
+}
+
 // repositories.md §2.
 export class SupabaseJobRepository implements JobRepository {
   constructor(private readonly client: TypedSupabaseClient) {}
@@ -145,10 +155,8 @@ export class SupabaseJobRepository implements JobRepository {
   }
 
   async findUnscored(roleSelectionId: string, expandedRoles: string[]): Promise<Job[]> {
-    if (expandedRoles.length === 0) return [];
-
-    const sanitizedRoles = expandedRoles.map(sanitizeRoleForFilter).filter((role) => role.length > 0);
-    if (sanitizedRoles.length === 0) return [];
+    const roleFilter = buildRoleFilter(expandedRoles);
+    if (!roleFilter) return [];
 
     // Jobs with a job_scores row whose ai_score is already set are fully
     // scored for this role selection and excluded. Jobs with NO row, or a
@@ -164,13 +172,6 @@ export class SupabaseJobRepository implements JobRepository {
 
     const aiScoredIds = (aiScored ?? []).map((row) => row.job_id);
 
-    // Match title OR description so this stays consistent with the
-    // scrape-time role filter (jobMatchesRoles, decisions.md AD-15), which
-    // also matches on description -- otherwise jobs ingested on a
-    // description-only role match would never be selected for scoring.
-    const roleFilter = sanitizedRoles
-      .flatMap((role) => [`title.ilike.%${role}%`, `description.ilike.%${role}%`])
-      .join(",");
     let query = this.client.from("jobs").select("*").or(roleFilter);
     if (aiScoredIds.length > 0) {
       query = query.not("id", "in", `(${aiScoredIds.join(",")})`);
@@ -179,6 +180,15 @@ export class SupabaseJobRepository implements JobRepository {
     const { data, error } = await query;
     if (error) throw error;
     return (data ?? []).map(toJob);
+  }
+
+  async countMatchingExpandedRoles(expandedRoles: string[]): Promise<number> {
+    const roleFilter = buildRoleFilter(expandedRoles);
+    if (!roleFilter) return 0;
+
+    const { count, error } = await this.client.from("jobs").select("id", { count: "exact", head: true }).or(roleFilter);
+    if (error) throw error;
+    return count ?? 0;
   }
 
   async findForDashboard(roleSelectionId: string, filters: JobFilters, limit: number): Promise<JobsPage> {

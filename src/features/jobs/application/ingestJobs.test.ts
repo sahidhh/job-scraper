@@ -25,6 +25,7 @@ function makeRepository(): JobRepository {
     upsertMany: vi.fn().mockResolvedValue({ inserted: 0, updated: 0 }),
     findUnscored: vi.fn(),
     findForDashboard: vi.fn(),
+    countMatchingExpandedRoles: vi.fn(),
   };
 }
 

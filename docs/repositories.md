@@ -34,6 +34,7 @@ interface JobRepository {
   upsertMany(jobs: NormalizedJob[]): Promise<{ inserted: number; updated: number }>;
   findUnscored(roleSelectionId: string, expandedRoles: string[]): Promise<Job[]>;
   findForDashboard(roleSelectionId: string, filters: JobFilters, limit: number): Promise<{ jobs: JobWithScore[]; hasMore: boolean }>;
+  countMatchingExpandedRoles(expandedRoles: string[]): Promise<number>;
 }
 ```
 
@@ -74,6 +75,22 @@ interface JobRepository {
   `gte` filter on the embedded `job_scores.ai_score` (P1 #5) — because
   `job_scores` is a `!left` join, this filter effectively requires a
   matching scored row, excluding unscored jobs from the result.
+- `countMatchingExpandedRoles(expandedRoles)` →
+  ```sql
+  select count(*) from jobs j
+  where (j.title ilike any($roleFilter) or j.description ilike any($roleFilter))
+  ```
+  Same title/description `ilike` predicate as `findUnscored` (shared via the
+  `buildRoleFilter` helper), but with no `role_selection_id`/`ai_score`
+  exclusion — counts every job currently matching the active role
+  selection's `expandedRoles`, scored or not. A `head: true, count: "exact"`
+  query (no rows returned). Used by the dashboard to show how many of the
+  jobs in `jobs` are actually eligible for scoring under the active role
+  selection, since `findForDashboard` itself applies no role filter
+  (reports/dashboard-scoring-discrepancy.md) — the two numbers can diverge
+  after a role-selection change, when jobs scraped under a previous
+  selection's `expandedRoles` remain in `jobs` but no longer match the
+  current ones.
 
 **Transaction boundaries:** `upsertMany` is a single batched statement (or several batches, each independently atomic) — partial success across batches is acceptable since upsert is idempotent and the next cron run retries.
 

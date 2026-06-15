@@ -22,4 +22,13 @@ export interface JobRepository {
    * `hasMore` indicates whether additional rows exist beyond `limit`.
    */
   findForDashboard(roleSelectionId: string, filters: JobFilters, limit: number): Promise<JobsPage>;
+
+  /**
+   * Count of jobs whose title or description matches at least one of
+   * expandedRoles (same predicate as findUnscored), regardless of scoring
+   * status. Lets the dashboard show how many of the jobs it lists are
+   * actually eligible for scoring under the active role selection
+   * (reports/dashboard-scoring-discrepancy.md).
+   */
+  countMatchingExpandedRoles(expandedRoles: string[]): Promise<number>;
 }

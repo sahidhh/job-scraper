@@ -179,6 +179,36 @@ describe("SupabaseJobRepository", () => {
     });
   });
 
+  describe("countMatchingExpandedRoles", () => {
+    it("returns the exact count from a head-only query filtered by expanded roles", async () => {
+      const { client, builder } = mockSupabaseClient({ data: null, error: null, count: 24 });
+      const repo = new SupabaseJobRepository(client);
+
+      const result = await repo.countMatchingExpandedRoles(["React Developer", "Frontend Engineer"]);
+
+      expect(result).toBe(24);
+      expect(builder.select).toHaveBeenCalledWith("id", { count: "exact", head: true });
+      expect(builder.or).toHaveBeenCalledWith(
+        "title.ilike.%React Developer%,description.ilike.%React Developer%,title.ilike.%Frontend Engineer%,description.ilike.%Frontend Engineer%",
+      );
+    });
+
+    it("returns 0 without querying when there are no expanded roles", async () => {
+      const { client, builders } = queuedSupabaseClient([]);
+      const repo = new SupabaseJobRepository(client);
+
+      expect(await repo.countMatchingExpandedRoles([])).toBe(0);
+      expect(builders).toHaveLength(0);
+    });
+
+    it("returns 0 when count is null", async () => {
+      const { client } = mockSupabaseClient({ data: null, error: null, count: null });
+      const repo = new SupabaseJobRepository(client);
+
+      expect(await repo.countMatchingExpandedRoles(["React Developer"])).toBe(0);
+    });
+  });
+
   describe("findForDashboard", () => {
     it("maps jobs joined with their score and applies location/source filters", async () => {
       const { client, builder } = mockSupabaseClient({
