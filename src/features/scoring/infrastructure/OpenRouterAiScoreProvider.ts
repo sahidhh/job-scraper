@@ -54,6 +54,9 @@ export class OpenRouterAiScoreProvider implements AiScoreProvider {
       })) as JobMatchResponse;
 
       if (typeof result.score !== "number" || typeof result.reasoning !== "string") {
+        console.warn(
+          `[ai-score] job ${input.job.id}: OpenRouter response missing/invalid score or reasoning: ${JSON.stringify(result)}`,
+        );
         return null;
       }
 
@@ -61,7 +64,9 @@ export class OpenRouterAiScoreProvider implements AiScoreProvider {
         score: Math.min(1, Math.max(0, result.score)),
         reasoning: result.reasoning,
       };
-    } catch {
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn(`[ai-score] job ${input.job.id}: OpenRouter call failed: ${message}`);
       return null;
     }
   }

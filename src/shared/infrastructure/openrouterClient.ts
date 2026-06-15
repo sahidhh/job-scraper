@@ -51,7 +51,8 @@ export async function callOpenRouterJson(request: OpenRouterJsonRequest): Promis
     });
 
     if (!response.ok) {
-      throw new Error(`OpenRouter request failed with status ${response.status}`);
+      const body = await response.text().catch(() => "");
+      throw new Error(`OpenRouter request failed with status ${response.status}${body ? `: ${body.slice(0, 500)}` : ""}`);
     }
 
     const body = (await response.json()) as OpenRouterChatResponse;
