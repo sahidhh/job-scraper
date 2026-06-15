@@ -9,8 +9,10 @@ export interface JobRepository {
   upsertMany(jobs: NormalizedJob[]): Promise<UpsertResult>;
 
   /**
-   * Jobs with no job_scores row for roleSelectionId, whose title matches
-   * one of expandedRoles. Feeds scripts/score.ts (architecture.md §3.2).
+   * Jobs whose title matches one of expandedRoles, and which either have
+   * no job_scores row for roleSelectionId, or have one with ai_score IS
+   * NULL (stage 2 never ran or previously failed -- retried). Feeds
+   * scripts/score.ts (architecture.md §3.2, scoring.md §3).
    */
   findUnscored(roleSelectionId: string, expandedRoles: string[]): Promise<Job[]>;
 

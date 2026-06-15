@@ -45,7 +45,7 @@ describe("greenhouseScraper", () => {
     );
     vi.stubGlobal("fetch", fetchMock);
 
-    const result = await greenhouseScraper.fetchJobs([makeCompany()]);
+    const result = await greenhouseScraper.fetchJobs([makeCompany()], []);
 
     expect(result).toEqual([
       {
@@ -71,10 +71,10 @@ describe("greenhouseScraper", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    const result = await greenhouseScraper.fetchJobs([
-      makeCompany({ id: "broken-co", boardToken: "broken" }),
-      makeCompany({ id: "ok-co", boardToken: "ok" }),
-    ]);
+    const result = await greenhouseScraper.fetchJobs(
+      [makeCompany({ id: "broken-co", boardToken: "broken" }), makeCompany({ id: "ok-co", boardToken: "ok" })],
+      [],
+    );
 
     expect(result).toEqual([]);
     expect(fetchMock).toHaveBeenCalledTimes(2);
@@ -84,9 +84,40 @@ describe("greenhouseScraper", () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
 
-    const result = await greenhouseScraper.fetchJobs([makeCompany({ boardToken: null })]);
+    const result = await greenhouseScraper.fetchJobs([makeCompany({ boardToken: null })], []);
 
     expect(result).toEqual([]);
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("filters results to jobs matching the given roles", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({
+        jobs: [
+          {
+            id: 1,
+            title: "Senior React Developer",
+            location: { name: "Remote - India" },
+            content: "<p>Build UI.</p>",
+            absolute_url: "https://boards.greenhouse.io/acme/jobs/1",
+            updated_at: "2026-06-01T00:00:00.000Z",
+          },
+          {
+            id: 2,
+            title: "Accounts Payable Clerk",
+            location: { name: "Remote - India" },
+            content: "<p>Process invoices.</p>",
+            absolute_url: "https://boards.greenhouse.io/acme/jobs/2",
+            updated_at: "2026-06-01T00:00:00.000Z",
+          },
+        ],
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await greenhouseScraper.fetchJobs([makeCompany()], ["React Developer"]);
+
+    expect(result).toHaveLength(1);
+    expect(result[0]?.sourceJobId).toBe("1");
   });
 });

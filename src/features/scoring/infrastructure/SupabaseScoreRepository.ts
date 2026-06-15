@@ -15,7 +15,7 @@ export class SupabaseScoreRepository implements ScoreRepository {
         ai_score: score.aiScore ?? null,
         ai_reasoning: score.aiReasoning ?? null,
       },
-      { onConflict: "job_id,role_selection_id", ignoreDuplicates: true },
+      { onConflict: "job_id,role_selection_id", ignoreDuplicates: false },
     );
 
     if (error) throw error;

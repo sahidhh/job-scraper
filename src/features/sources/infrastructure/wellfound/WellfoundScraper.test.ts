@@ -30,7 +30,7 @@ describe("wellfoundScraper", () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
 
-    const result = await wellfoundScraper.fetchJobs([]);
+    const result = await wellfoundScraper.fetchJobs([], []);
 
     expect(result).toEqual([]);
     expect(fetchMock).not.toHaveBeenCalled();
@@ -53,7 +53,7 @@ describe("wellfoundScraper", () => {
     );
     vi.stubGlobal("fetch", fetchMock);
 
-    const result = await wellfoundScraper.fetchJobs([]);
+    const result = await wellfoundScraper.fetchJobs([], []);
 
     expect(result).toEqual([
       {
@@ -75,7 +75,7 @@ describe("wellfoundScraper", () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ unexpected: "object" }));
     vi.stubGlobal("fetch", fetchMock);
 
-    const result = await wellfoundScraper.fetchJobs([]);
+    const result = await wellfoundScraper.fetchJobs([], []);
 
     expect(result).toEqual([]);
   });
@@ -85,7 +85,7 @@ describe("wellfoundScraper", () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse([{ title: "Missing id and company" }]));
     vi.stubGlobal("fetch", fetchMock);
 
-    const result = await wellfoundScraper.fetchJobs([]);
+    const result = await wellfoundScraper.fetchJobs([], []);
 
     expect(result).toEqual([]);
   });
@@ -95,8 +95,40 @@ describe("wellfoundScraper", () => {
     const fetchMock = vi.fn().mockRejectedValue(new Error("network down"));
     vi.stubGlobal("fetch", fetchMock);
 
-    const result = await wellfoundScraper.fetchJobs([]);
+    const result = await wellfoundScraper.fetchJobs([], []);
 
     expect(result).toEqual([]);
+  });
+
+  it("filters results to entries matching the given roles", async () => {
+    process.env.WELLFOUND_FEED_URL = "https://example.com/wellfound-feed";
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse([
+        {
+          id: "listing-1",
+          title: "Founding Engineer",
+          company: "Stealth Startup",
+          location: "Remote",
+          description: "<p>Early team.</p>",
+          url: "https://wellfound.com/jobs/listing-1",
+          postedAt: "2026-06-08T00:00:00Z",
+        },
+        {
+          id: "listing-2",
+          title: "Recruiter",
+          company: "Stealth Startup",
+          location: "Remote",
+          description: "<p>Hire people.</p>",
+          url: "https://wellfound.com/jobs/listing-2",
+          postedAt: "2026-06-08T00:00:00Z",
+        },
+      ]),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await wellfoundScraper.fetchJobs([], ["Founding Engineer"]);
+
+    expect(result).toHaveLength(1);
+    expect(result[0]?.sourceJobId).toBe("listing-1");
   });
 });

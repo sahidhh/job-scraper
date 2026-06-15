@@ -1,5 +1,6 @@
 import type { Company } from "@/features/companies/domain/types";
 import type { JobSourceScraper } from "@/features/sources/domain/JobSourceScraper";
+import { jobMatchesRoles } from "@/features/sources/domain/roleMatch";
 import type { RawJob } from "@/features/sources/domain/types";
 import { fetchWithRetry } from "@/shared/infrastructure/http";
 import { normalizeWhitespace, stripHtml } from "@/shared/infrastructure/text";
@@ -41,7 +42,10 @@ export const remoteokScraper: JobSourceScraper = {
   source: "remoteok",
   requiresCompanyConfig: false,
 
-  async fetchJobs(_companies: Company[]): Promise<RawJob[]> {
+  // RemoteOK's single global feed (scrapers.md §1) has no role/keyword
+  // query parameter -- fetch the whole feed, then filter client-side via
+  // the shared `jobMatchesRoles` helper.
+  async fetchJobs(_companies: Company[], roles: readonly string[]): Promise<RawJob[]> {
     const response = await fetchWithRetry(REMOTEOK_API_URL, {
       headers: { "User-Agent": "job-intelligence-platform" },
     });
@@ -50,6 +54,9 @@ export const remoteokScraper: JobSourceScraper = {
     }
 
     const entries = (await response.json()) as RemoteOkEntry[];
-    return entries.filter(isJobEntry).map(toRawJob);
+    return entries
+      .filter(isJobEntry)
+      .map(toRawJob)
+      .filter((job) => jobMatchesRoles(job, roles));
   },
 };
