@@ -26,6 +26,16 @@ describe("SupabaseNotificationRepository", () => {
           job_scores: [{ ai_score: 0.9, ai_reasoning: "Great fit" }],
           notifications_log: [{ id: "notif-1" }],
         },
+        {
+          id: "job-3",
+          title: "Staff Engineer",
+          company_name: "Acme",
+          location_tags: ["remote"],
+          source: "greenhouse",
+          url: "https://example.com/jobs/3",
+          job_scores: [{ ai_score: 0.95, ai_reasoning: "Excellent fit" }],
+          notifications_log: null,
+        },
       ],
       error: null,
     });
@@ -43,6 +53,16 @@ describe("SupabaseNotificationRepository", () => {
         url: "https://example.com/jobs/1",
         aiScore: 0.85,
         aiReasoning: "Strong match",
+      },
+      {
+        jobId: "job-3",
+        title: "Staff Engineer",
+        companyName: "Acme",
+        locationTags: ["remote"],
+        source: "greenhouse",
+        url: "https://example.com/jobs/3",
+        aiScore: 0.95,
+        aiReasoning: "Excellent fit",
       },
     ]);
     expect(builder.eq).toHaveBeenCalledWith("job_scores.role_selection_id", "role-selection-1");
