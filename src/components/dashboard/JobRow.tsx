@@ -12,11 +12,6 @@ function formatScore(score: number | null): string {
 
 // AI score thresholds mirror scoring.md §3/§5: KEYWORD_THRESHOLD (0.25) and
 // NOTIFY_THRESHOLD (0.75) define the meaningful bands for the AI score.
-const AI_SCORE_TIER_CLASS = {
-  success: "border-transparent bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300",
-  warning: "border-transparent bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300",
-} as const;
-
 function ScoreBadge({ aiScore, keywordScore }: { aiScore: number | null; keywordScore: number | null }) {
   if (aiScore === null) {
     return (
@@ -27,13 +22,11 @@ function ScoreBadge({ aiScore, keywordScore }: { aiScore: number | null; keyword
     );
   }
 
-  const tierClass = aiScore >= 0.75 ? AI_SCORE_TIER_CLASS.success : aiScore >= 0.4 ? AI_SCORE_TIER_CLASS.warning : undefined;
+  const variant = aiScore >= 0.75 ? "success" : aiScore >= 0.4 ? "warning" : "outline";
 
   return (
     <div className="flex flex-col gap-0.5">
-      <Badge variant={tierClass ? "default" : "outline"} className={tierClass}>
-        {formatScore(aiScore)}
-      </Badge>
+      <Badge variant={variant}>{formatScore(aiScore)}</Badge>
       <span className="text-xs text-muted-foreground">AI score</span>
     </div>
   );
@@ -56,14 +49,14 @@ export function JobRow({ job }: { job: JobWithScore }) {
           </button>
         </TableCell>
         <TableCell>{job.companyName}</TableCell>
-        <TableCell className="space-x-1">
+        <TableCell className="hidden space-x-1 md:table-cell">
           {job.locationTags.map((tag) => (
             <Badge key={tag} variant="outline">
               {tag}
             </Badge>
           ))}
         </TableCell>
-        <TableCell>
+        <TableCell className="hidden md:table-cell">
           <Badge variant="secondary">{job.source}</Badge>
         </TableCell>
         <TableCell>

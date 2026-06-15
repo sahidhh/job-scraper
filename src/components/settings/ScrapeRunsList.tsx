@@ -3,8 +3,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import type { ScrapeRun } from "@/features/sources/domain/types";
 
 const STATUS_VARIANT = {
-  success: "default",
-  partial: "secondary",
+  success: "success",
+  partial: "warning",
   failed: "destructive",
 } as const;
 
@@ -16,8 +16,8 @@ export function ScrapeRunsList({ runs }: { runs: ScrapeRun[] }) {
           <TableHead>Source</TableHead>
           <TableHead>Status</TableHead>
           <TableHead>Jobs found</TableHead>
-          <TableHead>Run at</TableHead>
-          <TableHead>Error</TableHead>
+          <TableHead className="hidden md:table-cell">Run at</TableHead>
+          <TableHead className="hidden md:table-cell">Error</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -28,8 +28,8 @@ export function ScrapeRunsList({ runs }: { runs: ScrapeRun[] }) {
               <Badge variant={STATUS_VARIANT[run.status]}>{run.status}</Badge>
             </TableCell>
             <TableCell>{run.jobsFound}</TableCell>
-            <TableCell>{new Date(run.runAt).toLocaleString()}</TableCell>
-            <TableCell className="max-w-xs truncate">{run.error ?? "—"}</TableCell>
+            <TableCell className="hidden md:table-cell">{new Date(run.runAt).toLocaleString()}</TableCell>
+            <TableCell className="hidden max-w-xs truncate md:table-cell">{run.error ?? "—"}</TableCell>
           </TableRow>
         ))}
         {runs.length === 0 && (

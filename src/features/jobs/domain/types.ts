@@ -45,8 +45,10 @@ export interface JobFilters {
   minAiScore?: number;
 }
 
-// Job joined with its score for the active role_selection.
-export interface JobWithScore extends Job {
+// Job joined with its score for the active role_selection. Omits
+// `description` -- the dashboard query doesn't select it (P1 #4, never
+// rendered by JobRow).
+export interface JobWithScore extends Omit<Job, "description"> {
   keywordScore: number | null;
   aiScore: number | null;
   aiReasoning: string | null;

@@ -34,7 +34,7 @@ export default async function SettingsPage() {
       </div>
 
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle>Companies</CardTitle>
           <CompanyFormDialog
             trigger={

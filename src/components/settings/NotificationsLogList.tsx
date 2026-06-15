@@ -9,8 +9,8 @@ export function NotificationsLogList({ entries }: { entries: NotificationLogItem
         <TableRow>
           <TableHead>Job</TableHead>
           <TableHead>Company</TableHead>
-          <TableHead>Source</TableHead>
-          <TableHead>Sent at</TableHead>
+          <TableHead className="hidden md:table-cell">Source</TableHead>
+          <TableHead className="hidden md:table-cell">Sent at</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -18,10 +18,10 @@ export function NotificationsLogList({ entries }: { entries: NotificationLogItem
           <TableRow key={entry.id}>
             <TableCell className="font-medium">{entry.jobTitle}</TableCell>
             <TableCell>{entry.companyName}</TableCell>
-            <TableCell>
+            <TableCell className="hidden md:table-cell">
               <Badge variant="secondary">{entry.source}</Badge>
             </TableCell>
-            <TableCell>{new Date(entry.sentAt).toLocaleString()}</TableCell>
+            <TableCell className="hidden md:table-cell">{new Date(entry.sentAt).toLocaleString()}</TableCell>
           </TableRow>
         ))}
         {entries.length === 0 && (

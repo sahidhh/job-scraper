@@ -53,20 +53,27 @@ interface JobRepository {
   Matches title *or* description, consistent with the scrape-time role filter (`jobMatchesRoles`, AD-15) — a job ingested on a description-only role match must still be selectable for scoring. Rows with an existing `job_scores` entry are included when `ai_score is null` (decisions.md AD-14 retry).
 - `findForDashboard(roleSelectionId, filters, limit)` →
   ```sql
-  select j.*, s.keyword_score, s.ai_score, s.ai_reasoning
+  select j.id, j.source, j.source_job_id, j.company_id, j.company_name, j.title,
+         j.location_raw, j.location_tags, j.url, j.posted_at, j.first_seen_at, j.updated_at,
+         s.keyword_score, s.ai_score, s.ai_reasoning
   from jobs j
   left join job_scores s
     on s.job_id = j.id and s.role_selection_id = $roleSelectionId
   where j.location_tags && $filters.locationTags  -- if provided
     and j.source = any($filters.sources)          -- if provided
+    and s.ai_score >= $filters.minAiScore         -- if provided
   order by s.ai_score desc nulls last, j.posted_at desc
   limit $limit + 1
   ```
   Fetches `limit + 1` rows; the extra row (if present) is dropped from the
   returned `jobs` and only used to compute `hasMore` for the dashboard's
-  "load more" control. `filters.minAiScore` (if set) is applied in-app to
-  the limited page, so the returned count may be smaller than `limit` even
-  when `hasMore` is true.
+  "load more" control. `j.description` is intentionally excluded from the
+  select (P1 #4 — never rendered by `JobRow`, and dropping it shrinks the
+  dashboard's RSC payload), so `JobWithScore` is `Omit<Job, "description">`
+  plus the score fields. `filters.minAiScore` (if set) is applied as a
+  `gte` filter on the embedded `job_scores.ai_score` (P1 #5) — because
+  `job_scores` is a `!left` join, this filter effectively requires a
+  matching scored row, excluding unscored jobs from the result.
 
 **Transaction boundaries:** `upsertMany` is a single batched statement (or several batches, each independently atomic) — partial success across batches is acceptable since upsert is idempotent and the next cron run retries.
 

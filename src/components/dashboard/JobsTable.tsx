@@ -9,8 +9,8 @@ export function JobsTable({ jobs }: { jobs: JobWithScore[] }) {
         <TableRow>
           <TableHead>Title</TableHead>
           <TableHead>Company</TableHead>
-          <TableHead>Location</TableHead>
-          <TableHead>Source</TableHead>
+          <TableHead className="hidden md:table-cell">Location</TableHead>
+          <TableHead className="hidden md:table-cell">Source</TableHead>
           <TableHead>Score</TableHead>
           <TableHead>Link</TableHead>
         </TableRow>

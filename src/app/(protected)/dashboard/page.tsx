@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { FilterBar } from "@/components/dashboard/FilterBar";
 import { JobsTable } from "@/components/dashboard/JobsTable";
 import { Button } from "@/components/ui/button";
@@ -6,6 +7,7 @@ import { SupabaseCompanyRepository } from "@/features/companies/infrastructure/S
 import type { JobFilters } from "@/features/jobs/domain/types";
 import { SupabaseJobRepository } from "@/features/jobs/infrastructure/SupabaseJobRepository";
 import { SupabaseRoleRepository } from "@/features/roles/infrastructure/SupabaseRoleRepository";
+import type { ScrapeRun } from "@/features/sources/domain/types";
 import { SupabaseScrapeRunRepository } from "@/features/sources/infrastructure/SupabaseScrapeRunRepository";
 import type { JobSource, LocationTag } from "@/shared/domain/enums";
 import { JOB_SOURCES, LOCATION_TAGS } from "@/shared/domain/enums";
@@ -72,7 +74,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       </div>
 
       {activeSelection ? (
-        <DashboardJobs roleSelectionId={activeSelection.id} filters={parseFilters(params)} params={params} />
+        <DashboardContent roleSelectionId={activeSelection.id} filters={parseFilters(params)} params={params} />
       ) : (
         <Button asChild>
           <Link href="/roles">Choose a role</Link>
@@ -82,7 +84,10 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   );
 }
 
-async function DashboardJobs({
+// Companies/scrape-run data doesn't depend on the jobs filters, so it's
+// fetched here (outside the Suspense boundary below) and isn't re-resolved
+// when only the filter-dependent JobsSection re-renders (P1 #2).
+async function DashboardContent({
   roleSelectionId,
   filters,
   params,
@@ -92,16 +97,55 @@ async function DashboardJobs({
   params: DashboardSearchParams;
 }) {
   const client = await createSupabaseServerClient();
-  const jobRepository = new SupabaseJobRepository(client);
   const companyRepository = new SupabaseCompanyRepository(client);
   const scrapeRunRepository = new SupabaseScrapeRunRepository(client);
+
+  const [companies, scrapeRuns] = await Promise.all([companyRepository.list(), scrapeRunRepository.listRecent(1)]);
+
+  return (
+    <div className="space-y-4">
+      {companies.length === 0 && (
+        <div className="rounded-md border border-border bg-muted/50 p-3 text-sm">
+          <p className="text-muted-foreground">
+            No companies configured yet — add some in Settings so the scraper has somewhere to look.
+          </p>
+          <Button asChild size="sm" variant="outline" className="mt-2">
+            <Link href="/settings">Go to Settings &rarr;</Link>
+          </Button>
+        </div>
+      )}
+      <Suspense fallback={<JobsSectionFallback />}>
+        <JobsSection roleSelectionId={roleSelectionId} filters={filters} params={params} scrapeRuns={scrapeRuns} />
+      </Suspense>
+    </div>
+  );
+}
+
+function JobsSectionFallback() {
+  return (
+    <div className="space-y-4">
+      <div className="h-5 w-72 animate-pulse rounded bg-muted" />
+      <div className="h-64 animate-pulse rounded-md border border-border bg-muted/50" />
+    </div>
+  );
+}
+
+async function JobsSection({
+  roleSelectionId,
+  filters,
+  params,
+  scrapeRuns,
+}: {
+  roleSelectionId: string;
+  filters: JobFilters;
+  params: DashboardSearchParams;
+  scrapeRuns: ScrapeRun[];
+}) {
+  const client = await createSupabaseServerClient();
+  const jobRepository = new SupabaseJobRepository(client);
   const limit = parseLimit(params);
 
-  const [{ jobs, hasMore }, companies, scrapeRuns] = await Promise.all([
-    jobRepository.findForDashboard(roleSelectionId, filters, limit),
-    companyRepository.list(),
-    scrapeRunRepository.listRecent(1),
-  ]);
+  const { jobs, hasMore } = await jobRepository.findForDashboard(roleSelectionId, filters, limit);
 
   const scoredCount = jobs.filter((job) => job.aiScore !== null).length;
   const pendingCount = jobs.length - scoredCount;
@@ -113,16 +157,6 @@ async function DashboardJobs({
         {lastRun ? `Last scraped ${new Date(lastRun.runAt).toLocaleString()} — ` : ""}
         {jobs.length} job{jobs.length === 1 ? "" : "s"} matched, {scoredCount} scored by AI, {pendingCount} pending.
       </p>
-      {companies.length === 0 && (
-        <div className="rounded-md border border-border bg-muted/50 p-3 text-sm">
-          <p className="text-muted-foreground">
-            No companies configured yet — add some in Settings so the scraper has somewhere to look.
-          </p>
-          <Button asChild size="sm" variant="outline" className="mt-2">
-            <Link href="/settings">Go to Settings &rarr;</Link>
-          </Button>
-        </div>
-      )}
       {jobs.length === 0 ? (
         <div className="rounded-md border border-border bg-muted/50 p-3 text-sm text-muted-foreground">
           {scrapeRuns.length === 0

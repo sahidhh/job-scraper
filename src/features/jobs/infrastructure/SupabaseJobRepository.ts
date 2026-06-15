@@ -7,7 +7,9 @@ import type { Database } from "../../../../supabase/database.types";
 type JobRow = Database["public"]["Tables"]["jobs"]["Row"];
 type JobInsertRow = Database["public"]["Tables"]["jobs"]["Insert"];
 
-interface JobWithScoreRow extends JobRow {
+// findForDashboard doesn't select `description` (P1 #4) -- never rendered
+// by JobRow, and dropping it shrinks the dashboard's RSC payload.
+interface DashboardJobRow extends Omit<JobRow, "description"> {
   job_scores: { keyword_score: number; ai_score: number | null; ai_reasoning: string | null }[];
 }
 
@@ -31,10 +33,21 @@ function toJob(row: JobRow): Job {
   };
 }
 
-function toJobWithScore(row: JobWithScoreRow): JobWithScore {
-  const score = row.job_scores[0] as JobWithScoreRow["job_scores"][number] | undefined;
+function toDashboardJob(row: DashboardJobRow): JobWithScore {
+  const score = row.job_scores[0] as DashboardJobRow["job_scores"][number] | undefined;
   return {
-    ...toJob(row),
+    id: row.id,
+    source: row.source,
+    sourceJobId: row.source_job_id,
+    companyId: row.company_id,
+    companyName: row.company_name,
+    title: row.title,
+    locationRaw: row.location_raw,
+    locationTags: row.location_tags,
+    url: row.url,
+    postedAt: row.posted_at,
+    firstSeenAt: row.first_seen_at,
+    updatedAt: row.updated_at,
     keywordScore: score?.keyword_score ?? null,
     aiScore: score?.ai_score ?? null,
     aiReasoning: score?.ai_reasoning ?? null,
@@ -171,7 +184,9 @@ export class SupabaseJobRepository implements JobRepository {
   async findForDashboard(roleSelectionId: string, filters: JobFilters, limit: number): Promise<JobsPage> {
     let query = this.client
       .from("jobs")
-      .select("*, job_scores!left(keyword_score, ai_score, ai_reasoning, role_selection_id)")
+      .select(
+        "id, source, source_job_id, company_id, company_name, title, location_raw, location_tags, url, posted_at, first_seen_at, updated_at, job_scores!left(keyword_score, ai_score, ai_reasoning, role_selection_id)",
+      )
       .eq("job_scores.role_selection_id", roleSelectionId);
 
     if (filters.locationTags && filters.locationTags.length > 0) {
@@ -180,23 +195,22 @@ export class SupabaseJobRepository implements JobRepository {
     if (filters.sources && filters.sources.length > 0) {
       query = query.in("source", filters.sources);
     }
+    if (filters.minAiScore !== undefined) {
+      query = query.gte("job_scores.ai_score", filters.minAiScore);
+    }
 
     query = query
       .order("ai_score", { ascending: false, nullsFirst: false, foreignTable: "job_scores" })
       .order("posted_at", { ascending: false })
       .limit(limit + 1);
 
-    const { data, error } = await query.returns<JobWithScoreRow[]>();
+    const { data, error } = await query.returns<DashboardJobRow[]>();
     if (error) throw error;
 
     const rows = data ?? [];
     const hasMore = rows.length > limit;
-    const mapped = rows.slice(0, limit).map(toJobWithScore);
+    const jobs = rows.slice(0, limit).map(toDashboardJob);
 
-    if (filters.minAiScore !== undefined) {
-      const threshold = filters.minAiScore;
-      return { jobs: mapped.filter((job) => job.aiScore !== null && job.aiScore >= threshold), hasMore };
-    }
-    return { jobs: mapped, hasMore };
+    return { jobs, hasMore };
   }
 }

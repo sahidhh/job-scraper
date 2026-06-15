@@ -11,8 +11,8 @@ export function CompaniesTable({ companies }: { companies: Company[] }) {
       <TableHeader>
         <TableRow>
           <TableHead>Name</TableHead>
-          <TableHead>Source</TableHead>
-          <TableHead>Board token</TableHead>
+          <TableHead className="hidden md:table-cell">Source</TableHead>
+          <TableHead className="hidden md:table-cell">Board token</TableHead>
           <TableHead>Status</TableHead>
           <TableHead className="text-right">Actions</TableHead>
         </TableRow>
@@ -21,8 +21,8 @@ export function CompaniesTable({ companies }: { companies: Company[] }) {
         {companies.map((company) => (
           <TableRow key={company.id}>
             <TableCell className="font-medium">{company.name}</TableCell>
-            <TableCell>{company.source}</TableCell>
-            <TableCell>{company.boardToken ?? "—"}</TableCell>
+            <TableCell className="hidden md:table-cell">{company.source}</TableCell>
+            <TableCell className="hidden md:table-cell">{company.boardToken ?? "—"}</TableCell>
             <TableCell>
               <Badge variant={company.active ? "default" : "secondary"}>
                 {company.active ? "Active" : "Inactive"}

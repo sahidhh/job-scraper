@@ -94,7 +94,7 @@ export function RoleSelectorForm({ activeSelection }: { activeSelection: RoleSel
         />
       )}
       {isActiveSelection && (
-        <div className="flex items-center gap-2 rounded-md border border-border bg-muted/50 p-3 text-sm">
+        <div className="flex flex-col gap-2 rounded-md border border-border bg-muted/50 p-3 text-sm sm:flex-row sm:items-center">
           <p className="text-muted-foreground">Saved! This is now your active role selection.</p>
           <Button asChild size="sm" variant="outline">
             <Link href="/dashboard">View matching jobs &rarr;</Link>

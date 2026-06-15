@@ -224,12 +224,9 @@ describe("SupabaseJobRepository", () => {
       ]);
     });
 
-    it("filters out jobs below minAiScore", async () => {
-      const { client } = mockSupabaseClient({
-        data: [
-          { ...jobRow, id: "job-low", job_scores: [{ keyword_score: 1, ai_score: 0.4, ai_reasoning: "Weak" }] },
-          { ...jobRow, id: "job-high", job_scores: [{ keyword_score: 1, ai_score: 0.9, ai_reasoning: "Strong" }] },
-        ],
+    it("pushes minAiScore into the query as a gte filter on job_scores.ai_score", async () => {
+      const { client, builder } = mockSupabaseClient({
+        data: [{ ...jobRow, id: "job-high", job_scores: [{ keyword_score: 1, ai_score: 0.9, ai_reasoning: "Strong" }] }],
         error: null,
       });
       const repo = new SupabaseJobRepository(client);
@@ -237,6 +234,7 @@ describe("SupabaseJobRepository", () => {
       const result = await repo.findForDashboard("role-selection-1", { minAiScore: 0.8 }, 50);
 
       expect(result.jobs).toEqual([expect.objectContaining({ id: "job-high" })]);
+      expect(builder.gte).toHaveBeenCalledWith("job_scores.ai_score", 0.8);
     });
 
     it("sets hasMore when more rows exist than the requested limit", async () => {

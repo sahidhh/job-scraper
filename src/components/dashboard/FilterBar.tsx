@@ -20,9 +20,9 @@ export function FilterBar({ hasAiScores }: { hasAiScores: boolean }) {
   }
 
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex flex-col gap-2 sm:flex-row">
       <Select value={searchParams.get("location") ?? "all"} onValueChange={(value) => updateParam("location", value)}>
-        <SelectTrigger className="w-40">
+        <SelectTrigger className="w-full sm:w-40">
           <SelectValue placeholder="Location" />
         </SelectTrigger>
         <SelectContent>
@@ -36,7 +36,7 @@ export function FilterBar({ hasAiScores }: { hasAiScores: boolean }) {
       </Select>
 
       <Select value={searchParams.get("source") ?? "all"} onValueChange={(value) => updateParam("source", value)}>
-        <SelectTrigger className="w-40">
+        <SelectTrigger className="w-full sm:w-40">
           <SelectValue placeholder="Source" />
         </SelectTrigger>
         <SelectContent>
@@ -59,7 +59,7 @@ export function FilterBar({ hasAiScores }: { hasAiScores: boolean }) {
         onBlur={(event) => updateParam("minScore", event.target.value)}
         disabled={!hasAiScores}
         title={hasAiScores ? undefined : "AI scoring hasn't run for these jobs yet — this filter has no effect until jobs are AI-scored."}
-        className="w-32"
+        className="w-full sm:w-32"
       />
     </div>
   );
