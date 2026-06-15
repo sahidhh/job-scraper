@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { JOB_SOURCES, LOCATION_TAGS } from "@/shared/domain/enums";
 
-export function FilterBar() {
+export function FilterBar({ hasAiScores }: { hasAiScores: boolean }) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -57,6 +57,8 @@ export function FilterBar() {
         placeholder="Min AI score"
         defaultValue={searchParams.get("minScore") ?? ""}
         onBlur={(event) => updateParam("minScore", event.target.value)}
+        disabled={!hasAiScores}
+        title={hasAiScores ? undefined : "AI scoring hasn't run for these jobs yet — this filter has no effect until jobs are AI-scored."}
         className="w-32"
       />
     </div>

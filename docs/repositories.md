@@ -33,7 +33,7 @@ interface CompanyRepository {
 interface JobRepository {
   upsertMany(jobs: NormalizedJob[]): Promise<{ inserted: number; updated: number }>;
   findUnscored(roleSelectionId: string, expandedRoles: string[]): Promise<Job[]>;
-  findForDashboard(roleSelectionId: string, filters: JobFilters): Promise<JobWithScore[]>;
+  findForDashboard(roleSelectionId: string, filters: JobFilters, limit: number): Promise<{ jobs: JobWithScore[]; hasMore: boolean }>;
 }
 ```
 
@@ -51,7 +51,7 @@ interface JobRepository {
          or j.description ilike any (array[...expandedRoles patterns...]))
   ```
   Matches title *or* description, consistent with the scrape-time role filter (`jobMatchesRoles`, AD-15) — a job ingested on a description-only role match must still be selectable for scoring. Rows with an existing `job_scores` entry are included when `ai_score is null` (decisions.md AD-14 retry).
-- `findForDashboard(roleSelectionId, filters)` →
+- `findForDashboard(roleSelectionId, filters, limit)` →
   ```sql
   select j.*, s.keyword_score, s.ai_score, s.ai_reasoning
   from jobs j
@@ -60,7 +60,13 @@ interface JobRepository {
   where j.location_tags && $filters.locationTags  -- if provided
     and j.source = any($filters.sources)          -- if provided
   order by s.ai_score desc nulls last, j.posted_at desc
+  limit $limit + 1
   ```
+  Fetches `limit + 1` rows; the extra row (if present) is dropped from the
+  returned `jobs` and only used to compute `hasMore` for the dashboard's
+  "load more" control. `filters.minAiScore` (if set) is applied in-app to
+  the limited page, so the returned count may be smaller than `limit` even
+  when `hasMore` is true.
 
 **Transaction boundaries:** `upsertMany` is a single batched statement (or several batches, each independently atomic) — partial success across batches is acceptable since upsert is idempotent and the next cron run retries.
 

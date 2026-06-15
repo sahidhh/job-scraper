@@ -51,3 +51,10 @@ export interface JobWithScore extends Job {
   aiScore: number | null;
   aiReasoning: string | null;
 }
+
+// Result of findForDashboard: a limited page of jobs plus whether more rows
+// exist beyond `limit` (repositories.md §2).
+export interface JobsPage {
+  jobs: JobWithScore[];
+  hasMore: boolean;
+}

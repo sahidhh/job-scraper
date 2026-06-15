@@ -11,11 +11,16 @@ import type { JobSource, LocationTag } from "@/shared/domain/enums";
 import { JOB_SOURCES, LOCATION_TAGS } from "@/shared/domain/enums";
 import { createSupabaseServerClient } from "@/shared/infrastructure/supabase/server";
 
+const DEFAULT_JOBS_LIMIT = 50;
+const MAX_JOBS_LIMIT = 500;
+
+type DashboardSearchParams = { location?: string; source?: string; minScore?: string; limit?: string };
+
 interface DashboardPageProps {
-  searchParams: Promise<{ location?: string; source?: string; minScore?: string }>;
+  searchParams: Promise<DashboardSearchParams>;
 }
 
-function parseFilters(params: { location?: string; source?: string; minScore?: string }): JobFilters {
+function parseFilters(params: DashboardSearchParams): JobFilters {
   const filters: JobFilters = {};
 
   if (params.location && (LOCATION_TAGS as readonly string[]).includes(params.location)) {
@@ -32,6 +37,21 @@ function parseFilters(params: { location?: string; source?: string; minScore?: s
   }
 
   return filters;
+}
+
+function parseLimit(params: DashboardSearchParams): number {
+  const value = Number(params.limit);
+  if (!Number.isFinite(value) || value <= 0) return DEFAULT_JOBS_LIMIT;
+  return Math.min(Math.floor(value), MAX_JOBS_LIMIT);
+}
+
+function loadMoreHref(params: DashboardSearchParams, currentLimit: number): string {
+  const next = new URLSearchParams();
+  if (params.location) next.set("location", params.location);
+  if (params.source) next.set("source", params.source);
+  if (params.minScore) next.set("minScore", params.minScore);
+  next.set("limit", String(currentLimit + DEFAULT_JOBS_LIMIT));
+  return `/dashboard?${next.toString()}`;
 }
 
 export default async function DashboardPage({ searchParams }: DashboardPageProps) {
@@ -52,7 +72,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       </div>
 
       {activeSelection ? (
-        <DashboardJobs roleSelectionId={activeSelection.id} filters={parseFilters(params)} />
+        <DashboardJobs roleSelectionId={activeSelection.id} filters={parseFilters(params)} params={params} />
       ) : (
         <Button asChild>
           <Link href="/roles">Choose a role</Link>
@@ -62,20 +82,37 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   );
 }
 
-async function DashboardJobs({ roleSelectionId, filters }: { roleSelectionId: string; filters: JobFilters }) {
+async function DashboardJobs({
+  roleSelectionId,
+  filters,
+  params,
+}: {
+  roleSelectionId: string;
+  filters: JobFilters;
+  params: DashboardSearchParams;
+}) {
   const client = await createSupabaseServerClient();
   const jobRepository = new SupabaseJobRepository(client);
   const companyRepository = new SupabaseCompanyRepository(client);
   const scrapeRunRepository = new SupabaseScrapeRunRepository(client);
+  const limit = parseLimit(params);
 
-  const [jobs, companies, scrapeRuns] = await Promise.all([
-    jobRepository.findForDashboard(roleSelectionId, filters),
+  const [{ jobs, hasMore }, companies, scrapeRuns] = await Promise.all([
+    jobRepository.findForDashboard(roleSelectionId, filters, limit),
     companyRepository.list(),
     scrapeRunRepository.listRecent(1),
   ]);
 
+  const scoredCount = jobs.filter((job) => job.aiScore !== null).length;
+  const pendingCount = jobs.length - scoredCount;
+  const lastRun = scrapeRuns[0];
+
   return (
     <div className="space-y-4">
+      <p className="text-sm text-muted-foreground">
+        {lastRun ? `Last scraped ${new Date(lastRun.runAt).toLocaleString()} — ` : ""}
+        {jobs.length} job{jobs.length === 1 ? "" : "s"} matched, {scoredCount} scored by AI, {pendingCount} pending.
+      </p>
       {companies.length === 0 && (
         <div className="rounded-md border border-border bg-muted/50 p-3 text-sm">
           <p className="text-muted-foreground">
@@ -92,13 +129,19 @@ async function DashboardJobs({ roleSelectionId, filters }: { roleSelectionId: st
             ? "No jobs scraped yet. The scrape pipeline runs via GitHub Actions — see Settings for details."
             : "No matching jobs yet for this role selection. Jobs are added by the next scheduled scrape run."}
         </div>
-      ) : jobs.every((job) => job.aiScore === null) ? (
+      ) : pendingCount > 0 ? (
         <div className="rounded-md border border-border bg-muted/50 p-3 text-sm text-muted-foreground">
-          Jobs have been scraped but not scored yet. Scoring runs automatically after each scrape.
+          {pendingCount} of {jobs.length} job{jobs.length === 1 ? "" : "s"} pending AI review — keyword match score
+          shown until AI review completes.
         </div>
       ) : null}
-      <FilterBar />
+      <FilterBar hasAiScores={scoredCount > 0} />
       <JobsTable jobs={jobs} />
+      {hasMore && (
+        <Button asChild variant="outline" size="sm">
+          <Link href={loadMoreHref(params, limit)}>Load more</Link>
+        </Button>
+      )}
     </div>
   );
 }

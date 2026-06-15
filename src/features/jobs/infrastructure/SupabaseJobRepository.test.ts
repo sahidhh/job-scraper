@@ -187,22 +187,27 @@ describe("SupabaseJobRepository", () => {
       });
       const repo = new SupabaseJobRepository(client);
 
-      const result = await repo.findForDashboard("role-selection-1", {
-        locationTags: ["remote"],
-        sources: ["greenhouse"],
-      });
+      const result = await repo.findForDashboard(
+        "role-selection-1",
+        { locationTags: ["remote"], sources: ["greenhouse"] },
+        50,
+      );
 
-      expect(result).toEqual([
-        expect.objectContaining({
-          id: "job-1",
-          keywordScore: 1,
-          aiScore: 0.85,
-          aiReasoning: "Strong match",
-        }),
-      ]);
+      expect(result).toEqual({
+        jobs: [
+          expect.objectContaining({
+            id: "job-1",
+            keywordScore: 1,
+            aiScore: 0.85,
+            aiReasoning: "Strong match",
+          }),
+        ],
+        hasMore: false,
+      });
       expect(builder.eq).toHaveBeenCalledWith("job_scores.role_selection_id", "role-selection-1");
       expect(builder.overlaps).toHaveBeenCalledWith("location_tags", ["remote"]);
       expect(builder.in).toHaveBeenCalledWith("source", ["greenhouse"]);
+      expect(builder.limit).toHaveBeenCalledWith(51);
     });
 
     it("returns a job with null score fields when it has no job_scores row", async () => {
@@ -212,9 +217,9 @@ describe("SupabaseJobRepository", () => {
       });
       const repo = new SupabaseJobRepository(client);
 
-      const result = await repo.findForDashboard("role-selection-1", {});
+      const result = await repo.findForDashboard("role-selection-1", {}, 50);
 
-      expect(result).toEqual([
+      expect(result.jobs).toEqual([
         expect.objectContaining({ keywordScore: null, aiScore: null, aiReasoning: null }),
       ]);
     });
@@ -229,9 +234,25 @@ describe("SupabaseJobRepository", () => {
       });
       const repo = new SupabaseJobRepository(client);
 
-      const result = await repo.findForDashboard("role-selection-1", { minAiScore: 0.8 });
+      const result = await repo.findForDashboard("role-selection-1", { minAiScore: 0.8 }, 50);
 
-      expect(result).toEqual([expect.objectContaining({ id: "job-high" })]);
+      expect(result.jobs).toEqual([expect.objectContaining({ id: "job-high" })]);
+    });
+
+    it("sets hasMore when more rows exist than the requested limit", async () => {
+      const { client } = mockSupabaseClient({
+        data: [
+          { ...jobRow, id: "job-1", job_scores: [] },
+          { ...jobRow, id: "job-2", job_scores: [] },
+        ],
+        error: null,
+      });
+      const repo = new SupabaseJobRepository(client);
+
+      const result = await repo.findForDashboard("role-selection-1", {}, 1);
+
+      expect(result.hasMore).toBe(true);
+      expect(result.jobs).toHaveLength(1);
     });
   });
 });

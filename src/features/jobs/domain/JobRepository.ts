@@ -1,4 +1,4 @@
-import type { Job, JobFilters, JobWithScore, NormalizedJob, UpsertResult } from "./types";
+import type { Job, JobFilters, JobsPage, NormalizedJob, UpsertResult } from "./types";
 
 export interface JobRepository {
   /**
@@ -18,7 +18,8 @@ export interface JobRepository {
 
   /**
    * Jobs joined with job_scores for roleSelectionId, filtered/sorted for
-   * the /dashboard table (repositories.md §2).
+   * the /dashboard table, capped at `limit` rows (repositories.md §2).
+   * `hasMore` indicates whether additional rows exist beyond `limit`.
    */
-  findForDashboard(roleSelectionId: string, filters: JobFilters): Promise<JobWithScore[]>;
+  findForDashboard(roleSelectionId: string, filters: JobFilters, limit: number): Promise<JobsPage>;
 }

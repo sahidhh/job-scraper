@@ -1,5 +1,5 @@
 import type { JobRepository } from "@/features/jobs/domain/JobRepository";
-import type { Job, JobFilters, JobWithScore, NormalizedJob, UpsertResult } from "@/features/jobs/domain/types";
+import type { Job, JobFilters, JobsPage, JobWithScore, NormalizedJob, UpsertResult } from "@/features/jobs/domain/types";
 import type { JobSource } from "@/shared/domain/enums";
 import type { TypedSupabaseClient } from "@/shared/infrastructure/supabaseClient";
 import type { Database } from "../../../../supabase/database.types";
@@ -168,7 +168,7 @@ export class SupabaseJobRepository implements JobRepository {
     return (data ?? []).map(toJob);
   }
 
-  async findForDashboard(roleSelectionId: string, filters: JobFilters): Promise<JobWithScore[]> {
+  async findForDashboard(roleSelectionId: string, filters: JobFilters, limit: number): Promise<JobsPage> {
     let query = this.client
       .from("jobs")
       .select("*, job_scores!left(keyword_score, ai_score, ai_reasoning, role_selection_id)")
@@ -183,17 +183,20 @@ export class SupabaseJobRepository implements JobRepository {
 
     query = query
       .order("ai_score", { ascending: false, nullsFirst: false, foreignTable: "job_scores" })
-      .order("posted_at", { ascending: false });
+      .order("posted_at", { ascending: false })
+      .limit(limit + 1);
 
     const { data, error } = await query.returns<JobWithScoreRow[]>();
     if (error) throw error;
 
-    const mapped = (data ?? []).map(toJobWithScore);
+    const rows = data ?? [];
+    const hasMore = rows.length > limit;
+    const mapped = rows.slice(0, limit).map(toJobWithScore);
 
     if (filters.minAiScore !== undefined) {
       const threshold = filters.minAiScore;
-      return mapped.filter((job) => job.aiScore !== null && job.aiScore >= threshold);
+      return { jobs: mapped.filter((job) => job.aiScore !== null && job.aiScore >= threshold), hasMore };
     }
-    return mapped;
+    return { jobs: mapped, hasMore };
   }
 }

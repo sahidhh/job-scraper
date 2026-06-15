@@ -10,6 +10,35 @@ function formatScore(score: number | null): string {
   return score === null ? "—" : `${Math.round(score * 100)}%`;
 }
 
+// AI score thresholds mirror scoring.md §3/§5: KEYWORD_THRESHOLD (0.25) and
+// NOTIFY_THRESHOLD (0.75) define the meaningful bands for the AI score.
+const AI_SCORE_TIER_CLASS = {
+  success: "border-transparent bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300",
+  warning: "border-transparent bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300",
+} as const;
+
+function ScoreBadge({ aiScore, keywordScore }: { aiScore: number | null; keywordScore: number | null }) {
+  if (aiScore === null) {
+    return (
+      <div className="flex flex-col gap-0.5">
+        <Badge variant="outline">Pending</Badge>
+        <span className="text-xs text-muted-foreground">Keyword: {formatScore(keywordScore)}</span>
+      </div>
+    );
+  }
+
+  const tierClass = aiScore >= 0.75 ? AI_SCORE_TIER_CLASS.success : aiScore >= 0.4 ? AI_SCORE_TIER_CLASS.warning : undefined;
+
+  return (
+    <div className="flex flex-col gap-0.5">
+      <Badge variant={tierClass ? "default" : "outline"} className={tierClass}>
+        {formatScore(aiScore)}
+      </Badge>
+      <span className="text-xs text-muted-foreground">AI score</span>
+    </div>
+  );
+}
+
 export function JobRow({ job }: { job: JobWithScore }) {
   const [open, setOpen] = useState(false);
 
@@ -37,7 +66,9 @@ export function JobRow({ job }: { job: JobWithScore }) {
         <TableCell>
           <Badge variant="secondary">{job.source}</Badge>
         </TableCell>
-        <TableCell>{formatScore(job.aiScore ?? job.keywordScore)}</TableCell>
+        <TableCell>
+          <ScoreBadge aiScore={job.aiScore} keywordScore={job.keywordScore} />
+        </TableCell>
         <TableCell>
           <a href={job.url} target="_blank" rel="noreferrer" className="text-primary hover:underline">
             View
@@ -47,7 +78,7 @@ export function JobRow({ job }: { job: JobWithScore }) {
       {open && (
         <TableRow>
           <TableCell colSpan={6} className="whitespace-normal text-sm text-muted-foreground">
-            {job.aiReasoning ?? "No AI reasoning available yet."}
+            {job.aiReasoning ?? "AI review pending — keyword match score shown above."}
           </TableCell>
         </TableRow>
       )}
