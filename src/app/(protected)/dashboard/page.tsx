@@ -172,7 +172,16 @@ async function JobsSection({
   ]);
 
   const scoredCount = jobs.filter((job) => job.aiScore !== null).length;
-  const pendingCount = jobs.length - scoredCount;
+  // ai_score === null splits into two distinct cases (reports/dashboard-scoring-discrepancy.md):
+  // - keywordScore === null: job has no job_scores row for this role
+  //   selection at all -- its title/description don't match the active
+  //   role's expandedRoles, so it will never be scored.
+  // - keywordScore !== null: scoring ran -- either the keyword score was
+  //   below the AI gate (permanent) or the AI call failed and will be
+  //   retried on the next scoring run.
+  const notEligibleCount = jobs.filter((job) => job.aiScore === null && job.keywordScore === null).length;
+  const awaitingReviewCount = jobs.filter((job) => job.aiScore === null && job.keywordScore !== null).length;
+  const pendingCount = notEligibleCount + awaitingReviewCount;
   const lastRun = scrapeRuns[0];
 
   return (
@@ -190,9 +199,19 @@ async function JobsSection({
             : "No matching jobs yet for this role selection. Jobs are added by the next scheduled scrape run."}
         </div>
       ) : pendingCount > 0 ? (
-        <div className="rounded-md border border-border bg-muted/50 p-3 text-sm text-muted-foreground">
-          {pendingCount} of {jobs.length} job{jobs.length === 1 ? "" : "s"} pending AI review — keyword match score
-          shown until AI review completes.
+        <div className="space-y-1">
+          {awaitingReviewCount > 0 && (
+            <div className="rounded-md border border-border bg-muted/50 p-3 text-sm text-muted-foreground">
+              {awaitingReviewCount} of {jobs.length} job{jobs.length === 1 ? "" : "s"} awaiting AI review — keyword
+              match score shown; some may stay below the AI scoring threshold and never receive an AI score.
+            </div>
+          )}
+          {notEligibleCount > 0 && (
+            <div className="rounded-md border border-border bg-muted/50 p-3 text-sm text-muted-foreground">
+              {notEligibleCount} of {jobs.length} job{jobs.length === 1 ? "" : "s"} don&rsquo;t match &ldquo;
+              {primaryRole}&rdquo; under the current role selection and won&rsquo;t be scored.
+            </div>
+          )}
         </div>
       ) : null}
       <FilterBar hasAiScores={scoredCount > 0} />
