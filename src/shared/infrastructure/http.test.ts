@@ -43,6 +43,19 @@ describe("fetchWithRetry", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
+  it("retries once on a 429 response and returns the retry's result", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(makeResponse(429))
+      .mockResolvedValueOnce(makeResponse(200));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await fetchWithRetry("https://example.com", undefined, { retryDelayMs: 1 });
+
+    expect(response.status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
   it("returns the last 5xx response once retries are exhausted", async () => {
     const fetchMock = vi.fn().mockResolvedValue(makeResponse(500));
     vi.stubGlobal("fetch", fetchMock);
