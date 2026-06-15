@@ -116,7 +116,9 @@ describe("SupabaseJobRepository", () => {
       ];
       expect(scoredBuilder.eq).toHaveBeenCalledWith("role_selection_id", "role-selection-1");
       expect(scoredBuilder.not).toHaveBeenCalledWith("ai_score", "is", null);
-      expect(jobsBuilder.or).toHaveBeenCalledWith("title.ilike.%React Developer%,title.ilike.%Frontend Engineer%");
+      expect(jobsBuilder.or).toHaveBeenCalledWith(
+        "title.ilike.%React Developer%,description.ilike.%React Developer%,title.ilike.%Frontend Engineer%,description.ilike.%Frontend Engineer%",
+      );
       expect(jobsBuilder.not).toHaveBeenCalledWith("id", "in", "(job-2)");
     });
 
@@ -163,7 +165,9 @@ describe("SupabaseJobRepository", () => {
         Record<string, ReturnType<typeof vi.fn>>,
         Record<string, ReturnType<typeof vi.fn>>,
       ];
-      expect(jobsBuilder.or).toHaveBeenCalledWith("title.ilike.%Engineer Backend Remote%");
+      expect(jobsBuilder.or).toHaveBeenCalledWith(
+        "title.ilike.%Engineer Backend Remote%,description.ilike.%Engineer Backend Remote%",
+      );
     });
 
     it("returns an empty array without querying when every role is sanitized to empty", async () => {

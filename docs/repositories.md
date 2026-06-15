@@ -46,9 +46,11 @@ interface JobRepository {
   select j.* from jobs j
   left join job_scores s
     on s.job_id = j.id and s.role_selection_id = $roleSelectionId
-  where s.id is null
-    and j.title ilike any (array[...expandedRoles patterns...])
+  where (s.id is null or s.ai_score is null)
+    and (j.title ilike any (array[...expandedRoles patterns...])
+         or j.description ilike any (array[...expandedRoles patterns...]))
   ```
+  Matches title *or* description, consistent with the scrape-time role filter (`jobMatchesRoles`, AD-15) — a job ingested on a description-only role match must still be selectable for scoring. Rows with an existing `job_scores` entry are included when `ai_score is null` (decisions.md AD-14 retry).
 - `findForDashboard(roleSelectionId, filters)` →
   ```sql
   select j.*, s.keyword_score, s.ai_score, s.ai_reasoning
@@ -112,7 +114,7 @@ interface ScoreRepository {
 **Responsibilities:** persist `job_scores` rows; idempotency check for `score.ts`.
 
 **Query patterns:**
-- `insertScore(score)` → `insert into job_scores (...) values (...) on conflict (job_id, role_selection_id) do nothing`. Combined with `JobRepository.findUnscored()` already filtering scored jobs, this `on conflict do nothing` is a defense-in-depth no-op in the common case.
+- `insertScore(score)` → `insert into job_scores (...) values (...) on conflict (job_id, role_selection_id) do update set keyword_score = excluded.keyword_score, ai_score = excluded.ai_score, ai_reasoning = excluded.ai_reasoning` (decisions.md AD-14). The update-on-conflict is what makes a retried row's `ai_score` actually get persisted when `JobRepository.findUnscored()` re-selects it.
 - `hasScore(jobId, roleSelectionId)` → used only if a caller needs a point check outside the bulk `findUnscored` flow (e.g. future manual "re-score this job" action).
 
 **Transaction boundaries:** none — single-row insert per job, independently idempotent.

@@ -1,4 +1,4 @@
-// Role-aware fetching (scrapers.md §2, decisions.md AD-14): when the
+// Role-aware fetching (scrapers.md §2, decisions.md AD-15): when the
 // upstream ATS API has no role/keyword query parameter, adapters filter
 // fetched jobs client-side by matching `roles` terms against `title`
 // (primarily) and `description` (fallback). This is the single shared

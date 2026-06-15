@@ -151,8 +151,14 @@ export class SupabaseJobRepository implements JobRepository {
 
     const aiScoredIds = (aiScored ?? []).map((row) => row.job_id);
 
-    const titleFilter = sanitizedRoles.map((role) => `title.ilike.%${role}%`).join(",");
-    let query = this.client.from("jobs").select("*").or(titleFilter);
+    // Match title OR description so this stays consistent with the
+    // scrape-time role filter (jobMatchesRoles, decisions.md AD-15), which
+    // also matches on description -- otherwise jobs ingested on a
+    // description-only role match would never be selected for scoring.
+    const roleFilter = sanitizedRoles
+      .flatMap((role) => [`title.ilike.%${role}%`, `description.ilike.%${role}%`])
+      .join(",");
+    let query = this.client.from("jobs").select("*").or(roleFilter);
     if (aiScoredIds.length > 0) {
       query = query.not("id", "in", `(${aiScoredIds.join(",")})`);
     }
