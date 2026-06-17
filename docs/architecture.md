@@ -158,6 +158,8 @@ graph TB
 | `resume` | Resume upload, parsing, skill extraction | `shared/supabase` (Storage + DB) | `ResumeRepository`, `uploadResume()` |
 | `scoring` | Two-stage scoring: keyword overlap + AI refinement | `shared/supabase`, OpenRouter client, `jobs`, `resume` domain types | `ScoreRepository`, `scoreJob()` |
 | `notifications` | Telegram alerts, one-time send guarantee | `shared/supabase`, Telegram client | `NotificationRepository`, `sendNotification()` |
+| `insights` | Skill-gap ("level up") + skill-demand views over role-matched jobs (P1) | `shared/supabase`, `shared/domain/skills`, `shared/infrastructure/roleFilter` | `MatchedJobsRepository`, `computeSkillGaps()`, `computeSkillDemand()` |
+| `settings` | Editable user settings (desired experience years) backed by `app_settings` (P2) | `shared/supabase` | `SettingsRepository`, `setDesiredExperience()` |
 
 **Cross-feature rule:** a feature may import another feature's `domain` types (e.g. `scoring` imports the `Job` and `Resume` entity types from `jobs/domain` and `resume/domain`), but **never** another feature's `infrastructure`. All cross-feature orchestration happens in `scripts/*.ts` or `app/**/page.tsx` (composition roots), which wire concrete repositories into use-cases.
 
@@ -183,5 +185,5 @@ Rules, in order of strictness:
 2. **`application` depends only on `domain`** (interfaces, entities). It never imports `infrastructure` directly — repositories are injected as constructor/function arguments, typed by their `domain` interface.
 3. **`infrastructure` implements `domain` interfaces** and is the only layer allowed to import Supabase client, OpenRouter SDK, Telegram client, `pdf-parse`, etc.
 4. **`presentation` (Next.js `app/` and `scripts/*.ts`) is the composition root** — the only place where `infrastructure` classes are instantiated and passed into `application` use-cases. This keeps use-cases testable with mock repositories and keeps both runtime entrypoints (web app, cron scripts) calling identical logic.
-5. **No feature imports another feature's `infrastructure`.** Shared low-level clients (Supabase client factory, OpenRouter client, Telegram client, logger, config) live in `shared/` and are imported by any `infrastructure` module that needs them.
+5. **No feature imports another feature's `infrastructure`.** Shared low-level clients (Supabase client factory, OpenRouter client, Telegram client, logger, config) live in `shared/` and are imported by any `infrastructure` module that needs them. Example: the PostgREST role-match `.or()` filter builder is in `shared/infrastructure/roleFilter.ts` so both `jobs` and `insights` repositories use it without crossing this boundary.
 6. **`shared/` has no dependency on `features/`** — it is the lowest layer, importable from anywhere.

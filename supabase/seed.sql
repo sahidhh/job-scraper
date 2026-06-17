@@ -88,3 +88,19 @@ insert into role_expansion_map (role, related_roles, source) values
   ], 'seed')
 
 on conflict (role) do nothing;
+
+
+-- Default job statuses (P0, docs/plans/feature-roadmap.md Phase 1).
+--   - Seeded set; full add/edit/delete CRUD is a later phase.
+--   - Mild colors (light tints) so badges stay readable in both themes.
+--   - `on conflict (label) do nothing` -- safe to re-run; not auto-applied to
+--     production (apply once manually or via a one-off migration with the
+--     same guard), same convention as the role_expansion_map seed above.
+--   - A job with no job_state row renders as the first status (New).
+insert into job_statuses (label, color, sort_order) values
+  ('New',        '#E5E7EB', 0),
+  ('Interested', '#DBEAFE', 1),
+  ('Applied',    '#DCFCE7', 2),
+  ('Rejected',   '#FEE2E2', 3),
+  ('Archived',   '#F3F4F6', 4)
+on conflict (label) do nothing;

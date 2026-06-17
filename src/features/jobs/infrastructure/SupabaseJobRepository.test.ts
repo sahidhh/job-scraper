@@ -36,6 +36,7 @@ const jobRow: JobRow = {
   posted_at: "2026-01-01T00:00:00Z",
   first_seen_at: "2025-12-01T00:00:00Z",
   updated_at: "2025-12-01T00:00:00Z",
+  min_years: null,
 };
 
 describe("SupabaseJobRepository", () => {
@@ -281,6 +282,112 @@ describe("SupabaseJobRepository", () => {
 
       expect(result.hasMore).toBe(true);
       expect(result.jobs).toHaveLength(1);
+    });
+
+    it("maps the joined status and excludes Archived jobs by default", async () => {
+      const { client, builders } = queuedSupabaseClient([
+        { data: { id: "status-archived" }, error: null }, // statusIdByLabel(Archived)
+        { data: [{ job_id: "job-9" }], error: null }, // job ids currently Archived
+        {
+          data: [
+            {
+              ...jobRow,
+              job_scores: [{ keyword_score: 0.5, ai_score: 0.8, ai_reasoning: "x" }],
+              job_state: [{ status_id: "s1", job_statuses: { id: "s1", label: "Applied", color: "#DCFCE7" } }],
+            },
+          ],
+          error: null,
+        },
+      ]);
+      const repo = new SupabaseJobRepository(client);
+
+      const result = await repo.findForDashboard("role-selection-1", {}, 50);
+
+      expect(result.jobs).toEqual([
+        expect.objectContaining({ id: "job-1", statusId: "s1", statusLabel: "Applied", statusColor: "#DCFCE7" }),
+      ]);
+
+      const mainBuilder = builders[2] as Record<string, ReturnType<typeof vi.fn>>;
+      expect(mainBuilder.not).toHaveBeenCalledWith("id", "in", "(job-9)");
+    });
+
+    it("restricts to jobs in the requested statuses when statusIds is given", async () => {
+      const { client, builders } = queuedSupabaseClient([
+        { data: [{ job_id: "job-1" }], error: null }, // job ids in status s1
+        { data: [{ ...jobRow, job_scores: [], job_state: [] }], error: null }, // main query
+      ]);
+      const repo = new SupabaseJobRepository(client);
+
+      await repo.findForDashboard("role-selection-1", { statusIds: ["s1"] }, 50);
+
+      const [stateBuilder, mainBuilder] = builders as [
+        Record<string, ReturnType<typeof vi.fn>>,
+        Record<string, ReturnType<typeof vi.fn>>,
+      ];
+      expect(stateBuilder.in).toHaveBeenCalledWith("status_id", ["s1"]);
+      expect(mainBuilder.in).toHaveBeenCalledWith("id", ["job-1"]);
+    });
+
+    it("returns no jobs without a main query when no job is in the requested statuses", async () => {
+      const { client, builders } = queuedSupabaseClient([
+        { data: [], error: null }, // no job ids in the requested statuses
+      ]);
+      const repo = new SupabaseJobRepository(client);
+
+      const result = await repo.findForDashboard("role-selection-1", { statusIds: ["s1"] }, 50);
+
+      expect(result).toEqual({ jobs: [], hasMore: false });
+      expect(builders).toHaveLength(1);
+    });
+
+    it("skips the Archived-exclusion lookups when includeArchived is true", async () => {
+      const { client, builder } = mockSupabaseClient({
+        data: [{ ...jobRow, job_scores: [], job_state: [] }],
+        error: null,
+      });
+      const repo = new SupabaseJobRepository(client);
+
+      await repo.findForDashboard("role-selection-1", { includeArchived: true }, 50);
+
+      expect(builder.eq).not.toHaveBeenCalledWith("label", "Archived");
+    });
+  });
+
+  describe("listStatuses", () => {
+    it("maps status rows ordered by sort_order", async () => {
+      const { client, builder } = mockSupabaseClient({
+        data: [
+          { id: "s0", label: "New", color: "#E5E7EB", sort_order: 0 },
+          { id: "s1", label: "Applied", color: "#DCFCE7", sort_order: 2 },
+        ],
+        error: null,
+      });
+      const repo = new SupabaseJobRepository(client);
+
+      const result = await repo.listStatuses();
+
+      expect(result).toEqual([
+        { id: "s0", label: "New", color: "#E5E7EB", sortOrder: 0 },
+        { id: "s1", label: "Applied", color: "#DCFCE7", sortOrder: 2 },
+      ]);
+      expect(builder.order).toHaveBeenCalledWith("sort_order", { ascending: true });
+    });
+  });
+
+  describe("setJobStatus", () => {
+    it("upserts a job_state row per id on conflict of job_id", async () => {
+      const { client, builder } = mockSupabaseClient({ data: null, error: null });
+      const repo = new SupabaseJobRepository(client);
+
+      await repo.setJobStatus(["job-1", "job-2"], "s1");
+
+      const upsertCall = builder.upsert!.mock.calls[0] as unknown[];
+      const rows = upsertCall[0] as Record<string, unknown>[];
+      expect(rows).toHaveLength(2);
+      expect(rows[0]).toMatchObject({ job_id: "job-1", status_id: "s1" });
+      expect(rows[1]).toMatchObject({ job_id: "job-2", status_id: "s1" });
+      expect(rows[0]).toHaveProperty("updated_at");
+      expect(upsertCall[1]).toEqual({ onConflict: "job_id" });
     });
   });
 });

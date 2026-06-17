@@ -35,8 +35,15 @@ interface JobRepository {
   findUnscored(roleSelectionId: string, expandedRoles: string[]): Promise<Job[]>;
   findForDashboard(roleSelectionId: string, filters: JobFilters, limit: number): Promise<{ jobs: JobWithScore[]; hasMore: boolean }>;
   countMatchingExpandedRoles(expandedRoles: string[]): Promise<number>;
+  listStatuses(): Promise<JobStatus[]>;                       // P0: job_statuses, ordered by sort_order
+  setJobStatus(jobIds: string[], statusId: string): Promise<void>; // P0: upsert job_state per id
 }
 ```
+
+**Status methods (P0, docs/plans/feature-roadmap.md Phase 1):**
+- `listStatuses()` → `select id, label, color, sort_order from job_statuses order by sort_order`. Drives the per-row dropdown, bulk-action bar, and dashboard status filter.
+- `setJobStatus(jobIds, statusId)` → `insert into job_state (job_id, status_id, updated_at) values (...) on conflict (job_id) do update set status_id = excluded.status_id, updated_at = excluded.updated_at`. One status per job; "archive" is just setting the `Archived` status (never a DELETE — the scrape upsert would re-insert a hard-deleted row).
+- `findForDashboard` now also left-joins `job_state → job_statuses` to surface `statusId/statusLabel/statusColor` on each `JobWithScore`. Status *filtering* (`filters.statusIds`, `filters.includeArchived`) resolves to a set of `jobs.id` first (PostgREST filters on an embedded resource only null the embedding, they don't drop the parent row), mirroring the `findUnscored` ai-score exclusion. Archived jobs are excluded unless `includeArchived` is set; jobs with no `job_state` row are never Archived.
 
 **Responsibilities:** persistence and dedup of scraped postings; supplies candidate jobs to the scoring pipeline; supplies the dashboard's main query.
 
@@ -193,6 +200,30 @@ interface ScrapeRunRepository {
 - `listRecent(limit)` → `select * from scrape_runs order by run_at desc limit $limit`.
 
 **Transaction boundaries:** none.
+
+## 7b. MatchedJobsRepository (`features/insights`, P1)
+
+```ts
+interface MatchedJobsRepository {
+  findRoleMatchedJobs(roleSelectionId: string, expandedRoles: string[]): Promise<MatchedJob[]>;
+  // MatchedJob = { title; description; aiScore: number | null }
+}
+```
+
+**Responsibilities:** feeds the skill-gap / demand views (`/insights`). Returns role-matched jobs reduced to text + score; the page extracts skills at read time via the shared dictionary (no persisted `jobs.skills` column — recompute chosen over persist, see docs/plans/phase-p1-insights.md).
+
+**Query pattern:** `select title, description, job_scores!left(ai_score, role_selection_id)` filtered by the same `.or(buildRoleFilter(expandedRoles))` predicate as `JobRepository`, scoped to the active role selection. Uses the shared `buildRoleFilter` from `shared/infrastructure/roleFilter.ts` (extracted from `SupabaseJobRepository` so both repos share it without crossing the no-cross-feature-infra rule).
+
+## 7c. SettingsRepository (`features/settings`, P2)
+
+```ts
+interface SettingsRepository {
+  getDesiredExperienceYears(): Promise<number | null>;
+  setDesiredExperienceYears(years: number | null): Promise<void>;
+}
+```
+
+**Responsibilities:** editable user settings backed by `app_settings` (key/value). `getDesiredExperienceYears` reads key `desired_experience_years` (returns null if unset or non-numeric). `setDesiredExperienceYears(null)` deletes the row (keeps "unset" distinct from "0"); a value upserts on conflict of `key`. The dashboard reads this as the default soft `maxYears` filter; `JobFilters.maxYears` applies `min_years.is.null,min_years.lte.N` so unknown-experience jobs always pass.
 
 ## 8. Cross-Feature Read Note
 

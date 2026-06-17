@@ -3,9 +3,18 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import type { JobStatus } from "@/features/jobs/domain/types";
 import { JOB_SOURCES, LOCATION_TAGS } from "@/shared/domain/enums";
 
-export function FilterBar({ hasAiScores }: { hasAiScores: boolean }) {
+export function FilterBar({
+  hasAiScores,
+  statuses,
+  effectiveMaxYears,
+}: {
+  hasAiScores: boolean;
+  statuses: JobStatus[];
+  effectiveMaxYears: number | null;
+}) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -15,6 +24,16 @@ export function FilterBar({ hasAiScores }: { hasAiScores: boolean }) {
       params.delete(key);
     } else {
       params.set(key, value);
+    }
+    router.push(`/dashboard?${params.toString()}`);
+  }
+
+  function toggleArchived(checked: boolean) {
+    const params = new URLSearchParams(searchParams.toString());
+    if (checked) {
+      params.set("archived", "1");
+    } else {
+      params.delete("archived");
     }
     router.push(`/dashboard?${params.toString()}`);
   }
@@ -49,6 +68,20 @@ export function FilterBar({ hasAiScores }: { hasAiScores: boolean }) {
         </SelectContent>
       </Select>
 
+      <Select value={searchParams.get("status") ?? "all"} onValueChange={(value) => updateParam("status", value)}>
+        <SelectTrigger className="w-full sm:w-40">
+          <SelectValue placeholder="Status" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All statuses</SelectItem>
+          {statuses.map((status) => (
+            <SelectItem key={status.id} value={status.id}>
+              {status.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
       <Input
         type="number"
         min={0}
@@ -61,6 +94,28 @@ export function FilterBar({ hasAiScores }: { hasAiScores: boolean }) {
         title={hasAiScores ? undefined : "AI scoring hasn't run for these jobs yet — this filter has no effect until jobs are AI-scored."}
         className="w-full sm:w-32"
       />
+
+      <Input
+        type="number"
+        min={0}
+        max={50}
+        step={1}
+        placeholder={effectiveMaxYears === null ? "Max years" : `Max yrs (${effectiveMaxYears})`}
+        defaultValue={searchParams.get("maxYears") ?? ""}
+        onBlur={(event) => updateParam("maxYears", event.target.value)}
+        title="Hide jobs requiring more than this many years. Jobs with unknown experience always show. Defaults to your Settings value."
+        className="w-full sm:w-32"
+      />
+
+      <label className="flex items-center gap-1.5 text-sm text-muted-foreground sm:w-auto">
+        <input
+          type="checkbox"
+          checked={searchParams.get("archived") === "1"}
+          onChange={(event) => toggleArchived(event.target.checked)}
+          className="size-4 accent-primary"
+        />
+        Show archived
+      </label>
     </div>
   );
 }

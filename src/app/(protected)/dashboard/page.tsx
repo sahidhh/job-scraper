@@ -7,6 +7,7 @@ import { SupabaseCompanyRepository } from "@/features/companies/infrastructure/S
 import type { JobFilters } from "@/features/jobs/domain/types";
 import { SupabaseJobRepository } from "@/features/jobs/infrastructure/SupabaseJobRepository";
 import { SupabaseRoleRepository } from "@/features/roles/infrastructure/SupabaseRoleRepository";
+import { SupabaseSettingsRepository } from "@/features/settings/infrastructure/SupabaseSettingsRepository";
 import type { ScrapeRun } from "@/features/sources/domain/types";
 import { SupabaseScrapeRunRepository } from "@/features/sources/infrastructure/SupabaseScrapeRunRepository";
 import type { JobSource, LocationTag } from "@/shared/domain/enums";
@@ -16,7 +17,15 @@ import { createSupabaseServerClient } from "@/shared/infrastructure/supabase/ser
 const DEFAULT_JOBS_LIMIT = 50;
 const MAX_JOBS_LIMIT = 500;
 
-type DashboardSearchParams = { location?: string; source?: string; minScore?: string; limit?: string };
+type DashboardSearchParams = {
+  location?: string;
+  source?: string;
+  minScore?: string;
+  status?: string;
+  archived?: string;
+  maxYears?: string;
+  limit?: string;
+};
 
 interface DashboardPageProps {
   searchParams: Promise<DashboardSearchParams>;
@@ -37,6 +46,18 @@ function parseFilters(params: DashboardSearchParams): JobFilters {
       filters.minAiScore = value;
     }
   }
+  if (params.status) {
+    filters.statusIds = [params.status];
+  }
+  if (params.archived === "1") {
+    filters.includeArchived = true;
+  }
+  if (params.maxYears) {
+    const value = Number(params.maxYears);
+    if (Number.isInteger(value) && value >= 0) {
+      filters.maxYears = value;
+    }
+  }
 
   return filters;
 }
@@ -52,6 +73,9 @@ function loadMoreHref(params: DashboardSearchParams, currentLimit: number): stri
   if (params.location) next.set("location", params.location);
   if (params.source) next.set("source", params.source);
   if (params.minScore) next.set("minScore", params.minScore);
+  if (params.status) next.set("status", params.status);
+  if (params.archived) next.set("archived", params.archived);
+  if (params.maxYears) next.set("maxYears", params.maxYears);
   next.set("limit", String(currentLimit + DEFAULT_JOBS_LIMIT));
   return `/dashboard?${next.toString()}`;
 }
@@ -164,11 +188,21 @@ async function JobsSection({
 }) {
   const client = await createSupabaseServerClient();
   const jobRepository = new SupabaseJobRepository(client);
+  const settingsRepository = new SupabaseSettingsRepository(client);
   const limit = parseLimit(params);
 
-  const [{ jobs, hasMore }, matchingRoleCount] = await Promise.all([
-    jobRepository.findForDashboard(roleSelectionId, filters, limit),
+  // Desired-experience setting is the default soft year cap; an explicit
+  // maxYears search param overrides it for the current view (P2).
+  const desiredExperience = await settingsRepository.getDesiredExperienceYears();
+  const effectiveFilters: JobFilters =
+    filters.maxYears === undefined && desiredExperience !== null
+      ? { ...filters, maxYears: desiredExperience }
+      : filters;
+
+  const [{ jobs, hasMore }, matchingRoleCount, statuses] = await Promise.all([
+    jobRepository.findForDashboard(roleSelectionId, effectiveFilters, limit),
     jobRepository.countMatchingExpandedRoles(expandedRoles),
+    jobRepository.listStatuses(),
   ]);
 
   const scoredCount = jobs.filter((job) => job.aiScore !== null).length;
@@ -214,8 +248,8 @@ async function JobsSection({
           )}
         </div>
       ) : null}
-      <FilterBar hasAiScores={scoredCount > 0} />
-      <JobsTable jobs={jobs} />
+      <FilterBar hasAiScores={scoredCount > 0} statuses={statuses} effectiveMaxYears={effectiveFilters.maxYears ?? null} />
+      <JobsTable jobs={jobs} statuses={statuses} />
       {hasMore && (
         <Button asChild variant="outline" size="sm">
           <Link href={loadMoreHref(params, limit)}>Load more</Link>

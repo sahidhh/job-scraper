@@ -2,6 +2,7 @@ import type { JobRepository } from "@/features/jobs/domain/JobRepository";
 import type { NormalizedJob, UpsertResult } from "@/features/jobs/domain/types";
 import { validateNormalizedJob } from "@/features/jobs/domain/validation";
 import { dedupeJobs } from "./dedupeJobs";
+import { parseMinYears } from "./parseMinYears";
 
 export interface IngestJobsDeps {
   jobRepository: JobRepository;
@@ -29,5 +30,12 @@ export async function ingestJobs(
     return { inserted: 0, updated: 0 };
   }
 
-  return deps.jobRepository.upsertMany(deduped);
+  // Derive the soft experience signal at ingest (P2): parsed best-effort
+  // from title+description, null when unknown.
+  const withYears = deduped.map((job) => ({
+    ...job,
+    minYears: parseMinYears(`${job.title}\n${job.description}`),
+  }));
+
+  return deps.jobRepository.upsertMany(withYears);
 }

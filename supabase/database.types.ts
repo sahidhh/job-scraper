@@ -56,6 +56,7 @@ export interface Database {
           posted_at: string | null;
           first_seen_at: string;
           updated_at: string;
+          min_years: number | null;
         };
         Insert: {
           id?: string;
@@ -71,6 +72,7 @@ export interface Database {
           posted_at?: string | null;
           first_seen_at?: string;
           updated_at?: string;
+          min_years?: number | null;
         };
         Update: {
           id?: string;
@@ -86,6 +88,7 @@ export interface Database {
           posted_at?: string | null;
           first_seen_at?: string;
           updated_at?: string;
+          min_years?: number | null;
         };
         Relationships: [
           {
@@ -270,6 +273,84 @@ export interface Database {
           jobs_found?: number;
           error?: string | null;
           run_at?: string;
+        };
+        Relationships: [];
+      };
+
+      job_statuses: {
+        Row: {
+          id: string;
+          label: string;
+          color: string;
+          sort_order: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          label: string;
+          color: string;
+          sort_order?: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          label?: string;
+          color?: string;
+          sort_order?: number;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+
+      job_state: {
+        Row: {
+          job_id: string;
+          status_id: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          job_id: string;
+          status_id?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          job_id?: string;
+          status_id?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "job_state_job_id_fkey";
+            columns: ["job_id"];
+            isOneToOne: true;
+            referencedRelation: "jobs";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "job_state_status_id_fkey";
+            columns: ["status_id"];
+            isOneToOne: false;
+            referencedRelation: "job_statuses";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+
+      app_settings: {
+        Row: {
+          key: string;
+          value: Json;
+          updated_at: string;
+        };
+        Insert: {
+          key: string;
+          value: Json;
+          updated_at?: string;
+        };
+        Update: {
+          key?: string;
+          value?: Json;
+          updated_at?: string;
         };
         Relationships: [];
       };

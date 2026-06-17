@@ -31,6 +31,9 @@ export interface NormalizedJob {
   description: string;
   url: string;
   postedAt: string | null;
+  // Best-effort minimum years of experience parsed from the posting at
+  // ingest (P2). Optional on input; derived by ingestJobs, not the scraper.
+  minYears?: number | null;
 }
 
 export interface UpsertResult {
@@ -38,11 +41,27 @@ export interface UpsertResult {
   updated: number;
 }
 
+// A user-assignable status (job_statuses table, P0). Seeded with mild
+// colors; full CRUD deferred to a later phase.
+export interface JobStatus {
+  id: string;
+  label: string;
+  color: string;
+  sortOrder: number;
+}
+
 // Dashboard query filters (repositories.md §2).
 export interface JobFilters {
   locationTags?: LocationTag[];
   sources?: JobSource[];
   minAiScore?: number;
+  // Restrict to jobs whose current status is one of these ids.
+  statusIds?: string[];
+  // Jobs whose status is "Archived" are hidden unless this is true.
+  includeArchived?: boolean;
+  // Keep jobs requiring at most this many years (P2, soft). Jobs with
+  // min_years NULL ("unknown") always pass and are never excluded.
+  maxYears?: number;
 }
 
 // Job joined with its score for the active role_selection. Omits
@@ -52,6 +71,11 @@ export interface JobWithScore extends Omit<Job, "description"> {
   keywordScore: number | null;
   aiScore: number | null;
   aiReasoning: string | null;
+  // Current status (job_state join, P0). Null => unset, rendered as the
+  // first seeded status (New) by the UI.
+  statusId: string | null;
+  statusLabel: string | null;
+  statusColor: string | null;
 }
 
 // Result of findForDashboard: a limited page of jobs plus whether more rows

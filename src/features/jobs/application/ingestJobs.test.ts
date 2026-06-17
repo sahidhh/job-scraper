@@ -26,6 +26,8 @@ function makeRepository(): JobRepository {
     findUnscored: vi.fn(),
     findForDashboard: vi.fn(),
     countMatchingExpandedRoles: vi.fn(),
+    listStatuses: vi.fn(),
+    setJobStatus: vi.fn(),
   };
 }
 

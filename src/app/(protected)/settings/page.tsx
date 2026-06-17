@@ -2,11 +2,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CompaniesTable } from "@/components/settings/CompaniesTable";
 import { CompanyFormDialog } from "@/components/settings/CompanyFormDialog";
+import { ExperienceCard } from "@/components/settings/ExperienceCard";
 import { NotificationsLogList } from "@/components/settings/NotificationsLogList";
 import { ScrapeRunsList } from "@/components/settings/ScrapeRunsList";
 import { ThresholdsCard } from "@/components/settings/ThresholdsCard";
 import { SupabaseCompanyRepository } from "@/features/companies/infrastructure/SupabaseCompanyRepository";
 import { SupabaseNotificationRepository } from "@/features/notifications/infrastructure/SupabaseNotificationRepository";
+import { SupabaseSettingsRepository } from "@/features/settings/infrastructure/SupabaseSettingsRepository";
 import { SupabaseScrapeRunRepository } from "@/features/sources/infrastructure/SupabaseScrapeRunRepository";
 import { createSupabaseServerClient } from "@/shared/infrastructure/supabase/server";
 import { optionalEnv } from "@/shared/infrastructure/env";
@@ -16,11 +18,13 @@ export default async function SettingsPage() {
   const companyRepository = new SupabaseCompanyRepository(client);
   const scrapeRunRepository = new SupabaseScrapeRunRepository(client);
   const notificationRepository = new SupabaseNotificationRepository(client);
+  const settingsRepository = new SupabaseSettingsRepository(client);
 
-  const [companies, scrapeRuns, notifications] = await Promise.all([
+  const [companies, scrapeRuns, notifications, desiredExperience] = await Promise.all([
     companyRepository.list(),
     scrapeRunRepository.listRecent(20),
     notificationRepository.listRecent(20),
+    settingsRepository.getDesiredExperienceYears(),
   ]);
 
   const keywordThreshold = optionalEnv("KEYWORD_THRESHOLD", "0.5");
@@ -46,6 +50,8 @@ export default async function SettingsPage() {
           <CompaniesTable companies={companies} />
         </CardContent>
       </Card>
+
+      <ExperienceCard current={desiredExperience} />
 
       <ThresholdsCard keywordThreshold={keywordThreshold} notifyThreshold={notifyThreshold} />
 

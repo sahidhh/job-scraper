@@ -52,6 +52,7 @@ create table jobs (
   posted_at       timestamptz,
   first_seen_at   timestamptz not null default now(),
   updated_at      timestamptz not null default now(),
+  min_years       integer,              -- P2: soft experience signal, parsed at ingest; NULL = unknown
 
   unique (source, source_job_id)
 );
@@ -151,6 +152,48 @@ create table scrape_runs (
 );
 
 create index scrape_runs_run_at_idx on scrape_runs (run_at desc);
+
+
+-- ============================================================
+-- job_statuses: user-assignable status config (label + mild color).
+-- Seeded (New/Interested/Applied/Rejected/Archived); full CRUD deferred.
+-- Migration: 20260616000001_job_status.sql (P0).
+-- ============================================================
+create table job_statuses (
+  id         uuid primary key default gen_random_uuid(),
+  label      text not null unique,
+  color      text not null,                 -- mild hex, e.g. '#E5E7EB'
+  sort_order integer not null default 0,
+  created_at timestamptz not null default now()
+);
+
+
+-- ============================================================
+-- job_state: at most one status per job. No row => "unset" (rendered as New).
+-- "Archive"/"remove" = setting the Archived status, NOT a DELETE -- the
+-- scrape pipeline upserts on (source, source_job_id) and would re-insert a
+-- hard-deleted row on the next cron run.
+-- ============================================================
+create table job_state (
+  job_id     uuid primary key references jobs(id) on delete cascade,
+  status_id  uuid references job_statuses(id) on delete set null,
+  updated_at timestamptz not null default now()
+);
+
+create index job_state_status_idx on job_state (status_id);
+
+
+-- ============================================================
+-- app_settings: editable key/value config (P2), distinct from the read-only
+-- env thresholds. Single-user app => flat key/value is enough.
+-- Migration: 20260616000002_experience.sql. Current keys:
+--   'desired_experience_years' -> number (dashboard soft year cap)
+-- ============================================================
+create table app_settings (
+  key        text primary key,
+  value      jsonb not null,
+  updated_at timestamptz not null default now()
+);
 ```
 
 ## 3. Table Purposes
@@ -165,6 +208,9 @@ create index scrape_runs_run_at_idx on scrape_runs (run_at desc);
 | `job_scores` | Per-job, per-role-selection score (keyword + optional AI). |
 | `notifications_log` | Guarantees each job triggers at most one Telegram message. |
 | `scrape_runs` | Per-source cron run history for debugging from the dashboard. `status` is currently `success`/`failed` only — `partial` reserved, not yet produced (decisions.md AD-13). |
+| `job_statuses` | User-assignable status config (label + mild color). Seeded set; full CRUD deferred (P0). |
+| `job_state` | At most one status per job (`job_id` PK). No row => unset/New. Archive = the `Archived` status, not a DELETE. |
+| `app_settings` | Editable key/value config (P2), e.g. `desired_experience_years`. Distinct from read-only env thresholds. |
 
 ## 4. Relationships
 

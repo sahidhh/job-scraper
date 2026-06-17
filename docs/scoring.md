@@ -19,6 +19,8 @@ Two-stage pipeline: cheap deterministic keyword scoring runs for every candidate
 
 No AI is used in resume parsing — extraction is purely dictionary lookup.
 
+The same `extractSkills(text, dictionary)` (`shared/domain/skills.ts`) also powers the `insights` feature (P1): the `/insights` page recomputes each role-matched job's skills at read time to build the skill-gap ("level up") and skill-demand views. No skills are persisted on `jobs` — recomputation is cheap at single-user scale and keeps the scrape/ingest pipeline untouched.
+
 ## 2. Keyword Scoring Algorithm (`features/scoring`, stage 1 — always runs)
 
 For each job returned by `JobRepository.findUnscored()` (already filtered by title or description against `expanded_roles` — consistent with the scrape-time role filter, AD-15 — and now also including previously-inserted rows with `ai_score IS NULL` — see §3):

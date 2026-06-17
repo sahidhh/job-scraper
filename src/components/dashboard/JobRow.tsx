@@ -4,7 +4,12 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { TableCell, TableRow } from "@/components/ui/table";
-import type { JobWithScore } from "@/features/jobs/domain/types";
+import type { JobStatus, JobWithScore } from "@/features/jobs/domain/types";
+import { JobStatusSelect } from "./JobStatusSelect";
+
+// Total column count, used for the expanded-reasoning row's colSpan:
+// select, title, company, location, source, status, score, link.
+const COLUMN_COUNT = 8;
 
 function formatScore(score: number | null): string {
   return score === null ? "—" : `${Math.round(score * 100)}%`;
@@ -32,12 +37,31 @@ function ScoreBadge({ aiScore, keywordScore }: { aiScore: number | null; keyword
   );
 }
 
-export function JobRow({ job }: { job: JobWithScore }) {
+export function JobRow({
+  job,
+  statuses,
+  selected,
+  onToggleSelect,
+}: {
+  job: JobWithScore;
+  statuses: JobStatus[];
+  selected: boolean;
+  onToggleSelect: (jobId: string) => void;
+}) {
   const [open, setOpen] = useState(false);
 
   return (
     <>
       <TableRow>
+        <TableCell className="w-8">
+          <input
+            type="checkbox"
+            checked={selected}
+            onChange={() => onToggleSelect(job.id)}
+            aria-label={`Select ${job.title}`}
+            className="size-4 accent-primary"
+          />
+        </TableCell>
         <TableCell className="max-w-xs">
           <button
             type="button"
@@ -60,6 +84,9 @@ export function JobRow({ job }: { job: JobWithScore }) {
           <Badge variant="secondary">{job.source}</Badge>
         </TableCell>
         <TableCell>
+          <JobStatusSelect jobId={job.id} statusId={job.statusId} statuses={statuses} />
+        </TableCell>
+        <TableCell>
           <ScoreBadge aiScore={job.aiScore} keywordScore={job.keywordScore} />
         </TableCell>
         <TableCell>
@@ -70,7 +97,7 @@ export function JobRow({ job }: { job: JobWithScore }) {
       </TableRow>
       {open && (
         <TableRow>
-          <TableCell colSpan={6} className="whitespace-normal text-sm text-muted-foreground">
+          <TableCell colSpan={COLUMN_COUNT} className="whitespace-normal text-sm text-muted-foreground">
             {job.aiReasoning ?? "AI review pending — keyword match score shown above."}
           </TableCell>
         </TableRow>

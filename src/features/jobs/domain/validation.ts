@@ -17,3 +17,14 @@ export function validateNormalizedJob(job: NormalizedJob): void {
     );
   }
 }
+
+// Guards a bulk status assignment (P0): at least one job, a status id, and
+// no blank entries. ids are not deep-validated as UUIDs here -- the DB FK +
+// RLS reject anything that isn't a real job/status.
+export function validateSetJobStatus(jobIds: readonly string[], statusId: string): void {
+  if (jobIds.length === 0) {
+    throw new DomainValidationError("setJobStatus requires at least one job id");
+  }
+  jobIds.forEach((jobId, index) => assertNonEmpty(jobId, `setJobStatus.jobIds[${index}]`));
+  assertNonEmpty(statusId, "setJobStatus.statusId");
+}

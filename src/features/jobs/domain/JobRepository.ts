@@ -1,6 +1,19 @@
-import type { Job, JobFilters, JobsPage, NormalizedJob, UpsertResult } from "./types";
+import type { Job, JobFilters, JobsPage, JobStatus, NormalizedJob, UpsertResult } from "./types";
 
 export interface JobRepository {
+  /**
+   * All configured statuses ordered by sortOrder (job_statuses table, P0).
+   * Drives the per-row status dropdown and the dashboard status filter.
+   */
+  listStatuses(): Promise<JobStatus[]>;
+
+  /**
+   * Assign `statusId` to every job in `jobIds` (upsert into job_state on
+   * job_id). Used by the per-row dropdown (single id) and the bulk-select
+   * action bar (many ids). "Archive" is just setting the Archived status.
+   */
+  setJobStatus(jobIds: string[], statusId: string): Promise<void>;
+
   /**
    * Upsert on (source, sourceJobId). Preserves firstSeenAt on conflict,
    * bumps updatedAt. Batched internally by the implementation

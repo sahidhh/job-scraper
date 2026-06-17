@@ -16,6 +16,8 @@ src/app/
 │   │   └── page.tsx
 │   ├── resume/
 │   │   └── page.tsx
+│   ├── insights/
+│   │   └── page.tsx           # P1 — skill-gap + demand over role-matched jobs
 │   └── settings/
 │       └── page.tsx
 ├── auth/
@@ -33,9 +35,12 @@ src/app/
 | Component | Used in | Built from shadcn primitives |
 |---|---|---|
 | `AppShell` | `(protected)/layout.tsx` | `NavigationMenu` / simple sidebar `Sheet` — links to Dashboard, Roles, Resume, Settings, Logout |
-| `JobsTable` | `/dashboard` | `Table`, `Badge` (location tags, source), `Progress` or text for scores |
-| `JobRow` (expandable) | inside `JobsTable` | `Collapsible` — reveals `ai_reasoning` text |
-| `FilterBar` | `/dashboard` | `Select` (location tag, source), `Slider` or `Input` (min score) |
+| `JobsTable` | `/dashboard` | Client component (`"use client"`): holds multi-select state, renders the select-all checkbox header, the bulk-action bar (`Select` + Apply/Archive/Clear `Button`s), `Table`, `Badge` |
+| `JobRow` (expandable) | inside `JobsTable` | `Collapsible` — reveals `ai_reasoning`; row checkbox + per-row `JobStatusSelect` |
+| `JobStatusSelect` | inside `JobRow` | Client component: `Select` of statuses (colored dot) → `setJobStatusAction([jobId], statusId)` then `router.refresh()` |
+| `FilterBar` | `/dashboard` | `Select` (location tag, source, **status**), `Input` (min score, **max years**), **"show archived" checkbox**. `maxYears` defaults to the Settings desired-experience value; the input overrides per-view (P2) |
+| `InsightsPage` / `SkillRow` | `/insights` | `Card`, `Badge`, proportion bars — "Level up" (skill gaps) + "In demand" lists from `computeSkillGaps`/`computeSkillDemand` over role-matched jobs (P1) |
+| `ExperienceCard` | `/settings` | Client `Card` + numeric `Input` → `setDesiredExperienceAction`; blank clears the soft year filter (P2) |
 | `RoleSelectorForm` | `/roles` | `Input`, `Button` |
 | `ExpandedRolesCard` | `/roles` | `Card`, `Badge` (toggleable chips per related role, click to include/exclude from selection), confirm `Button` |
 | `ResumeUploadCard` | `/resume` | `Card`, `Input type=file`, `Button` |
@@ -44,6 +49,7 @@ src/app/
 | `CompanyFormDialog` | `/settings` | `Dialog`, `Input`, `Select` (source enum) |
 | `ScrapeRunsList` | `/settings` | `Table` — recent `scrape_runs` (source, status, jobs_found, run_at, error) |
 | `ThresholdsCard` | `/settings` | `Card` — read-only display of `KEYWORD_THRESHOLD`/`NOTIFY_THRESHOLD` from config |
+| Insights "Level up" / "In demand" cards | `/insights` | `Card`, `Badge`, proportion bars. Server component recomputes job skills at read time (`extractSkills` over role-matched jobs), then `computeSkillGaps`/`computeSkillDemand`. Honest copy: demand is over the user's scraped role-matched jobs, not the market |
 | `LoginForm` | `/login` | `Card`, `Input`, `Button`, `Form` (with `zod` validation) |
 
 All data-displaying components are server components receiving data as props from the page's server-side fetch (via repository → application use-case). Only interactive leaf components (`SkillsEditor`, `FilterBar`, forms) are client components (`"use client"`).
@@ -61,6 +67,8 @@ Mutations go through server actions in `features/<feature>/actions.ts` (e.g. `fe
 | `uploadResumeAction(formData)` | resume | calls `resume.application.uploadResume()` (storage + parse + extract), revalidates `/resume` |
 | `updateResumeSkillsAction(resumeId, skills)` | resume | calls `resume.application.updateSkills()`, revalidates `/resume` |
 | `createCompanyAction(input)` / `updateCompanyAction(id, input)` / `deleteCompanyAction(id)` | companies | CRUD via `CompanyRepository`, revalidates `/settings` |
+| `setJobStatusAction(jobIds, statusId)` | jobs | calls `jobs.application.setJobStatus()` (upsert `job_state` per id), revalidates `/dashboard`. Used by both the per-row dropdown (one id) and the bulk-select bar (many ids) |
+| `setDesiredExperienceAction(years)` | settings | calls `settings.application.setDesiredExperience()` (upsert/clear `app_settings`), revalidates `/settings` + `/dashboard`. `null` clears the soft year filter (P2) |
 
 Server actions return typed result objects (`{ ok: true, data }` or `{ ok: false, error }`) — no thrown exceptions cross the server/client boundary.
 

@@ -1,16 +1,31 @@
 import type { JobRepository } from "@/features/jobs/domain/JobRepository";
-import type { Job, JobFilters, JobsPage, JobWithScore, NormalizedJob, UpsertResult } from "@/features/jobs/domain/types";
+import type {
+  Job,
+  JobFilters,
+  JobsPage,
+  JobStatus,
+  JobWithScore,
+  NormalizedJob,
+  UpsertResult,
+} from "@/features/jobs/domain/types";
 import type { JobSource } from "@/shared/domain/enums";
+import { buildRoleFilter } from "@/shared/infrastructure/roleFilter";
 import type { TypedSupabaseClient } from "@/shared/infrastructure/supabaseClient";
 import type { Database } from "../../../../supabase/database.types";
 
 type JobRow = Database["public"]["Tables"]["jobs"]["Row"];
 type JobInsertRow = Database["public"]["Tables"]["jobs"]["Insert"];
+type JobStatusRow = Database["public"]["Tables"]["job_statuses"]["Row"];
+
+const ARCHIVED_STATUS_LABEL = "Archived";
 
 // findForDashboard doesn't select `description` (P1 #4) -- never rendered
 // by JobRow, and dropping it shrinks the dashboard's RSC payload.
 interface DashboardJobRow extends Omit<JobRow, "description"> {
   job_scores: { keyword_score: number; ai_score: number | null; ai_reasoning: string | null }[];
+  // job_state.job_id is a PK referencing jobs, so PostgREST returns at most
+  // one embedded row; treated as an array for parity with job_scores.
+  job_state: { status_id: string | null; job_statuses: { id: string; label: string; color: string } | null }[];
 }
 
 const UPSERT_BATCH_SIZE = 500;
@@ -35,6 +50,7 @@ function toJob(row: JobRow): Job {
 
 function toDashboardJob(row: DashboardJobRow): JobWithScore {
   const score = row.job_scores[0] as DashboardJobRow["job_scores"][number] | undefined;
+  const status = row.job_state?.[0]?.job_statuses ?? null;
   return {
     id: row.id,
     source: row.source,
@@ -51,7 +67,14 @@ function toDashboardJob(row: DashboardJobRow): JobWithScore {
     keywordScore: score?.keyword_score ?? null,
     aiScore: score?.ai_score ?? null,
     aiReasoning: score?.ai_reasoning ?? null,
+    statusId: status?.id ?? null,
+    statusLabel: status?.label ?? null,
+    statusColor: status?.color ?? null,
   };
+}
+
+function toJobStatus(row: Pick<JobStatusRow, "id" | "label" | "color" | "sort_order">): JobStatus {
+  return { id: row.id, label: row.label, color: row.color, sortOrder: row.sort_order };
 }
 
 // `excluded.first_seen_at` is never written, so the existing value (or the
@@ -69,31 +92,12 @@ function toUpsertRow(job: NormalizedJob): JobInsertRow {
     url: job.url,
     posted_at: job.postedAt,
     updated_at: new Date().toISOString(),
+    min_years: job.minYears ?? null,
   };
 }
 
 function jobKey(source: JobSource, sourceJobId: string): string {
   return `${source}:${sourceJobId}`;
-}
-
-// PostgREST .or() filter syntax treats `,`, `.`, `(`, `)` as structural and
-// `%`/`*` as wildcards -- strip them from role strings (which may originate
-// from AI-expanded roles, scraper-audit.md #1) before interpolating into
-// `title.ilike.%...%` clauses.
-const FILTER_UNSAFE_CHARS = /[,.()%*]/g;
-
-function sanitizeRoleForFilter(role: string): string {
-  return role.replace(FILTER_UNSAFE_CHARS, "").trim();
-}
-
-// Shared by findUnscored and countMatchingExpandedRoles: a PostgREST
-// .or() filter matching title OR description against any expandedRoles term
-// (decisions.md AD-15), or null if no usable terms remain after sanitizing.
-function buildRoleFilter(expandedRoles: string[]): string | null {
-  const sanitizedRoles = expandedRoles.map(sanitizeRoleForFilter).filter((role) => role.length > 0);
-  if (sanitizedRoles.length === 0) return null;
-
-  return sanitizedRoles.flatMap((role) => [`title.ilike.%${role}%`, `description.ilike.%${role}%`]).join(",");
 }
 
 // repositories.md §2.
@@ -192,10 +196,19 @@ export class SupabaseJobRepository implements JobRepository {
   }
 
   async findForDashboard(roleSelectionId: string, filters: JobFilters, limit: number): Promise<JobsPage> {
+    // Status filtering is resolved to a set of job ids first (mirrors the
+    // aiScored-exclusion pattern in findUnscored): PostgREST filters on an
+    // embedded resource only null out the embedding, they don't drop the
+    // parent row, so status restrict/exclude must constrain `jobs.id`.
+    const statusScope = await this.resolveStatusScope(filters);
+    if (statusScope.restrictToIds && statusScope.restrictToIds.length === 0) {
+      return { jobs: [], hasMore: false };
+    }
+
     let query = this.client
       .from("jobs")
       .select(
-        "id, source, source_job_id, company_id, company_name, title, location_raw, location_tags, url, posted_at, first_seen_at, updated_at, job_scores!left(keyword_score, ai_score, ai_reasoning, role_selection_id)",
+        "id, source, source_job_id, company_id, company_name, title, location_raw, location_tags, url, posted_at, first_seen_at, updated_at, job_scores!left(keyword_score, ai_score, ai_reasoning, role_selection_id), job_state!left(status_id, job_statuses(id, label, color))",
       )
       .eq("job_scores.role_selection_id", roleSelectionId);
 
@@ -207,6 +220,16 @@ export class SupabaseJobRepository implements JobRepository {
     }
     if (filters.minAiScore !== undefined) {
       query = query.gte("job_scores.ai_score", filters.minAiScore);
+    }
+    if (filters.maxYears !== undefined) {
+      // Soft: NULL min_years ("unknown") always passes, never excluded.
+      query = query.or(`min_years.is.null,min_years.lte.${filters.maxYears}`);
+    }
+    if (statusScope.restrictToIds) {
+      query = query.in("id", statusScope.restrictToIds);
+    }
+    if (statusScope.excludeIds && statusScope.excludeIds.length > 0) {
+      query = query.not("id", "in", `(${statusScope.excludeIds.join(",")})`);
     }
 
     query = query
@@ -222,5 +245,58 @@ export class SupabaseJobRepository implements JobRepository {
     const jobs = rows.slice(0, limit).map(toDashboardJob);
 
     return { jobs, hasMore };
+  }
+
+  // Translates the status filter into job-id constraints:
+  //  - statusIds given  -> restrict to jobs currently in those statuses.
+  //  - otherwise, unless includeArchived -> exclude jobs in the Archived
+  //    status. Jobs with no job_state row are never Archived, so they stay.
+  private async resolveStatusScope(
+    filters: JobFilters,
+  ): Promise<{ restrictToIds?: string[]; excludeIds?: string[] }> {
+    if (filters.statusIds && filters.statusIds.length > 0) {
+      return { restrictToIds: await this.jobIdsWithStatuses(filters.statusIds) };
+    }
+
+    if (!filters.includeArchived) {
+      const archivedId = await this.statusIdByLabel(ARCHIVED_STATUS_LABEL);
+      if (archivedId) {
+        return { excludeIds: await this.jobIdsWithStatuses([archivedId]) };
+      }
+    }
+
+    return {};
+  }
+
+  private async jobIdsWithStatuses(statusIds: string[]): Promise<string[]> {
+    const { data, error } = await this.client.from("job_state").select("job_id").in("status_id", statusIds);
+    if (error) throw error;
+    return (data ?? []).map((row) => row.job_id);
+  }
+
+  private async statusIdByLabel(label: string): Promise<string | null> {
+    const { data, error } = await this.client.from("job_statuses").select("id").eq("label", label).maybeSingle();
+    if (error) throw error;
+    return data?.id ?? null;
+  }
+
+  async listStatuses(): Promise<JobStatus[]> {
+    const { data, error } = await this.client
+      .from("job_statuses")
+      .select("id, label, color, sort_order")
+      .order("sort_order", { ascending: true });
+    if (error) throw error;
+    return (data ?? []).map(toJobStatus);
+  }
+
+  async setJobStatus(jobIds: string[], statusId: string): Promise<void> {
+    const now = new Date().toISOString();
+    const { error } = await this.client
+      .from("job_state")
+      .upsert(
+        jobIds.map((jobId) => ({ job_id: jobId, status_id: statusId, updated_at: now })),
+        { onConflict: "job_id" },
+      );
+    if (error) throw error;
   }
 }
