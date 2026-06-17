@@ -385,7 +385,13 @@ export type Database = {
       }
     }
     Enums: {
-      job_source: "greenhouse" | "lever" | "ashby" | "wellfound" | "remoteok"
+      job_source:
+        | "greenhouse"
+        | "lever"
+        | "ashby"
+        | "wellfound"
+        | "remoteok"
+        | "mycareersfuture"
       location_tag: "india" | "singapore" | "uae" | "remote"
       role_map_source: "seed" | "ai"
       scrape_run_status: "success" | "partial" | "failed"
@@ -516,7 +522,14 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      job_source: ["greenhouse", "lever", "ashby", "wellfound", "remoteok"],
+      job_source: [
+        "greenhouse",
+        "lever",
+        "ashby",
+        "wellfound",
+        "remoteok",
+        "mycareersfuture",
+      ],
       location_tag: ["india", "singapore", "uae", "remote"],
       role_map_source: ["seed", "ai"],
       scrape_run_status: ["success", "partial", "failed"],
