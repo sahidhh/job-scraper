@@ -27,7 +27,7 @@ export default async function SettingsPage() {
     settingsRepository.getDesiredExperienceYears(),
   ]);
 
-  const keywordThreshold = optionalEnv("KEYWORD_THRESHOLD", "0.5");
+  const keywordThreshold = optionalEnv("KEYWORD_THRESHOLD", "0.25");
   const notifyThreshold = optionalEnv("NOTIFY_THRESHOLD", "0.75");
 
   return (

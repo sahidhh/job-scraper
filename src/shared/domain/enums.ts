@@ -1,7 +1,7 @@
 // Pure TS mirrors of the Postgres enums (supabase/migrations/20260612000001_enums.sql).
 // Domain code must depend on these, never on generated Supabase types.
 
-export type JobSource = "greenhouse" | "lever" | "ashby" | "wellfound" | "remoteok";
+export type JobSource = "greenhouse" | "lever" | "ashby" | "wellfound" | "remoteok" | "mycareersfuture";
 
 export const JOB_SOURCES: readonly JobSource[] = [
   "greenhouse",
@@ -9,6 +9,7 @@ export const JOB_SOURCES: readonly JobSource[] = [
   "ashby",
   "wellfound",
   "remoteok",
+  "mycareersfuture",
 ];
 
 export type LocationTag = "india" | "singapore" | "uae" | "remote";
