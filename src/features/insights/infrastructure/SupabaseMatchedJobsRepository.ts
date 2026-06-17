@@ -1,4 +1,5 @@
 import type { MatchedJob, MatchedJobsRepository } from "@/features/insights/domain/MatchedJobsRepository";
+import type { ScrapeRunDataPoint, StatusBreakdownEntry } from "@/features/insights/domain/types";
 import { buildRoleFilter } from "@/shared/infrastructure/roleFilter";
 import type { TypedSupabaseClient } from "@/shared/infrastructure/supabaseClient";
 
@@ -6,6 +7,20 @@ interface MatchedJobRow {
   title: string;
   description: string;
   job_scores: { ai_score: number | null; role_selection_id: string }[];
+}
+
+interface ScrapeRunRow {
+  run_at: string;
+  jobs_found: number;
+  source: string;
+}
+
+interface AiScoreRow {
+  ai_score: number | null;
+}
+
+interface JobStateWithStatusRow {
+  job_statuses: { label: string; color: string };
 }
 
 export class SupabaseMatchedJobsRepository implements MatchedJobsRepository {
@@ -30,5 +45,66 @@ export class SupabaseMatchedJobsRepository implements MatchedJobsRepository {
       description: row.description,
       aiScore: row.job_scores[0]?.ai_score ?? null,
     }));
+  }
+
+  async getScrapeRuns(): Promise<ScrapeRunDataPoint[]> {
+    const { data, error } = await this.client
+      .from("scrape_runs")
+      .select("run_at, jobs_found, source")
+      .eq("status", "success")
+      .order("run_at", { ascending: true })
+      .returns<ScrapeRunRow[]>();
+    if (error) throw error;
+
+    return (data ?? []).map((row) => ({
+      runAt: row.run_at,
+      jobsFound: row.jobs_found,
+      source: row.source,
+    }));
+  }
+
+  async getAiScores(roleSelectionId: string): Promise<number[]> {
+    const { data, error } = await this.client
+      .from("job_scores")
+      .select("ai_score")
+      .eq("role_selection_id", roleSelectionId)
+      .not("ai_score", "is", null)
+      .returns<AiScoreRow[]>();
+    if (error) throw error;
+
+    return (data ?? []).map((row) => row.ai_score as number);
+  }
+
+  async getStatusBreakdown(): Promise<StatusBreakdownEntry[]> {
+    const { data: stateData, error: stateError } = await this.client
+      .from("job_state")
+      .select("job_statuses!inner(label, color)")
+      .returns<JobStateWithStatusRow[]>();
+    if (stateError) throw stateError;
+
+    const result = await this.client.from("jobs").select("*", { count: "exact", head: true });
+    if (result.error) throw result.error;
+
+    const totalCount = result.count ?? 0;
+    const rows = stateData ?? [];
+
+    const map = new Map<string, StatusBreakdownEntry>();
+    for (const row of rows) {
+      const { label, color } = row.job_statuses;
+      const existing = map.get(label);
+      if (existing) {
+        existing.count += 1;
+      } else {
+        map.set(label, { label, color, count: 1 });
+      }
+    }
+
+    const assignedCount = rows.length;
+    const newCount = totalCount - assignedCount;
+    if (newCount > 0) {
+      map.set("New", { label: "New", color: "#E5E7EB", count: newCount });
+    }
+
+    return Array.from(map.values()).sort((a, b) => b.count - a.count);
   }
 }

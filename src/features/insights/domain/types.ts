@@ -9,3 +9,33 @@ export interface SkillDemand {
   skill: string;
   count: number; // number of matched jobs mentioning this skill
 }
+
+// Analytics types (P3)
+
+export interface ScrapeRunDataPoint {
+  runAt: string;    // ISO timestamp from scrape_runs.run_at
+  jobsFound: number;
+  source: string;
+}
+
+export interface JobsOverTimePoint {
+  date: string;     // YYYY-MM-DD, aggregated from runAt
+  count: number;    // sum of jobsFound for that date
+}
+
+export interface JobsBySourceEntry {
+  source: string;
+  count: number;    // total jobsFound across all runs for this source
+}
+
+// Buckets: "0–10", "10–20", ..., "90–100". All 10 always present.
+export interface ScoreHistogramBucket {
+  bucket: string;
+  count: number;
+}
+
+export interface StatusBreakdownEntry {
+  label: string;
+  color: string;  // hex from job_statuses.color
+  count: number;
+}

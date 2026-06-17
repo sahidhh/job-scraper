@@ -158,7 +158,7 @@ graph TB
 | `resume` | Resume upload, parsing, skill extraction | `shared/supabase` (Storage + DB) | `ResumeRepository`, `uploadResume()` |
 | `scoring` | Two-stage scoring: keyword overlap + AI refinement | `shared/supabase`, OpenRouter client, `jobs`, `resume` domain types | `ScoreRepository`, `scoreJob()` |
 | `notifications` | Telegram alerts, one-time send guarantee | `shared/supabase`, Telegram client | `NotificationRepository`, `sendNotification()` |
-| `insights` | Skill-gap ("level up") + skill-demand views over role-matched jobs (P1) | `shared/supabase`, `shared/domain/skills`, `shared/infrastructure/roleFilter` | `MatchedJobsRepository`, `computeSkillGaps()`, `computeSkillDemand()` |
+| `insights` | Skill-gap + demand views (P1); analytics aggregations — jobs over time, by source, score histogram, status breakdown (P3) | `shared/supabase`, `shared/domain/skills`, `shared/infrastructure/roleFilter` | `MatchedJobsRepository` (+ `getScrapeRuns`, `getAiScores`, `getStatusBreakdown`), `computeSkillGaps()`, `computeSkillDemand()`, `computeJobsOverTime()`, `computeJobsBySource()`, `bucketScores()` |
 | `settings` | Editable user settings (desired experience years) backed by `app_settings` (P2) | `shared/supabase` | `SettingsRepository`, `setDesiredExperience()` |
 
 **Cross-feature rule:** a feature may import another feature's `domain` types (e.g. `scoring` imports the `Job` and `Resume` entity types from `jobs/domain` and `resume/domain`), but **never** another feature's `infrastructure`. All cross-feature orchestration happens in `scripts/*.ts` or `app/**/page.tsx` (composition roots), which wire concrete repositories into use-cases.

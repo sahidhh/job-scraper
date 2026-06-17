@@ -22,21 +22,20 @@ Plan: [feature-roadmap.md](feature-roadmap.md). 6 requested features → 4 phase
 - UI: `ExperienceCard` on /settings; dashboard default `maxYears` from setting; FilterBar max-years override.
 - Details: [phase-p2-experience.md](phase-p2-experience.md).
 
-## ⏳ Not done
+### P3 — Analytics graphs
+- `recharts` installed.
+- Pure fns (+tests): `computeJobsOverTime`, `computeJobsBySource`, `bucketScores` — all in `features/insights/application/`.
+- `MatchedJobsRepository` extended: `getScrapeRuns()`, `getAiScores(roleSelectionId)`, `getStatusBreakdown()` — implemented in `SupabaseMatchedJobsRepository` (+tests).
+- UI: `/analytics` server page + `features/insights/ui/AnalyticsCharts.tsx` client component (4 recharts charts: jobs over time, by source, score histogram, status breakdown). Nav item added.
+- Verified: tsc clean, 236 vitest tests pass (39 files), next build OK (`/analytics` 111 kB).
 
-### P3 — Analytics graphs (NOT STARTED)
-- Add dep `recharts` (approved, not installed).
-- Aggregations (pure, +tests): jobs_found over time (`scrape_runs`), jobs per source, status breakdown (`job_state`, P0), ai_score histogram (`job_scores`).
-- Optional `InsightsRepository` aggregation methods.
-- UI: `/analytics` route (or tab on `/insights`) + nav item.
-- Plan detail: feature-roadmap.md Phase 4.
+## ✅ All 4 phases complete
 
-## ⚠️ Carryover / must-do before deploy
-1. **DB not migrated locally** (no Docker/CLI). Run `supabase db push` to apply both migrations (`20260616000001`, `20260616000002`).
-2. **Apply seed statuses** + **regenerate `supabase/database.types.ts`** (`supabase gen types ...`) — currently hand-edited to match migrations.
-3. **Pre-existing flaky tests**: `TelegramBotSender` 429-retry timeouts (obs 87) — unrelated to P0–P2, not a regression.
-4. Nothing committed yet — all P0–P2 work is uncommitted in working tree.
+## ⚠️ Must-do before deploy
+1. **DB not migrated** — Run `supabase db push` (applies `20260616000001_job_status.sql`, `20260616000002_experience.sql`).
+2. **Seed statuses** — `supabase db seed` (New/Interested/Applied/Rejected/Archived).
+3. **Regen types** — `supabase gen types typescript --linked > supabase/database.types.ts`.
+4. **Flaky test fixed** — `TelegramBotSender` 429-retry was flaky (fetchWithRetry internal 2 s delay fought fake timers); fixed by passing `{ retries: 0 }` so TelegramBotSender owns 429 retry logic exclusively.
 
-## Notes for next session
-- Subagent orchestration failed this session (Anthropic API 500s on background agents) — work done inline. Retry agents next time.
-- Verify commands: `npx tsc --noEmit`, `npx vitest run`, `npm run build`.
+## Verify commands
+`npx tsc --noEmit` · `npx vitest run` · `npm run build`

@@ -40,6 +40,8 @@ src/app/
 | `JobStatusSelect` | inside `JobRow` | Client component: `Select` of statuses (colored dot) → `setJobStatusAction([jobId], statusId)` then `router.refresh()` |
 | `FilterBar` | `/dashboard` | `Select` (location tag, source, **status**), `Input` (min score, **max years**), **"show archived" checkbox**. `maxYears` defaults to the Settings desired-experience value; the input overrides per-view (P2) |
 | `InsightsPage` / `SkillRow` | `/insights` | `Card`, `Badge`, proportion bars — "Level up" (skill gaps) + "In demand" lists from `computeSkillGaps`/`computeSkillDemand` over role-matched jobs (P1) |
+| `AnalyticsPage` | `/analytics` | Server component — fetches scrape runs, AI scores, status breakdown via `SupabaseMatchedJobsRepository`; transforms with pure fns; passes to `AnalyticsCharts` (P3) |
+| `AnalyticsCharts` | `/analytics` | `"use client"` — 4 recharts charts: `JobsOverTimeChart` (line), `JobsBySourceChart` (bar), `ScoreHistogramChart` (bar, green), `StatusBreakdownChart` (bar, per-status color via `Cell`). Empty-state guard per chart (P3) |
 | `ExperienceCard` | `/settings` | Client `Card` + numeric `Input` → `setDesiredExperienceAction`; blank clears the soft year filter (P2) |
 | `RoleSelectorForm` | `/roles` | `Input`, `Button` |
 | `ExpandedRolesCard` | `/roles` | `Card`, `Badge` (toggleable chips per related role, click to include/exclude from selection), confirm `Button` |
