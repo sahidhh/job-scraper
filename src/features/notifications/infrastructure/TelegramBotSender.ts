@@ -29,15 +29,15 @@ export class TelegramBotSender implements TelegramSender {
       }),
     };
 
-    let response = await fetchWithRetry(url, init);
+    // retries: 0 — TelegramBotSender owns 429 retry logic below via retry_after;
+    // letting fetchWithRetry also retry 429 causes a 2000ms internal delay that
+    // conflicts with the retry_after-based wait.
+    let response = await fetchWithRetry(url, init, { retries: 0 });
     let body = (await response.json()) as TelegramSendMessageResponse;
 
-    // Telegram's 429s carry a `retry_after` (seconds) in `parameters` --
-    // fetchWithRetry treats 4xx as final, so retry once more here, waiting
-    // the time Telegram asked for (capped).
     if (response.status === 429 && body.parameters?.retry_after !== undefined) {
       await delay(Math.min(body.parameters.retry_after * 1000, MAX_RETRY_AFTER_MS));
-      response = await fetchWithRetry(url, init);
+      response = await fetchWithRetry(url, init, { retries: 0 });
       body = (await response.json()) as TelegramSendMessageResponse;
     }
 
