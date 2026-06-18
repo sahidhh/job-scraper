@@ -16,3 +16,12 @@ export interface RoleExpansion {
   relatedRoles: string[];
   source: RoleMapSource;
 }
+
+// Mirrors role_packs + role_pack_roles (docs/tasks/role-packs.md).
+export interface RolePack {
+  id: string;
+  name: string;
+  description: string;
+  roles: string[]; // ordered by sort_order
+  createdAt: string; // ISO 8601
+}

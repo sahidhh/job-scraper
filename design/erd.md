@@ -56,6 +56,20 @@ erDiagram
         uuid status_id FK "FK → JOB_STATUSES"
     }
 
+    ROLE_PACKS {
+        uuid id PK
+        text name
+        text description
+        timestamptz created_at
+    }
+
+    ROLE_PACK_ROLES {
+        uuid id PK
+        uuid pack_id FK
+        text role
+        integer sort_order
+    }
+
     ROLE_SELECTIONS {
         uuid id PK
         text primary_role
@@ -102,6 +116,7 @@ erDiagram
         timestamptz updated_at
     }
 
+    ROLE_PACKS ||--o{ ROLE_PACK_ROLES : "contains"
     COMPANIES ||--o{ JOBS : "has (nullable)"
     JOBS ||--o{ JOB_SCORES : "scored by"
     ROLE_SELECTIONS ||--o{ JOB_SCORES : "scopes"
@@ -123,6 +138,7 @@ erDiagram
 | `resumes` | `UNIQUE (is_active) WHERE is_active = true` | Enforce single active resume |
 | `role_selections` | `UNIQUE (is_active) WHERE is_active = true` | Enforce single active role |
 | `notifications_log` | `UNIQUE (job_id)` | Guarantee at-most-one Telegram send |
+| `role_pack_roles` | `INDEX (pack_id)` | Fast lookup of roles for a pack |
 | `companies` | `UNIQUE (source, board_token) WHERE board_token IS NOT NULL` | No duplicate board configs |
 
 ---
