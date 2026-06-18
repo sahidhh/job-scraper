@@ -33,110 +33,152 @@ The Job Intelligence Platform is a single-user, self-hosted web application that
 
 ## 5. System Components
 
-```
-┌──────────────────────────────────────────────────────────────────┐
-│  GitHub Actions (Cron)                                           │
-│  ┌──────────────────┐   ┌──────────────────┐  ┌──────────────┐  │
-│  │  scripts/scrape  │ → │  scripts/score   │→ │scripts/notify│  │
-│  └──────────────────┘   └──────────────────┘  └──────────────┘  │
-└──────────────────────────────────────────────────────────────────┘
-          │ upsert jobs             │ upsert scores       │ mark notified
-          ▼                         ▼                     ▼
-┌──────────────────────────────────────────────────────────────────┐
-│  Supabase (Postgres 14.5 + Auth + Storage)                       │
-│  jobs │ companies │ job_scores │ resumes │ role_selections │ ...  │
-└──────────────────────────────────────────────────────────────────┘
-          ▲                         ▲
-          │ server actions          │ server actions
-┌─────────────────────┐   ┌────────────────────────┐
-│  Next.js App (Vercel)│   │  External APIs          │
-│  /dashboard         │   │  OpenRouter (AI scoring) │
-│  /roles             │   │  Telegram Bot API        │
-│  /resume            │   │  ATS board APIs          │
-│  /settings          │   └────────────────────────┘
-│  /analytics         │
-│  /insights          │
-└─────────────────────┘
+```mermaid
+flowchart TB
+    subgraph gha ["⏱️ GitHub Actions (Cron — every 2h)"]
+        SC["scrape.ts"] --> SK["score.ts"] --> NT["notify.ts"]
+    end
+
+    subgraph supabase ["🗄️ Supabase"]
+        DB[("Postgres 14.5\n+ Auth + Storage")]
+    end
+
+    subgraph vercel ["💻 Vercel (Next.js 15)"]
+        WEB["Web App\n/dashboard /roles /resume /settings /analytics /insights"]
+    end
+
+    subgraph ext ["🌐 External Services"]
+        OR["OpenRouter\n(AI scoring)"]
+        TG["Telegram Bot\n(notifications)"]
+        ATS["ATS Board APIs\n(Greenhouse / Lever / Ashby / …)"]
+    end
+
+    SC -->|upsert jobs| DB
+    SK -->|upsert scores| DB
+    SK --> OR
+    NT -->|mark notified| DB
+    NT --> TG
+    SC --> ATS
+    WEB <-->|server actions| DB
 ```
 
 ## 6. Data Flow
 
-### 6.1 Scrape Pipeline (Cron, every 2 hours)
+### 6.1 Scrape Pipeline
 
-```
-For each active company (greenhouse/lever/ashby):
-  → Fetch postings from ATS board API
-  → Normalize to RawJob[]
-  → Filter by expanded role keywords (client-side)
-  → tagLocations() → attach location_tags
-  → Drop jobs with empty location_tags
-  → Upsert into jobs table (dedup on source + source_job_id)
-  → Log scrape_run row (success/partial/failed)
+```mermaid
+sequenceDiagram
+    participant GHA as GitHub Actions
+    participant ATS as ATS / Board APIs
+    participant FT as filterTagLocations()
+    participant DB as Supabase
 
-Also fetch from:
-  Wellfound feed (if WELLFOUND_FEED_URL set)
-  RemoteOK public RSS
-  MyCareersFuture public API
-```
-
-### 6.2 Scoring Pipeline (Cron, after scrape)
-
-```
-Load active resume + active role_selection
-For each unscored job (matching expanded roles):
-  → computeKeywordScore(resume.skills, job.description+title)
-  → If keywordScore >= KEYWORD_THRESHOLD (default 0.25):
-      → AI call via OpenRouter (15s timeout, 1 retry)
-      → Store ai_score + ai_reasoning
-  → Upsert job_scores row
+    GHA->>ATS: Fetch per active company (GH/Lever/Ashby)
+    ATS-->>GHA: Raw postings []
+    GHA->>GHA: Normalize → RawJob[]
+    GHA->>GHA: Filter by expanded_roles (client-side)
+    GHA->>FT: tagLocations(rawJobs)
+    FT-->>GHA: jobs with location_tags (empty-tagged dropped)
+    GHA->>DB: UPSERT jobs ON CONFLICT (source, source_job_id) DO NOTHING
+    GHA->>DB: INSERT scrape_runs (success/partial/failed)
 ```
 
-### 6.3 Notification Pipeline (Cron, after scoring)
+### 6.2 Scoring Pipeline
 
+```mermaid
+sequenceDiagram
+    participant GHA as GitHub Actions
+    participant APP as Application Layer
+    participant OR as OpenRouter
+    participant DB as Supabase
+
+    GHA->>DB: Load active resume + role_selection
+    GHA->>DB: findUnscored(expanded_roles, role_selection_id)
+    DB-->>GHA: []Job
+    loop For each job
+        GHA->>APP: computeKeywordScore(resume.skills, job)
+        APP-->>GHA: keywordScore [0–1]
+        alt keywordScore ≥ KEYWORD_THRESHOLD
+            GHA->>OR: POST /chat/completions (15s timeout, 1 retry)
+            OR-->>GHA: { score, reasoning }
+            GHA->>DB: UPSERT job_scores (keyword + ai + reasoning)
+        else
+            GHA->>DB: UPSERT job_scores (keyword only, ai_score = null)
+        end
+    end
 ```
-Find: ai_score >= NOTIFY_THRESHOLD (default 0.75) AND no notifications_log row
-For each match (isolated):
-  → Format Telegram HTML message
-  → POST to Bot API (handle 429 retry_after)
-  → Upsert notifications_log row (mark sent)
+
+### 6.3 Notification Pipeline
+
+```mermaid
+sequenceDiagram
+    participant GHA as GitHub Actions
+    participant DB as Supabase
+    participant TG as Telegram Bot API
+
+    GHA->>DB: Find: ai_score ≥ threshold AND NOT IN notifications_log
+    DB-->>GHA: []Match
+    loop For each match (isolated)
+        GHA->>TG: POST sendMessage (HTML)
+        alt Success
+            GHA->>DB: INSERT notifications_log (job_id)
+        else Failure
+            GHA->>GHA: Log error, continue
+        end
+    end
 ```
 
 ### 6.4 User Interaction (Web)
 
-```
-User → Next.js Server Action → Supabase (anon key via SSR session)
-                             ↳ revalidatePath() → fresh dashboard data
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant RSC as Next.js RSC
+    participant SA as Server Action
+    participant DB as Supabase
+
+    U->>RSC: Navigate to page
+    RSC->>DB: Read data (anon key + session)
+    DB-->>RSC: Rows
+    RSC-->>U: Rendered page
+
+    U->>SA: Submit action (form/button)
+    SA->>SA: Validate input (Zod)
+    SA->>DB: Write (anon key + session + RLS)
+    DB-->>SA: Result
+    SA->>SA: revalidatePath()
+    SA-->>U: ActionResult<T>
 ```
 
 ## 7. Key Modules
 
 | Module | Path | Responsibility |
 |---|---|---|
-| sources | src/features/sources | Six ATS/board scrapers, RawJob normalization |
-| jobs | src/features/jobs | Persistence, dedup, dashboard queries, status CRUD |
-| filtering | src/features/filtering | Location tag inference from raw location strings |
-| resume | src/features/resume | PDF upload, text extraction, skill tagging |
-| roles | src/features/roles | Role selection, AI expansion, role_expansion_map cache |
-| scoring | src/features/scoring | Two-stage keyword+AI scoring pipeline |
-| notifications | src/features/notifications | Telegram message formatting and delivery |
-| insights | src/features/insights | Analytics computations (skill gaps, charts) |
-| companies | src/features/companies | Board-token CRUD for Greenhouse/Lever/Ashby |
-| settings | src/features/settings | User preferences (desired experience years) |
-| shared | src/shared | HTTP utilities, Supabase clients, domain primitives |
+| sources | `src/features/sources` | Six ATS/board scrapers, RawJob normalization |
+| jobs | `src/features/jobs` | Persistence, dedup, dashboard queries, status CRUD |
+| filtering | `src/features/filtering` | Location tag inference from raw location strings |
+| resume | `src/features/resume` | PDF upload, text extraction, skill tagging |
+| roles | `src/features/roles` | Role selection, AI expansion, role_expansion_map cache |
+| scoring | `src/features/scoring` | Two-stage keyword+AI scoring pipeline |
+| notifications | `src/features/notifications` | Telegram message formatting and delivery |
+| insights | `src/features/insights` | Analytics computations (skill gaps, charts) |
+| companies | `src/features/companies` | Board-token CRUD for Greenhouse/Lever/Ashby |
+| settings | `src/features/settings` | User preferences (desired experience years) |
+| shared | `src/shared` | HTTP utilities, Supabase clients, domain primitives |
 
 ## 8. Error Handling Strategy
 
 | Scenario | Behavior |
 |---|---|
-| Scraper returns empty results | Log scrape_run as `partial`; continue with other sources |
-| AI call times out | Leave ai_score null; retried on next scoring run |
+| Scraper returns empty results | Log `scrape_run` as `partial`; continue with other sources |
+| AI call times out | Leave `ai_score` null; retried automatically on next scoring run |
 | Telegram rate-limited | Honor `retry_after` header (capped 30s); retry once |
 | Server action fails | Return `{ ok: false, error: string }` — never throw to client |
-| Service-role in app/ | Blocked by CI check (`npm run check:service-role-boundary`) |
+| Service-role in `app/` | Blocked by CI check (`npm run check:service-role-boundary`) |
 
 ## 9. Configuration
 
-All runtime behavior is controlled via environment variables. See [tech-stack.md](tech-stack.md) for the full list and defaults.
+All runtime behaviour is controlled via environment variables. See [tech-stack.md](tech-stack.md) for the full list and defaults.
 
 ## 10. Testing Approach
 
