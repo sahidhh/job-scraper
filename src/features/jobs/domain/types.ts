@@ -50,6 +50,16 @@ export interface JobStatus {
   sortOrder: number;
 }
 
+export interface CreateStatusInput {
+  label: string;
+  color: string;
+}
+
+export interface UpdateStatusInput {
+  label?: string;
+  color?: string;
+}
+
 // Dashboard query filters (repositories.md §2).
 export interface JobFilters {
   locationTags?: LocationTag[];
