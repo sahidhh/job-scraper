@@ -35,8 +35,11 @@ const jobRow: JobRow = {
   url: "https://example.com/jobs/1",
   posted_at: "2026-01-01T00:00:00Z",
   first_seen_at: "2025-12-01T00:00:00Z",
+  last_seen_at: "2026-06-01T00:00:00Z",
   updated_at: "2025-12-01T00:00:00Z",
   min_years: null,
+  is_active: true,
+  inactive_reason: null,
 };
 
 describe("SupabaseJobRepository", () => {
@@ -67,6 +70,8 @@ describe("SupabaseJobRepository", () => {
       for (const row of rows) {
         expect(row).not.toHaveProperty("first_seen_at");
         expect(row).toHaveProperty("updated_at");
+        expect(row).toHaveProperty("last_seen_at");
+        expect(row).toHaveProperty("is_active", true);
       }
       expect(upsertCall[1]).toEqual({ onConflict: "source,source_job_id" });
     });
@@ -106,7 +111,10 @@ describe("SupabaseJobRepository", () => {
           url: "https://example.com/jobs/1",
           postedAt: "2026-01-01T00:00:00Z",
           firstSeenAt: "2025-12-01T00:00:00Z",
+          lastSeenAt: "2026-06-01T00:00:00Z",
           updatedAt: "2025-12-01T00:00:00Z",
+          isActive: true,
+          inactiveReason: null,
         },
       ]);
 
@@ -388,6 +396,33 @@ describe("SupabaseJobRepository", () => {
       expect(rows[1]).toMatchObject({ job_id: "job-2", status_id: "s1" });
       expect(rows[0]).toHaveProperty("updated_at");
       expect(upsertCall[1]).toEqual({ onConflict: "job_id" });
+    });
+  });
+
+  describe("markExpiredJobs", () => {
+    it("updates active jobs older than the cutoff and returns the count", async () => {
+      const { client, builder } = mockSupabaseClient({
+        data: [{ id: "job-old-1" }, { id: "job-old-2" }],
+        error: null,
+      });
+      const repo = new SupabaseJobRepository(client);
+
+      const count = await repo.markExpiredJobs(14);
+
+      expect(count).toBe(2);
+      expect(builder.update).toHaveBeenCalledWith({ is_active: false, inactive_reason: "expired" });
+      expect(builder.eq).toHaveBeenCalledWith("is_active", true);
+      expect(builder.lt).toHaveBeenCalledWith("last_seen_at", expect.any(String));
+      expect(builder.select).toHaveBeenCalledWith("id");
+    });
+
+    it("returns 0 when no jobs meet the expiration threshold", async () => {
+      const { client } = mockSupabaseClient({ data: [], error: null });
+      const repo = new SupabaseJobRepository(client);
+
+      const count = await repo.markExpiredJobs(14);
+
+      expect(count).toBe(0);
     });
   });
 });
