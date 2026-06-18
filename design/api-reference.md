@@ -134,6 +134,26 @@ Actions **never throw** to the client. On success they call `revalidatePath()` t
 
 ---
 
+#### `getRolePacksAction()`
+**File:** `src/features/roles/actions.ts`  
+**Description:** Returns all seeded role packs with their ordered role lists.
+
+**Returns:** `ActionResult<RolePack[]>`
+
+---
+
+#### `activateRolePackAction(packId)`
+**File:** `src/features/roles/actions.ts`  
+**Description:** Loads the pack's roles from `role_pack_roles` and calls `set_active_role_selection` with the pack name as `primary_role`. Revalidates `/dashboard` and `/roles`.
+
+| Param | Type | Description |
+|---|---|---|
+| packId | string (UUID) | ID of the role pack to activate |
+
+**Returns:** `ActionResult<RoleSelection>`
+
+---
+
 ### Companies
 
 #### `setCompanyAction(name, source, boardToken)`

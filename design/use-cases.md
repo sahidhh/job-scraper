@@ -106,6 +106,25 @@
 
 ---
 
+### UC-06a — Select Role Pack
+
+**Actor:** User  
+**Trigger:** User navigates to `/roles` and clicks a Role Pack  
+**Precondition:** Authenticated; role packs seeded in database  
+**Main Flow:**
+1. Page loads available packs from `role_packs` + `role_pack_roles`
+2. User clicks "Use pack" on a pack card
+3. `activateRolePackAction(packId)` called
+4. Pack's roles loaded from `role_pack_roles` (sorted by `sort_order`)
+5. `set_active_role_selection` RPC atomically creates new role_selection, deactivates previous
+6. Dashboard and `/roles` revalidated
+
+**Postcondition:** New role_selection is active with pack name as primary_role and pack roles as expanded_roles; scrape/score/notify pipelines unaffected
+
+**Alternate Flow:** User still able to expand and confirm a custom role via UC-06 (both flows coexist)
+
+---
+
 ### UC-07 — Configure Company Board Tokens
 
 **Actor:** User  
@@ -207,7 +226,7 @@
 | Story ID | As a user, I want to… | So that… |
 |---|---|---|
 | US-01 | upload my resume | the platform knows my skills |
-| US-02 | set my target role | the platform fetches and scores relevant jobs |
+| US-02 | set my target role (custom or via role pack) | the platform fetches and scores relevant jobs |
 | US-03 | see a ranked job list | I focus on the best matches first |
 | US-04 | filter by location and source | I find jobs in my preferred geography |
 | US-05 | assign statuses to jobs | I track my application pipeline |

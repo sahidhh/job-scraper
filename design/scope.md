@@ -20,6 +20,7 @@ A single technical professional (software engineer, data scientist, or similar) 
 |---|---|
 | Resume upload & skill extraction | Upload PDF, extract text, tag skills from dictionary |
 | Role selection & AI expansion | Define target role; expand to related roles via LLM or cache |
+| Role Packs | Pre-defined curated role groups; click to instantly activate without AI call |
 | Multi-source job scraping | Greenhouse, Lever, Ashby (per board_token), Wellfound, RemoteOK, MyCareersFuture |
 | Location filtering | Tag jobs by India / Singapore / UAE / Remote; drop untagged |
 | Two-stage scoring | Keyword score (free) → AI score (gated) per job |
@@ -82,7 +83,7 @@ A single technical professional (software engineer, data scientist, or similar) 
 
 ```
 P0 — Core (shipped)
- └── Resume, Role, Scraping, Scoring, Notifications, Dashboard, Status, Companies
+ └── Resume, Role, Role Packs, Scraping, Scoring, Notifications, Dashboard, Status, Companies
 
 P1 — Insights (current priority)
  └── Skill gaps, Skill demand

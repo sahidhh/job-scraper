@@ -288,6 +288,56 @@ export type Database = {
         }
         Relationships: []
       }
+      role_pack_roles: {
+        Row: {
+          id: string
+          pack_id: string
+          role: string
+          sort_order: number
+        }
+        Insert: {
+          id?: string
+          pack_id: string
+          role: string
+          sort_order?: number
+        }
+        Update: {
+          id?: string
+          pack_id?: string
+          role?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_pack_roles_pack_id_fkey"
+            columns: ["pack_id"]
+            isOneToOne: false
+            referencedRelation: "role_packs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      role_packs: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       role_expansion_map: {
         Row: {
           related_roles: string[]
