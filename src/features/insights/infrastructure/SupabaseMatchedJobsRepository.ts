@@ -2,6 +2,7 @@ import type { ExperienceRow, LocationRow, MatchedJob, MatchedJobsRepository } fr
 import type { ScrapeRunDataPoint, StatusBreakdownEntry } from "@/features/insights/domain/types";
 import { buildRoleFilter } from "@/shared/infrastructure/roleFilter";
 import type { TypedSupabaseClient } from "@/shared/infrastructure/supabaseClient";
+import { toAppError } from "@/shared/infrastructure/supabaseError";
 
 interface MatchedJobRow {
   title: string;
@@ -46,7 +47,7 @@ export class SupabaseMatchedJobsRepository implements MatchedJobsRepository {
       .eq("job_scores.role_selection_id", roleSelectionId)
       .or(roleFilter)
       .returns<MatchedJobRow[]>();
-    if (error) throw error;
+    if (error) throw toAppError(error);
 
     return (data ?? []).map((row) => ({
       title: row.title,
@@ -62,7 +63,7 @@ export class SupabaseMatchedJobsRepository implements MatchedJobsRepository {
       .eq("status", "success")
       .order("run_at", { ascending: true })
       .returns<ScrapeRunRow[]>();
-    if (error) throw error;
+    if (error) throw toAppError(error);
 
     return (data ?? []).map((row) => ({
       runAt: row.run_at,
@@ -78,7 +79,7 @@ export class SupabaseMatchedJobsRepository implements MatchedJobsRepository {
       .eq("role_selection_id", roleSelectionId)
       .not("ai_score", "is", null)
       .returns<AiScoreRow[]>();
-    if (error) throw error;
+    if (error) throw toAppError(error);
 
     return (data ?? []).map((row) => row.ai_score as number);
   }
@@ -88,10 +89,10 @@ export class SupabaseMatchedJobsRepository implements MatchedJobsRepository {
       .from("job_state")
       .select("job_statuses!inner(label, color)")
       .returns<JobStateWithStatusRow[]>();
-    if (stateError) throw stateError;
+    if (stateError) throw toAppError(stateError);
 
     const result = await this.client.from("jobs").select("*", { count: "exact", head: true });
-    if (result.error) throw result.error;
+    if (result.error) throw toAppError(result.error);
 
     const totalCount = result.count ?? 0;
     const rows = stateData ?? [];
@@ -121,7 +122,7 @@ export class SupabaseMatchedJobsRepository implements MatchedJobsRepository {
       .from("jobs")
       .select("min_years")
       .returns<MinYearsRow[]>();
-    if (error) throw error;
+    if (error) throw toAppError(error);
 
     return (data ?? []).map((row) => ({ minYears: row.min_years }));
   }
@@ -131,7 +132,7 @@ export class SupabaseMatchedJobsRepository implements MatchedJobsRepository {
       .from("jobs")
       .select("location_tags")
       .returns<LocationTagsRow[]>();
-    if (error) throw error;
+    if (error) throw toAppError(error);
 
     return (data ?? []).map((row) => ({ locationTags: row.location_tags ?? [] }));
   }

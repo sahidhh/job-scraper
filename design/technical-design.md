@@ -174,6 +174,8 @@ sequenceDiagram
 | AI call times out | Leave `ai_score` null; retried automatically on next scoring run |
 | Telegram rate-limited | Honor `retry_after` header (capped 30s); retry once |
 | Server action fails | Return `{ ok: false, error: string }` — never throw to client |
+| Supabase `PostgrestError` thrown | `toAppError()` (`src/shared/infrastructure/supabaseError.ts`) wraps it in a native `Error` with a readable message before it propagates |
+| Uncaught RSC error | Caught by `src/app/error.tsx` (route segment) or `src/app/global-error.tsx` (root fallback); user sees a readable message + "Try again" button |
 | Service-role in `app/` | Blocked by CI check (`npm run check:service-role-boundary`) |
 
 ## 9. Configuration

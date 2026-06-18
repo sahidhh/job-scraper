@@ -2,6 +2,7 @@ import type { NotificationPreferencesRepository } from "@/features/notifications
 import type { NotificationPreferences } from "@/features/notifications/domain/types";
 import type { Json } from "../../../../supabase/database.types";
 import type { TypedSupabaseClient } from "@/shared/infrastructure/supabaseClient";
+import { toAppError } from "@/shared/infrastructure/supabaseError";
 
 const NOTIFICATION_PREFERENCES_KEY = "notification_preferences";
 
@@ -17,7 +18,7 @@ export class SupabaseNotificationPreferencesRepository implements NotificationPr
       .select("value")
       .eq("key", NOTIFICATION_PREFERENCES_KEY)
       .maybeSingle();
-    if (error) throw error;
+    if (error) throw toAppError(error);
     if (!data) return null;
 
     const value = data.value;
@@ -31,7 +32,7 @@ export class SupabaseNotificationPreferencesRepository implements NotificationPr
         .from("app_settings")
         .delete()
         .eq("key", NOTIFICATION_PREFERENCES_KEY);
-      if (error) throw error;
+      if (error) throw toAppError(error);
       return;
     }
 
@@ -41,6 +42,6 @@ export class SupabaseNotificationPreferencesRepository implements NotificationPr
         { key: NOTIFICATION_PREFERENCES_KEY, value: prefs as unknown as Json, updated_at: new Date().toISOString() },
         { onConflict: "key" },
       );
-    if (error) throw error;
+    if (error) throw toAppError(error);
   }
 }

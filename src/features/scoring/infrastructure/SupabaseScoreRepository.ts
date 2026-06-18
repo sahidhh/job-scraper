@@ -1,6 +1,7 @@
 import type { NewJobScore } from "@/features/scoring/domain/types";
 import type { ScoreRepository } from "@/features/scoring/domain/ScoreRepository";
 import type { TypedSupabaseClient } from "@/shared/infrastructure/supabaseClient";
+import { toAppError } from "@/shared/infrastructure/supabaseError";
 
 // repositories.md §5.
 export class SupabaseScoreRepository implements ScoreRepository {
@@ -19,7 +20,7 @@ export class SupabaseScoreRepository implements ScoreRepository {
       { onConflict: "job_id,role_selection_id,resume_version", ignoreDuplicates: false },
     );
 
-    if (error) throw error;
+    if (error) throw toAppError(error);
   }
 
   async hasScore(jobId: string, roleSelectionId: string): Promise<boolean> {
@@ -29,7 +30,7 @@ export class SupabaseScoreRepository implements ScoreRepository {
       .eq("job_id", jobId)
       .eq("role_selection_id", roleSelectionId);
 
-    if (error) throw error;
+    if (error) throw toAppError(error);
     return (count ?? 0) > 0;
   }
 }

@@ -1,6 +1,7 @@
 import type { ResumeRepository } from "@/features/resume/domain/ResumeRepository";
 import type { NewResume, Resume } from "@/features/resume/domain/types";
 import type { TypedSupabaseClient } from "@/shared/infrastructure/supabaseClient";
+import { toAppError } from "@/shared/infrastructure/supabaseError";
 import type { Database } from "../../../../supabase/database.types";
 
 type ResumeRow = Database["public"]["Tables"]["resumes"]["Row"];
@@ -24,7 +25,7 @@ export class SupabaseResumeRepository implements ResumeRepository {
   async getActive(): Promise<Resume | null> {
     const { data, error } = await this.client.from("resumes").select("*").eq("is_active", true).maybeSingle();
 
-    if (error) throw error;
+    if (error) throw toAppError(error);
     return data ? toResume(data) : null;
   }
 
@@ -37,7 +38,7 @@ export class SupabaseResumeRepository implements ResumeRepository {
       p_skills: input.skills,
     });
 
-    if (error) throw error;
+    if (error) throw toAppError(error);
 
     const row = data?.[0];
     if (!row) throw new Error("set_active_resume returned no row");
@@ -47,7 +48,7 @@ export class SupabaseResumeRepository implements ResumeRepository {
   async updateSkills(id: string, skills: string[]): Promise<Resume> {
     const { data, error } = await this.client.from("resumes").update({ skills }).eq("id", id).select("*").single();
 
-    if (error) throw error;
+    if (error) throw toAppError(error);
     return toResume(data);
   }
 }

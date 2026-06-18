@@ -209,6 +209,7 @@ flowchart LR
         ENV["config/env.ts"]
         DICT["domain/skillsDictionary.ts"]
         RMAP["domain/roleExpansionMap.ts"]
+        ERR["supabaseError.ts\ntoAppError()"]
     end
 
     Features["src/features/*"] --> HTTP

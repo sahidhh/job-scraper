@@ -2,6 +2,7 @@ import type { CompanyRepository } from "@/features/companies/domain/CompanyRepos
 import type { Company, CompanyUpdate, NewCompany } from "@/features/companies/domain/types";
 import type { JobSource } from "@/shared/domain/enums";
 import type { TypedSupabaseClient } from "@/shared/infrastructure/supabaseClient";
+import { toAppError } from "@/shared/infrastructure/supabaseError";
 import type { Database } from "../../../../supabase/database.types";
 
 type CompanyRow = Database["public"]["Tables"]["companies"]["Row"];
@@ -29,13 +30,13 @@ export class SupabaseCompanyRepository implements CompanyRepository {
     }
 
     const { data, error } = await query;
-    if (error) throw error;
+    if (error) throw toAppError(error);
     return (data ?? []).map(toCompany);
   }
 
   async list(): Promise<Company[]> {
     const { data, error } = await this.client.from("companies").select("*");
-    if (error) throw error;
+    if (error) throw toAppError(error);
     return (data ?? []).map(toCompany);
   }
 
@@ -51,7 +52,7 @@ export class SupabaseCompanyRepository implements CompanyRepository {
       .select("*")
       .single();
 
-    if (error) throw error;
+    if (error) throw toAppError(error);
     return toCompany(data);
   }
 
@@ -64,12 +65,12 @@ export class SupabaseCompanyRepository implements CompanyRepository {
 
     const { data, error } = await this.client.from("companies").update(row).eq("id", id).select("*").single();
 
-    if (error) throw error;
+    if (error) throw toAppError(error);
     return toCompany(data);
   }
 
   async remove(id: string): Promise<void> {
     const { error } = await this.client.from("companies").delete().eq("id", id);
-    if (error) throw error;
+    if (error) throw toAppError(error);
   }
 }

@@ -13,6 +13,7 @@ import type {
 import type { JobSource } from "@/shared/domain/enums";
 import { buildRoleFilter } from "@/shared/infrastructure/roleFilter";
 import type { TypedSupabaseClient } from "@/shared/infrastructure/supabaseClient";
+import { toAppError } from "@/shared/infrastructure/supabaseError";
 import type { Database } from "../../../../supabase/database.types";
 
 type JobRow = Database["public"]["Tables"]["jobs"]["Row"];
@@ -133,7 +134,7 @@ export class SupabaseJobRepository implements JobRepository {
       const { error } = await this.client
         .from("jobs")
         .upsert(batch.map(toUpsertRow), { onConflict: "source,source_job_id" });
-      if (error) throw error;
+      if (error) throw toAppError(error);
 
       for (const job of batch) {
         if (existingKeys.has(jobKey(job.source, job.sourceJobId))) {
@@ -166,7 +167,7 @@ export class SupabaseJobRepository implements JobRepository {
         .select("source_job_id")
         .eq("source", source)
         .in("source_job_id", sourceJobIds);
-      if (error) throw error;
+      if (error) throw toAppError(error);
 
       for (const row of data ?? []) {
         keys.add(jobKey(source, row.source_job_id));
@@ -191,7 +192,7 @@ export class SupabaseJobRepository implements JobRepository {
       .eq("role_selection_id", roleSelectionId)
       .eq("resume_version", resumeVersion)
       .not("ai_score", "is", null);
-    if (scoredError) throw scoredError;
+    if (scoredError) throw toAppError(scoredError);
 
     const aiScoredIds = (aiScored ?? []).map((row) => row.job_id);
 
@@ -201,7 +202,7 @@ export class SupabaseJobRepository implements JobRepository {
     }
 
     const { data, error } = await query;
-    if (error) throw error;
+    if (error) throw toAppError(error);
     return (data ?? []).map(toJob);
   }
 
@@ -214,7 +215,7 @@ export class SupabaseJobRepository implements JobRepository {
       .select("id", { count: "exact", head: true })
       .eq("is_active", true)
       .or(roleFilter);
-    if (error) throw error;
+    if (error) throw toAppError(error);
     return count ?? 0;
   }
 
@@ -261,7 +262,7 @@ export class SupabaseJobRepository implements JobRepository {
       .limit(limit + 1);
 
     const { data, error } = await query.returns<DashboardJobRow[]>();
-    if (error) throw error;
+    if (error) throw toAppError(error);
 
     const rows = data ?? [];
     const hasMore = rows.length > limit;
@@ -293,13 +294,13 @@ export class SupabaseJobRepository implements JobRepository {
 
   private async jobIdsWithStatuses(statusIds: string[]): Promise<string[]> {
     const { data, error } = await this.client.from("job_state").select("job_id").in("status_id", statusIds);
-    if (error) throw error;
+    if (error) throw toAppError(error);
     return (data ?? []).map((row) => row.job_id);
   }
 
   private async statusIdByLabel(label: string): Promise<string | null> {
     const { data, error } = await this.client.from("job_statuses").select("id").eq("label", label).maybeSingle();
-    if (error) throw error;
+    if (error) throw toAppError(error);
     return data?.id ?? null;
   }
 
@@ -308,7 +309,7 @@ export class SupabaseJobRepository implements JobRepository {
       .from("job_statuses")
       .select("id, label, color, sort_order")
       .order("sort_order", { ascending: true });
-    if (error) throw error;
+    if (error) throw toAppError(error);
     return (data ?? []).map(toJobStatus);
   }
 
@@ -320,7 +321,7 @@ export class SupabaseJobRepository implements JobRepository {
         jobIds.map((jobId) => ({ job_id: jobId, status_id: statusId, updated_at: now })),
         { onConflict: "job_id" },
       );
-    if (error) throw error;
+    if (error) throw toAppError(error);
   }
 
   async createStatus(input: CreateStatusInput): Promise<JobStatus> {
@@ -330,7 +331,7 @@ export class SupabaseJobRepository implements JobRepository {
       .order("sort_order", { ascending: false })
       .limit(1)
       .maybeSingle();
-    if (maxError) throw maxError;
+    if (maxError) throw toAppError(maxError);
     const nextSortOrder = (maxData?.sort_order ?? 0) + 1;
 
     const { data, error } = await this.client
@@ -338,7 +339,7 @@ export class SupabaseJobRepository implements JobRepository {
       .insert({ label: input.label, color: input.color, sort_order: nextSortOrder })
       .select("id, label, color, sort_order")
       .single();
-    if (error) throw error;
+    if (error) throw toAppError(error);
     return toJobStatus(data);
   }
 
@@ -353,7 +354,7 @@ export class SupabaseJobRepository implements JobRepository {
       .eq("id", id)
       .select("id, label, color, sort_order")
       .single();
-    if (error) throw error;
+    if (error) throw toAppError(error);
     return toJobStatus(data);
   }
 
@@ -362,13 +363,13 @@ export class SupabaseJobRepository implements JobRepository {
       .from("job_state")
       .update({ status_id: null })
       .eq("status_id", id);
-    if (nullifyError) throw nullifyError;
+    if (nullifyError) throw toAppError(nullifyError);
 
     const { error } = await this.client
       .from("job_statuses")
       .delete()
       .eq("id", id);
-    if (error) throw error;
+    if (error) throw toAppError(error);
   }
 
   async markExpiredJobs(thresholdDays: number): Promise<number> {
@@ -380,7 +381,7 @@ export class SupabaseJobRepository implements JobRepository {
       .eq("is_active", true)
       .lt("last_seen_at", cutoff)
       .select("id");
-    if (error) throw error;
+    if (error) throw toAppError(error);
     return (data ?? []).length;
   }
 }

@@ -2,6 +2,7 @@ import type { RoleMapSource } from "@/shared/domain/enums";
 import type { RoleRepository } from "@/features/roles/domain/RoleRepository";
 import type { RoleExpansion, RoleSelection } from "@/features/roles/domain/types";
 import type { TypedSupabaseClient } from "@/shared/infrastructure/supabaseClient";
+import { toAppError } from "@/shared/infrastructure/supabaseError";
 import type { Database } from "../../../../supabase/database.types";
 
 type RoleSelectionRow = Database["public"]["Tables"]["role_selections"]["Row"];
@@ -23,7 +24,7 @@ export class SupabaseRoleRepository implements RoleRepository {
   async getExpansion(role: string): Promise<RoleExpansion | null> {
     const { data, error } = await this.client.from("role_expansion_map").select("*").eq("role", role).maybeSingle();
 
-    if (error) throw error;
+    if (error) throw toAppError(error);
     return data ? { relatedRoles: data.related_roles, source: data.source } : null;
   }
 
@@ -38,13 +39,13 @@ export class SupabaseRoleRepository implements RoleRepository {
       { onConflict: "role" },
     );
 
-    if (error) throw error;
+    if (error) throw toAppError(error);
   }
 
   async getActiveSelection(): Promise<RoleSelection | null> {
     const { data, error } = await this.client.from("role_selections").select("*").eq("is_active", true).maybeSingle();
 
-    if (error) throw error;
+    if (error) throw toAppError(error);
     return data ? toRoleSelection(data) : null;
   }
 
@@ -56,7 +57,7 @@ export class SupabaseRoleRepository implements RoleRepository {
       p_expanded_roles: expandedRoles,
     });
 
-    if (error) throw error;
+    if (error) throw toAppError(error);
 
     const row = data?.[0];
     if (!row) throw new Error("set_active_role_selection returned no row");
