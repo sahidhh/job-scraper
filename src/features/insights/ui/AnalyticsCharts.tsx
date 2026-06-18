@@ -12,6 +12,8 @@ import {
   YAxis,
 } from "recharts";
 import type {
+  JobsByExperiencePoint,
+  JobsByLocationPoint,
   JobsBySourceEntry,
   JobsOverTimePoint,
   ScoreHistogramBucket,
@@ -86,6 +88,44 @@ export function StatusBreakdownChart({ data }: { data: StatusBreakdownEntry[] })
           ))}
         </Bar>
       </BarChart>
+    </ResponsiveContainer>
+  );
+}
+
+export function JobsByExperienceChart({ data }: { data: JobsByExperiencePoint[] }) {
+  if (data.length === 0) {
+    return <p className="text-sm text-muted-foreground">No data yet.</p>;
+  }
+  const formatted = data.map((p) => ({
+    ...p,
+    label: p.minYears === null ? "Unknown" : String(p.minYears),
+  }));
+  return (
+    <ResponsiveContainer width="100%" height={220}>
+      <LineChart data={formatted}>
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis dataKey="label" />
+        <YAxis />
+        <Tooltip />
+        <Line type="monotone" dataKey="count" stroke="#10b981" dot={false} />
+      </LineChart>
+    </ResponsiveContainer>
+  );
+}
+
+export function JobsByLocationChart({ data }: { data: JobsByLocationPoint[] }) {
+  if (data.length === 0) {
+    return <p className="text-sm text-muted-foreground">No data yet.</p>;
+  }
+  return (
+    <ResponsiveContainer width="100%" height={220}>
+      <LineChart data={data}>
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis dataKey="location" />
+        <YAxis />
+        <Tooltip />
+        <Line type="monotone" dataKey="count" stroke="#f59e0b" dot={false} />
+      </LineChart>
     </ResponsiveContainer>
   );
 }

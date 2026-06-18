@@ -1,4 +1,4 @@
-import type { MatchedJob, MatchedJobsRepository } from "@/features/insights/domain/MatchedJobsRepository";
+import type { ExperienceRow, LocationRow, MatchedJob, MatchedJobsRepository } from "@/features/insights/domain/MatchedJobsRepository";
 import type { ScrapeRunDataPoint, StatusBreakdownEntry } from "@/features/insights/domain/types";
 import { buildRoleFilter } from "@/shared/infrastructure/roleFilter";
 import type { TypedSupabaseClient } from "@/shared/infrastructure/supabaseClient";
@@ -21,6 +21,14 @@ interface AiScoreRow {
 
 interface JobStateWithStatusRow {
   job_statuses: { label: string; color: string };
+}
+
+interface MinYearsRow {
+  min_years: number | null;
+}
+
+interface LocationTagsRow {
+  location_tags: string[] | null;
 }
 
 export class SupabaseMatchedJobsRepository implements MatchedJobsRepository {
@@ -106,5 +114,25 @@ export class SupabaseMatchedJobsRepository implements MatchedJobsRepository {
     }
 
     return Array.from(map.values()).sort((a, b) => b.count - a.count);
+  }
+
+  async getJobsExperienceData(): Promise<ExperienceRow[]> {
+    const { data, error } = await this.client
+      .from("jobs")
+      .select("min_years")
+      .returns<MinYearsRow[]>();
+    if (error) throw error;
+
+    return (data ?? []).map((row) => ({ minYears: row.min_years }));
+  }
+
+  async getJobsLocationData(): Promise<LocationRow[]> {
+    const { data, error } = await this.client
+      .from("jobs")
+      .select("location_tags")
+      .returns<LocationTagsRow[]>();
+    if (error) throw error;
+
+    return (data ?? []).map((row) => ({ locationTags: row.location_tags ?? [] }));
   }
 }
