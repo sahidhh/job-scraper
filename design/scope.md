@@ -1,0 +1,123 @@
+# Project Scope
+
+## 1. Problem Statement
+
+Job seekers waste hours manually checking multiple job boards, comparing postings to their skills, and missing newly posted positions. The Job Intelligence Platform automates this workflow: continuous scraping, intelligent scoring against a user's actual resume, and proactive notification — so the user only sees postings that matter.
+
+## 2. Target User
+
+A single technical professional (software engineer, data scientist, or similar) who:
+- Is actively or passively job-searching
+- Has a resume in PDF format
+- Wants to monitor positions in India, Singapore, UAE, or remote globally
+- Is comfortable with basic self-hosted setup (Supabase, Vercel, GitHub Actions)
+
+## 3. In-Scope Features
+
+### P0 — Core (Must Ship)
+
+| Feature | Description |
+|---|---|
+| Resume upload & skill extraction | Upload PDF, extract text, tag skills from dictionary |
+| Role selection & AI expansion | Define target role; expand to related roles via LLM or cache |
+| Multi-source job scraping | Greenhouse, Lever, Ashby (per board_token), Wellfound, RemoteOK, MyCareersFuture |
+| Location filtering | Tag jobs by India / Singapore / UAE / Remote; drop untagged |
+| Two-stage scoring | Keyword score (free) → AI score (gated) per job |
+| Telegram notifications | Push alert for jobs above AI score threshold |
+| Dashboard | Paginated, filterable, sortable job table with scores and statuses |
+| Status workflow | Customizable workflow statuses (New, Interested, Applied, Rejected, Archived) |
+| Company configuration | Add/remove Greenhouse/Lever/Ashby board tokens via UI |
+| Observability | scrape_runs log per source |
+
+### P1 — High Priority
+
+| Feature | Description |
+|---|---|
+| Skill gap insights | Show skills required by matched jobs but absent from resume |
+| Skill demand chart | Most-requested skills across all matched jobs |
+
+### P2 — Medium Priority
+
+| Feature | Description |
+|---|---|
+| Desired experience filter | User sets target years of experience; soft-filter on dashboard |
+| App settings persistence | Key-value store for user preferences (app_settings table) |
+
+### P3 — Low Priority
+
+| Feature | Description |
+|---|---|
+| Analytics charts | Jobs over time, by source, by experience bracket, score histogram |
+| Status breakdown | Pie chart of jobs per workflow status |
+
+### P4 — Future / Experimental
+
+| Feature | Description |
+|---|---|
+| Multi-agent orchestration | Background agent workflow for complex multi-step job analysis |
+
+## 4. Out-of-Scope
+
+| Feature | Reason |
+|---|---|
+| Multiple users / multi-tenancy | Single-user by design; no user_id columns |
+| Automated job applications | Scope is discovery and triage, not application |
+| Resume generation / editing | Platform assists skill tagging only |
+| Cover letter generation | Out of scope for V1 |
+| Interview preparation | Out of scope |
+| Salary data enrichment | Not available from target ATS sources |
+| Job board accounts (LinkedIn, Indeed) | No public API; scraping would violate ToS |
+| Mobile application | Web-only; Telegram notifications serve mobile alerting |
+| Team / recruiter features | Single-user tool |
+| Real-time scraping (push) | Cron-based polling; no webhook from ATS sources |
+| Geographies outside India / Singapore / UAE / Remote | Hardcoded in location_tags enum |
+
+## 5. Phase Roadmap
+
+```
+P0 — Core (shipped)
+ └── Resume, Role, Scraping, Scoring, Notifications, Dashboard, Status, Companies
+
+P1 — Insights (current priority)
+ └── Skill gaps, Skill demand
+
+P2 — Preferences
+ └── Desired experience, App settings
+
+P3 — Analytics
+ └── Charts: jobs over time, by source, by experience, score histogram, status breakdown
+
+P4 — Future
+ └── Multi-agent workflow orchestration
+```
+
+## 6. Scope Boundaries
+
+### Data Scope
+
+- **Job sources:** Only the six integrated sources. New sources require a new adapter implementing the scraper interface.
+- **Geographies:** India, Singapore, UAE, Remote. Adding a new geography requires a migration to extend the `location_tag` enum and updating the `tagLocations()` function.
+- **Skill dictionary:** Fixed canonical list. New skills require updating `src/shared/domain/skillsDictionary.ts`.
+
+### Integration Scope
+
+- **AI provider:** OpenRouter only. Model is configurable via `OPENROUTER_MODEL` env var.
+- **Notification channel:** Telegram only. Adding email/Slack would require new infrastructure implementations of the notification interface.
+- **Storage:** Supabase Storage only (resumes bucket). No S3 or local filesystem.
+
+### Deployment Scope
+
+- **Web app:** Vercel only (Next.js serverless).
+- **Cron jobs:** GitHub Actions only. No self-hosted cron or cloud scheduler.
+- **Database:** Supabase (managed Postgres). No self-hosted Postgres support in V1.
+
+## 7. Constraints
+
+| Constraint | Impact |
+|---|---|
+| Single-user | No RLS per-user isolation; all authenticated requests share data |
+| No real-time ATS webhooks | 2-hour scrape cadence; new jobs may be seen up to 2h late |
+| LLM cost | AI scoring gated behind keyword threshold to control OpenRouter spend |
+| Telegram rate limits | Bot API rate-limited; large notification batches may experience delay |
+| PDF-only resumes | Other formats (DOCX, plain text) not supported |
+| Manual company setup | Board tokens must be entered by user; no auto-discovery |
