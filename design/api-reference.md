@@ -176,6 +176,39 @@ Actions **never throw** to the client. On success they call `revalidatePath()` t
 
 ---
 
+### Notification Preferences
+
+#### `getNotificationPreferencesAction()`
+**File:** `src/features/notifications/actions.ts`  
+**Description:** Returns the current notification filter preferences, or `null` if none are set (notify-all behaviour).
+
+**Returns:** `ActionResult<NotificationPreferences | null>`
+
+---
+
+#### `setNotificationPreferencesAction(prefs)`
+**File:** `src/features/notifications/actions.ts`  
+**Description:** Persists notification filter preferences. Pass `null` to clear preferences and revert to notify-all. Filters are include-only; each specified filter must pass (AND logic), with any single match within a filter sufficient (OR logic).
+
+| Param | Type | Description |
+|---|---|---|
+| prefs | `NotificationPreferences \| null` | Preferences to save, or null to clear |
+
+`NotificationPreferences`:
+
+| Field | Type | Description |
+|---|---|---|
+| `roles` | `string[]` (optional) | Title must contain at least one (case-insensitive substring) |
+| `skills` | `string[]` (optional) | Description must match at least one skill (canonical or alias from dictionary) |
+| `locations` | `LocationTag[]` (optional) | `locationTags` must include at least one |
+| `minExperience` | `number` (optional) | `min_years` must be ≥ this; null `min_years` always passes |
+| `maxExperience` | `number` (optional) | `min_years` must be ≤ this; null `min_years` always passes |
+| `sources` | `JobSource[]` (optional) | Source must be one of these |
+
+**Returns:** `ActionResult<undefined>`
+
+---
+
 ## 2. Next.js App Routes
 
 | Route | Method | Auth | Description |

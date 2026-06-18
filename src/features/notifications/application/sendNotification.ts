@@ -1,12 +1,16 @@
 import type { NotificationRepository } from "@/features/notifications/domain/NotificationRepository";
 import type { TelegramSender } from "@/features/notifications/domain/TelegramSender";
+import type { NotificationPreferences } from "@/features/notifications/domain/types";
 import { validateNotifyThreshold } from "@/features/notifications/domain/validation";
+import { filterMatches } from "./filterMatches";
 import { formatMatchMessage } from "./formatMatchMessage";
 
 export interface SendNotificationDeps {
   notificationRepository: NotificationRepository;
   telegramSender: TelegramSender;
   notifyThreshold: number;
+  /** Optional include-filters applied before delivery. null or absent = notify all (default). */
+  preferences?: NotificationPreferences | null;
 }
 
 // Sends one Telegram message per unnotified match for roleSelectionId
@@ -21,7 +25,8 @@ export interface SendNotificationDeps {
 export async function sendNotification(roleSelectionId: string, deps: SendNotificationDeps): Promise<number> {
   validateNotifyThreshold(deps.notifyThreshold);
 
-  const matches = await deps.notificationRepository.findUnnotifiedMatches(roleSelectionId, deps.notifyThreshold);
+  const rawMatches = await deps.notificationRepository.findUnnotifiedMatches(roleSelectionId, deps.notifyThreshold);
+  const matches = deps.preferences ? filterMatches(rawMatches, deps.preferences) : rawMatches;
 
   let sent = 0;
   for (const match of matches) {

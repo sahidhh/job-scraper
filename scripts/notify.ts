@@ -1,4 +1,5 @@
 import { sendNotification } from "@/features/notifications/application/sendNotification";
+import { SupabaseNotificationPreferencesRepository } from "@/features/notifications/infrastructure/SupabaseNotificationPreferencesRepository";
 import { SupabaseNotificationRepository } from "@/features/notifications/infrastructure/SupabaseNotificationRepository";
 import { TelegramBotSender } from "@/features/notifications/infrastructure/TelegramBotSender";
 import { SupabaseRoleRepository } from "@/features/roles/infrastructure/SupabaseRoleRepository";
@@ -11,6 +12,7 @@ async function main(): Promise<void> {
   const client = createSupabaseServiceClient();
   const roleRepository = new SupabaseRoleRepository(client);
   const notificationRepository = new SupabaseNotificationRepository(client);
+  const preferencesRepository = new SupabaseNotificationPreferencesRepository(client);
   const telegramSender = new TelegramBotSender();
 
   const roleSelection = await roleRepository.getActiveSelection();
@@ -20,11 +22,17 @@ async function main(): Promise<void> {
   }
 
   const notifyThreshold = Number(optionalEnv("NOTIFY_THRESHOLD", "0.75"));
+  const preferences = await preferencesRepository.getPreferences();
+
+  if (preferences) {
+    console.log("[notify] applying notification preferences filter");
+  }
 
   const sent = await sendNotification(roleSelection.id, {
     notificationRepository,
     telegramSender,
     notifyThreshold,
+    preferences,
   });
 
   console.log(`[notify] sent ${sent} notification(s) for role selection ${roleSelection.id}`);

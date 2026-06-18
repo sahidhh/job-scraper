@@ -36,6 +36,12 @@ A single technical professional (software engineer, data scientist, or similar) 
 | Skill gap insights | Show skills required by matched jobs but absent from resume |
 | Skill demand chart | Most-requested skills across all matched jobs |
 
+### P1.5 — Notification Filters (shipped)
+
+| Feature | Description |
+|---|---|
+| Notification preferences | Configurable include filters: role, skill, location, experience, source — applied before Telegram delivery |
+
 ### P2 — Medium Priority
 
 | Feature | Description |
