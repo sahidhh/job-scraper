@@ -39,3 +39,13 @@ export interface StatusBreakdownEntry {
   color: string;  // hex from job_statuses.color
   count: number;
 }
+
+export interface JobsByExperiencePoint {
+  minYears: number | null;
+  count: number;
+}
+
+export interface JobsByLocationPoint {
+  location: string;
+  count: number;
+}
