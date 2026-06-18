@@ -5,8 +5,10 @@ import { CompanyFormDialog } from "@/components/settings/CompanyFormDialog";
 import { ExperienceCard } from "@/components/settings/ExperienceCard";
 import { NotificationsLogList } from "@/components/settings/NotificationsLogList";
 import { ScrapeRunsList } from "@/components/settings/ScrapeRunsList";
+import { StatusConfigSection } from "@/components/settings/StatusConfigSection";
 import { ThresholdsCard } from "@/components/settings/ThresholdsCard";
 import { SupabaseCompanyRepository } from "@/features/companies/infrastructure/SupabaseCompanyRepository";
+import { SupabaseJobRepository } from "@/features/jobs/infrastructure/SupabaseJobRepository";
 import { SupabaseNotificationRepository } from "@/features/notifications/infrastructure/SupabaseNotificationRepository";
 import { SupabaseSettingsRepository } from "@/features/settings/infrastructure/SupabaseSettingsRepository";
 import { SupabaseScrapeRunRepository } from "@/features/sources/infrastructure/SupabaseScrapeRunRepository";
@@ -16,12 +18,14 @@ import { optionalEnv } from "@/shared/infrastructure/env";
 export default async function SettingsPage() {
   const client = await createSupabaseServerClient();
   const companyRepository = new SupabaseCompanyRepository(client);
+  const jobRepository = new SupabaseJobRepository(client);
   const scrapeRunRepository = new SupabaseScrapeRunRepository(client);
   const notificationRepository = new SupabaseNotificationRepository(client);
   const settingsRepository = new SupabaseSettingsRepository(client);
 
-  const [companies, scrapeRuns, notifications, desiredExperience] = await Promise.all([
+  const [companies, statuses, scrapeRuns, notifications, desiredExperience] = await Promise.all([
     companyRepository.list(),
+    jobRepository.listStatuses(),
     scrapeRunRepository.listRecent(20),
     notificationRepository.listRecent(20),
     settingsRepository.getDesiredExperienceYears(),
@@ -48,6 +52,15 @@ export default async function SettingsPage() {
         </CardHeader>
         <CardContent>
           <CompaniesTable companies={companies} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Status</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <StatusConfigSection initialStatuses={statuses} />
         </CardContent>
       </Card>
 
