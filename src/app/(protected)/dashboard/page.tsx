@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { SupabaseCompanyRepository } from "@/features/companies/infrastructure/SupabaseCompanyRepository";
 import type { JobFilters } from "@/features/jobs/domain/types";
 import { SupabaseJobRepository } from "@/features/jobs/infrastructure/SupabaseJobRepository";
+import { SupabaseResumeRepository } from "@/features/resume/infrastructure/SupabaseResumeRepository";
 import { SupabaseRoleRepository } from "@/features/roles/infrastructure/SupabaseRoleRepository";
 import { SupabaseSettingsRepository } from "@/features/settings/infrastructure/SupabaseSettingsRepository";
 import type { ScrapeRun } from "@/features/sources/domain/types";
@@ -188,6 +189,7 @@ async function JobsSection({
 }) {
   const client = await createSupabaseServerClient();
   const jobRepository = new SupabaseJobRepository(client);
+  const resumeRepository = new SupabaseResumeRepository(client);
   const settingsRepository = new SupabaseSettingsRepository(client);
   const limit = parseLimit(params);
 
@@ -199,8 +201,12 @@ async function JobsSection({
       ? { ...filters, maxYears: desiredExperience }
       : filters;
 
+  const activeResume = await resumeRepository.getActive();
+  // If no active resume, version 0 matches no scores (sentinel); jobs show as pending.
+  const resumeVersion = activeResume?.version ?? 0;
+
   const [{ jobs, hasMore }, matchingRoleCount, statuses] = await Promise.all([
-    jobRepository.findForDashboard(roleSelectionId, effectiveFilters, limit),
+    jobRepository.findForDashboard(roleSelectionId, effectiveFilters, limit, resumeVersion),
     jobRepository.countMatchingExpandedRoles(expandedRoles),
     jobRepository.listStatuses(),
   ]);

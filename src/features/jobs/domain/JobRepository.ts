@@ -38,18 +38,21 @@ export interface JobRepository {
 
   /**
    * Jobs whose title matches one of expandedRoles, and which either have
-   * no job_scores row for roleSelectionId, or have one with ai_score IS
-   * NULL (stage 2 never ran or previously failed -- retried). Feeds
-   * scripts/score.ts (architecture.md §3.2, scoring.md §3).
+   * no job_scores row for (roleSelectionId, resumeVersion), or have one
+   * with ai_score IS NULL (stage 2 never ran or previously failed --
+   * retried). Jobs scored against a prior resume version are included so
+   * they are re-scored against the current version. Feeds scripts/score.ts.
    */
-  findUnscored(roleSelectionId: string, expandedRoles: string[]): Promise<Job[]>;
+  findUnscored(roleSelectionId: string, expandedRoles: string[], resumeVersion: number): Promise<Job[]>;
 
   /**
-   * Jobs joined with job_scores for roleSelectionId, filtered/sorted for
-   * the /dashboard table, capped at `limit` rows (repositories.md §2).
-   * `hasMore` indicates whether additional rows exist beyond `limit`.
+   * Jobs joined with job_scores for (roleSelectionId, resumeVersion),
+   * filtered/sorted for the /dashboard table, capped at `limit` rows.
+   * Scores from prior resume versions are excluded; those jobs appear as
+   * unscored (pending re-score). `hasMore` indicates whether additional
+   * rows exist beyond `limit`.
    */
-  findForDashboard(roleSelectionId: string, filters: JobFilters, limit: number): Promise<JobsPage>;
+  findForDashboard(roleSelectionId: string, filters: JobFilters, limit: number, resumeVersion: number): Promise<JobsPage>;
 
   /**
    * Count of jobs whose title or description matches at least one of

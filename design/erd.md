@@ -37,6 +37,7 @@ erDiagram
         uuid id PK
         uuid job_id FK
         uuid role_selection_id FK
+        integer resume_version "resume version used for this score"
         real keyword_score "0.0 – 1.0, always set"
         real ai_score "0.0 – 1.0, null if below threshold or pending"
         text ai_reasoning "nullable"
@@ -68,6 +69,7 @@ erDiagram
         text file_path "Supabase Storage path"
         text parsed_text
         text[] skills
+        integer version "monotonically increasing; set by set_active_resume"
         timestamptz uploaded_at
         boolean is_active "UNIQUE partial index where true"
     }
@@ -116,7 +118,7 @@ erDiagram
 |---|---|---|
 | `jobs` | `UNIQUE (source, source_job_id)` | Dedup on every ingest run |
 | `jobs` | `GIN INDEX (location_tags)` | Fast array containment queries |
-| `job_scores` | `UNIQUE (job_id, role_selection_id)` | One score per job+role pair |
+| `job_scores` | `UNIQUE (job_id, role_selection_id, resume_version)` | One score per job+role+resume-version triple; prior-version rows preserved |
 | `job_scores` | `INDEX (ai_score DESC NULLS LAST)` | Dashboard sorted by relevance |
 | `resumes` | `UNIQUE (is_active) WHERE is_active = true` | Enforce single active resume |
 | `role_selections` | `UNIQUE (is_active) WHERE is_active = true` | Enforce single active role |
@@ -130,9 +132,10 @@ erDiagram
 ### `set_active_resume(file_path, parsed_text, skills[])`
 
 ```
-1. UPDATE resumes SET is_active = false   -- deactivate previous
-2. INSERT INTO resumes (…, is_active = true)  -- activate new
-3. RETURN new row
+1. Compute next_version = MAX(version) + 1
+2. UPDATE resumes SET is_active = false   -- deactivate previous
+3. INSERT INTO resumes (…, is_active = true, version = next_version)  -- activate new
+4. RETURN new row
 ```
 
 ### `set_active_role_selection(primary_role, expanded_roles[])`

@@ -12,6 +12,7 @@ export interface JobScore {
 export interface NewJobScore {
   jobId: string;
   roleSelectionId: string;
+  resumeVersion: number;
   keywordScore: number;
   aiScore?: number | null;
   aiReasoning?: string | null;

@@ -95,7 +95,7 @@ describe("SupabaseJobRepository", () => {
       ]);
       const repo = new SupabaseJobRepository(client);
 
-      const result = await repo.findUnscored("role-selection-1", ["React Developer", "Frontend Engineer"]);
+      const result = await repo.findUnscored("role-selection-1", ["React Developer", "Frontend Engineer"], 1);
 
       expect(result).toEqual([
         {
@@ -124,6 +124,7 @@ describe("SupabaseJobRepository", () => {
         Record<string, ReturnType<typeof vi.fn>>,
       ];
       expect(scoredBuilder.eq).toHaveBeenCalledWith("role_selection_id", "role-selection-1");
+      expect(scoredBuilder.eq).toHaveBeenCalledWith("resume_version", 1);
       expect(scoredBuilder.not).toHaveBeenCalledWith("ai_score", "is", null);
       expect(jobsBuilder.or).toHaveBeenCalledWith(
         "title.ilike.%React Developer%,description.ilike.%React Developer%,title.ilike.%Frontend Engineer%,description.ilike.%Frontend Engineer%",
@@ -141,7 +142,7 @@ describe("SupabaseJobRepository", () => {
       ]);
       const repo = new SupabaseJobRepository(client);
 
-      const result = await repo.findUnscored("role-selection-1", ["React Developer"]);
+      const result = await repo.findUnscored("role-selection-1", ["React Developer"], 1);
 
       expect(result).toEqual([expect.objectContaining({ id: "job-1" })]);
 
@@ -157,7 +158,7 @@ describe("SupabaseJobRepository", () => {
       const { client, builders } = queuedSupabaseClient([]);
       const repo = new SupabaseJobRepository(client);
 
-      expect(await repo.findUnscored("role-selection-1", [])).toEqual([]);
+      expect(await repo.findUnscored("role-selection-1", [], 1)).toEqual([]);
       expect(builders).toHaveLength(0);
     });
 
@@ -168,7 +169,7 @@ describe("SupabaseJobRepository", () => {
       ]);
       const repo = new SupabaseJobRepository(client);
 
-      await repo.findUnscored("role-selection-1", ["Engineer, Backend (Remote)"]);
+      await repo.findUnscored("role-selection-1", ["Engineer, Backend (Remote)"], 1);
 
       const [, jobsBuilder] = builders as [
         Record<string, ReturnType<typeof vi.fn>>,
@@ -183,7 +184,7 @@ describe("SupabaseJobRepository", () => {
       const { client, builders } = queuedSupabaseClient([]);
       const repo = new SupabaseJobRepository(client);
 
-      expect(await repo.findUnscored("role-selection-1", ["(),.%*"])).toEqual([]);
+      expect(await repo.findUnscored("role-selection-1", ["(),.%*"], 1)).toEqual([]);
       expect(builders).toHaveLength(0);
     });
   });
@@ -230,6 +231,7 @@ describe("SupabaseJobRepository", () => {
         "role-selection-1",
         { locationTags: ["remote"], sources: ["greenhouse"] },
         50,
+        1,
       );
 
       expect(result).toEqual({
@@ -244,6 +246,7 @@ describe("SupabaseJobRepository", () => {
         hasMore: false,
       });
       expect(builder.eq).toHaveBeenCalledWith("job_scores.role_selection_id", "role-selection-1");
+      expect(builder.eq).toHaveBeenCalledWith("job_scores.resume_version", 1);
       expect(builder.overlaps).toHaveBeenCalledWith("location_tags", ["remote"]);
       expect(builder.in).toHaveBeenCalledWith("source", ["greenhouse"]);
       expect(builder.limit).toHaveBeenCalledWith(51);
@@ -256,7 +259,7 @@ describe("SupabaseJobRepository", () => {
       });
       const repo = new SupabaseJobRepository(client);
 
-      const result = await repo.findForDashboard("role-selection-1", {}, 50);
+      const result = await repo.findForDashboard("role-selection-1", {}, 50, 1);
 
       expect(result.jobs).toEqual([
         expect.objectContaining({ keywordScore: null, aiScore: null, aiReasoning: null }),
@@ -270,7 +273,7 @@ describe("SupabaseJobRepository", () => {
       });
       const repo = new SupabaseJobRepository(client);
 
-      const result = await repo.findForDashboard("role-selection-1", { minAiScore: 0.8 }, 50);
+      const result = await repo.findForDashboard("role-selection-1", { minAiScore: 0.8 }, 50, 1);
 
       expect(result.jobs).toEqual([expect.objectContaining({ id: "job-high" })]);
       expect(builder.gte).toHaveBeenCalledWith("job_scores.ai_score", 0.8);
@@ -286,7 +289,7 @@ describe("SupabaseJobRepository", () => {
       });
       const repo = new SupabaseJobRepository(client);
 
-      const result = await repo.findForDashboard("role-selection-1", {}, 1);
+      const result = await repo.findForDashboard("role-selection-1", {}, 1, 1);
 
       expect(result.hasMore).toBe(true);
       expect(result.jobs).toHaveLength(1);
@@ -309,7 +312,7 @@ describe("SupabaseJobRepository", () => {
       ]);
       const repo = new SupabaseJobRepository(client);
 
-      const result = await repo.findForDashboard("role-selection-1", {}, 50);
+      const result = await repo.findForDashboard("role-selection-1", {}, 50, 1);
 
       expect(result.jobs).toEqual([
         expect.objectContaining({ id: "job-1", statusId: "s1", statusLabel: "Applied", statusColor: "#DCFCE7" }),
@@ -326,7 +329,7 @@ describe("SupabaseJobRepository", () => {
       ]);
       const repo = new SupabaseJobRepository(client);
 
-      await repo.findForDashboard("role-selection-1", { statusIds: ["s1"] }, 50);
+      await repo.findForDashboard("role-selection-1", { statusIds: ["s1"] }, 50, 1);
 
       const [stateBuilder, mainBuilder] = builders as [
         Record<string, ReturnType<typeof vi.fn>>,
@@ -342,7 +345,7 @@ describe("SupabaseJobRepository", () => {
       ]);
       const repo = new SupabaseJobRepository(client);
 
-      const result = await repo.findForDashboard("role-selection-1", { statusIds: ["s1"] }, 50);
+      const result = await repo.findForDashboard("role-selection-1", { statusIds: ["s1"] }, 50, 1);
 
       expect(result).toEqual({ jobs: [], hasMore: false });
       expect(builders).toHaveLength(1);
@@ -355,7 +358,7 @@ describe("SupabaseJobRepository", () => {
       });
       const repo = new SupabaseJobRepository(client);
 
-      await repo.findForDashboard("role-selection-1", { includeArchived: true }, 50);
+      await repo.findForDashboard("role-selection-1", { includeArchived: true }, 50, 1);
 
       expect(builder.eq).not.toHaveBeenCalledWith("label", "Archived");
     });

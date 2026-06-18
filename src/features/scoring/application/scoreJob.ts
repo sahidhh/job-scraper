@@ -44,6 +44,7 @@ export async function scoreJob(
   const score: NewJobScore = {
     jobId: job.id,
     roleSelectionId,
+    resumeVersion: resume.version,
     keywordScore,
     aiScore,
     aiReasoning,

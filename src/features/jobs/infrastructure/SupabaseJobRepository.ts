@@ -176,19 +176,20 @@ export class SupabaseJobRepository implements JobRepository {
     return keys;
   }
 
-  async findUnscored(roleSelectionId: string, expandedRoles: string[]): Promise<Job[]> {
+  async findUnscored(roleSelectionId: string, expandedRoles: string[], resumeVersion: number): Promise<Job[]> {
     const roleFilter = buildRoleFilter(expandedRoles);
     if (!roleFilter) return [];
 
-    // Jobs with a job_scores row whose ai_score is already set are fully
-    // scored for this role selection and excluded. Jobs with NO row, or a
-    // row with ai_score IS NULL (stage 2 never ran or failed), are
-    // included so the AI step gets (re)tried (scoring.md §3, decisions.md
-    // AD-07 follow-up).
+    // Jobs with a job_scores row whose ai_score is already set AND whose
+    // resume_version matches the active resume are fully scored and
+    // excluded. Jobs with NO matching row, a row with ai_score IS NULL
+    // (stage 2 never ran or failed), or a row scored against a prior
+    // resume version are included so the scoring pipeline (re)tries them.
     const { data: aiScored, error: scoredError } = await this.client
       .from("job_scores")
       .select("job_id")
       .eq("role_selection_id", roleSelectionId)
+      .eq("resume_version", resumeVersion)
       .not("ai_score", "is", null);
     if (scoredError) throw scoredError;
 
@@ -217,7 +218,7 @@ export class SupabaseJobRepository implements JobRepository {
     return count ?? 0;
   }
 
-  async findForDashboard(roleSelectionId: string, filters: JobFilters, limit: number): Promise<JobsPage> {
+  async findForDashboard(roleSelectionId: string, filters: JobFilters, limit: number, resumeVersion: number): Promise<JobsPage> {
     // Status filtering is resolved to a set of job ids first (mirrors the
     // aiScored-exclusion pattern in findUnscored): PostgREST filters on an
     // embedded resource only null out the embedding, they don't drop the
@@ -231,7 +232,8 @@ export class SupabaseJobRepository implements JobRepository {
       .from("jobs")
       .select(DASHBOARD_SELECT)
       .eq("is_active", true)
-      .eq("job_scores.role_selection_id", roleSelectionId);
+      .eq("job_scores.role_selection_id", roleSelectionId)
+      .eq("job_scores.resume_version", resumeVersion);
 
     if (filters.locationTags && filters.locationTags.length > 0) {
       query = query.overlaps("location_tags", filters.locationTags);

@@ -12,6 +12,7 @@ const row: ResumeRow = {
   skills: ["React", "Node.js"],
   uploaded_at: "2026-01-01T00:00:00Z",
   is_active: true,
+  version: 1,
 };
 
 describe("SupabaseResumeRepository", () => {
@@ -28,6 +29,7 @@ describe("SupabaseResumeRepository", () => {
       skills: ["React", "Node.js"],
       uploadedAt: "2026-01-01T00:00:00Z",
       isActive: true,
+      version: 1,
     });
     expect(builder.eq).toHaveBeenCalledWith("is_active", true);
     expect(builder.maybeSingle).toHaveBeenCalled();

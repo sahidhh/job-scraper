@@ -13,6 +13,7 @@ function toResume(row: ResumeRow): Resume {
     skills: row.skills,
     uploadedAt: row.uploaded_at,
     isActive: row.is_active,
+    version: row.version,
   };
 }
 
