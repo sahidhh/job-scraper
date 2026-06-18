@@ -205,9 +205,11 @@ async function JobsSection({
   // If no active resume, version 0 matches no scores (sentinel); jobs show as pending.
   const resumeVersion = activeResume?.version ?? 0;
 
+  // countMatchingExpandedRoles is non-critical (used only for the header stat
+  // line) — isolate its failure so the rest of the dashboard still loads.
   const [{ jobs, hasMore }, matchingRoleCount, statuses] = await Promise.all([
     jobRepository.findForDashboard(roleSelectionId, effectiveFilters, limit, resumeVersion),
-    jobRepository.countMatchingExpandedRoles(expandedRoles),
+    jobRepository.countMatchingExpandedRoles(expandedRoles).catch(() => null),
     jobRepository.listStatuses(),
   ]);
 
@@ -229,8 +231,12 @@ async function JobsSection({
       <p className="text-sm text-muted-foreground">
         {lastRun ? `Last scraped ${new Date(lastRun.runAt).toLocaleString()} — ` : ""}
         {jobs.length} job{jobs.length === 1 ? "" : "s"} found, {scoredCount} scored by AI, {pendingCount} pending.{" "}
-        {matchingRoleCount} job{matchingRoleCount === 1 ? "" : "s"} match &ldquo;{primaryRole}&rdquo; and{" "}
-        {matchingRoleCount === 1 ? "is" : "are"} eligible for AI scoring under the current role selection.
+        {matchingRoleCount !== null && (
+          <>
+            {matchingRoleCount} job{matchingRoleCount === 1 ? "" : "s"} match &ldquo;{primaryRole}&rdquo; and{" "}
+            {matchingRoleCount === 1 ? "is" : "are"} eligible for AI scoring under the current role selection.
+          </>
+        )}
       </p>
       {jobs.length === 0 ? (
         <div className="rounded-md border border-border bg-muted/50 p-3 text-sm text-muted-foreground">

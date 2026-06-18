@@ -14,11 +14,16 @@ export function toAppError(e: unknown): Error {
     if (e.message) return e;
     // Error with empty message — try Supabase-specific fields on the same obj.
     const text = extractText(e as unknown as Record<string, unknown>);
-    return new Error(text || "Unexpected error.");
+    if (text) return new Error(text);
+    console.error("[toAppError] Error instance with no readable message:", JSON.stringify(e, Object.getOwnPropertyNames(e)));
+    return new Error("Unexpected error.");
   }
   if (typeof e === "object" && e !== null) {
     const text = extractText(e as Record<string, unknown>);
-    return new Error(text || "Unexpected error.");
+    if (text) return new Error(text);
+    console.error("[toAppError] Plain object error with no readable fields:", JSON.stringify(e));
+    return new Error("Unexpected error.");
   }
+  console.error("[toAppError] Non-object thrown value:", e);
   return new Error("Unexpected error.");
 }
