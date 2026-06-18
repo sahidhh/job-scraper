@@ -3,6 +3,14 @@ import type {
   StatusBreakdownEntry,
 } from "@/features/insights/domain/types";
 
+export interface ExperienceRow {
+  minYears: number | null;
+}
+
+export interface LocationRow {
+  locationTags: string[];
+}
+
 // A job that matches the active role selection, reduced to the fields the
 // insights use-cases need: text to extract skills from, and the AI score
 // (for optional weighting / "high-confidence demand" views).
@@ -34,4 +42,10 @@ export interface MatchedJobsRepository {
    * the "New" label (matching the dashboard's default display).
    */
   getStatusBreakdown(): Promise<StatusBreakdownEntry[]>;
+
+  /** min_years for all jobs (nullable). Used for experience distribution chart. */
+  getJobsExperienceData(): Promise<ExperienceRow[]>;
+
+  /** location_tags arrays for all jobs. Used for location distribution chart. */
+  getJobsLocationData(): Promise<LocationRow[]>;
 }
