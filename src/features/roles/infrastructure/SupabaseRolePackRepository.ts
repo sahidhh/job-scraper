@@ -1,6 +1,7 @@
 import type { RolePackRepository } from "@/features/roles/domain/RolePackRepository";
 import type { RolePack } from "@/features/roles/domain/types";
 import type { TypedSupabaseClient } from "@/shared/infrastructure/supabaseClient";
+import { toAppError } from "@/shared/infrastructure/supabaseError";
 
 export class SupabaseRolePackRepository implements RolePackRepository {
   constructor(private readonly client: TypedSupabaseClient) {}
@@ -11,7 +12,7 @@ export class SupabaseRolePackRepository implements RolePackRepository {
       .select("*")
       .order("created_at", { ascending: true });
 
-    if (packsError) throw packsError;
+    if (packsError) throw toAppError(packsError);
     if (!packs || packs.length === 0) return [];
 
     const packIds = packs.map((p) => p.id);
@@ -22,7 +23,7 @@ export class SupabaseRolePackRepository implements RolePackRepository {
       .in("pack_id", packIds)
       .order("sort_order", { ascending: true });
 
-    if (rolesError) throw rolesError;
+    if (rolesError) throw toAppError(rolesError);
 
     const rolesByPackId = new Map<string, string[]>();
     for (const row of packRoles ?? []) {
@@ -47,7 +48,7 @@ export class SupabaseRolePackRepository implements RolePackRepository {
       .eq("id", id)
       .maybeSingle();
 
-    if (packError) throw packError;
+    if (packError) throw toAppError(packError);
     if (!pack) return null;
 
     const { data: packRoles, error: rolesError } = await this.client
@@ -56,7 +57,7 @@ export class SupabaseRolePackRepository implements RolePackRepository {
       .eq("pack_id", id)
       .order("sort_order", { ascending: true });
 
-    if (rolesError) throw rolesError;
+    if (rolesError) throw toAppError(rolesError);
 
     return {
       id: pack.id,

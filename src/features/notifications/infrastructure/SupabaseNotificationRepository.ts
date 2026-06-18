@@ -2,6 +2,7 @@ import type { JobSource, LocationTag } from "@/shared/domain/enums";
 import type { NotificationRepository } from "@/features/notifications/domain/NotificationRepository";
 import type { JobMatch, NotificationLogItem } from "@/features/notifications/domain/types";
 import type { TypedSupabaseClient } from "@/shared/infrastructure/supabaseClient";
+import { toAppError } from "@/shared/infrastructure/supabaseError";
 
 // Shape returned by the embedded select in findUnnotifiedMatches --
 // `job_scores!inner` narrows to jobs with a matching score row, and
@@ -43,7 +44,7 @@ export class SupabaseNotificationRepository implements NotificationRepository {
       .gte("job_scores.ai_score", threshold)
       .returns<UnnotifiedMatchRow[]>();
 
-    if (error) throw error;
+    if (error) throw toAppError(error);
 
     return (data ?? [])
       .filter((row) => (row.notifications_log?.length ?? 0) === 0)
@@ -70,7 +71,7 @@ export class SupabaseNotificationRepository implements NotificationRepository {
       .from("notifications_log")
       .upsert({ job_id: jobId }, { onConflict: "job_id", ignoreDuplicates: true });
 
-    if (error) throw error;
+    if (error) throw toAppError(error);
   }
 
   async listRecent(limit: number): Promise<NotificationLogItem[]> {
@@ -81,7 +82,7 @@ export class SupabaseNotificationRepository implements NotificationRepository {
       .limit(limit)
       .returns<NotificationLogRow[]>();
 
-    if (error) throw error;
+    if (error) throw toAppError(error);
 
     return (data ?? [])
       .filter((row) => row.jobs !== null)

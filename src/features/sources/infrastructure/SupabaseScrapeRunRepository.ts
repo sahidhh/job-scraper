@@ -1,6 +1,7 @@
 import type { ScrapeRunRepository } from "@/features/sources/domain/ScrapeRunRepository";
 import type { NewScrapeRun, ScrapeRun } from "@/features/sources/domain/types";
 import type { TypedSupabaseClient } from "@/shared/infrastructure/supabaseClient";
+import { toAppError } from "@/shared/infrastructure/supabaseError";
 import type { Database } from "../../../../supabase/database.types";
 
 type ScrapeRunRow = Database["public"]["Tables"]["scrape_runs"]["Row"];
@@ -28,7 +29,7 @@ export class SupabaseScrapeRunRepository implements ScrapeRunRepository {
       error: run.error ?? null,
     });
 
-    if (error) throw error;
+    if (error) throw toAppError(error);
   }
 
   async listRecent(limit: number): Promise<ScrapeRun[]> {
@@ -38,7 +39,7 @@ export class SupabaseScrapeRunRepository implements ScrapeRunRepository {
       .order("run_at", { ascending: false })
       .limit(limit);
 
-    if (error) throw error;
+    if (error) throw toAppError(error);
     return (data ?? []).map(toScrapeRun);
   }
 }
