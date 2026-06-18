@@ -6,6 +6,7 @@ export interface Resume {
   skills: string[]; // canonical skill names (skills-dictionary.ts)
   uploadedAt: string; // ISO 8601
   isActive: boolean;
+  version: number; // monotonically increasing; incremented on each upload
 }
 
 // Input to ResumeRepository.create() -- atomically becomes the active

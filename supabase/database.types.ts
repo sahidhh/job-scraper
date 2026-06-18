@@ -66,6 +66,7 @@ export type Database = {
           id: string
           job_id: string
           keyword_score: number
+          resume_version: number
           role_selection_id: string
           scored_at: string
         }
@@ -75,6 +76,7 @@ export type Database = {
           id?: string
           job_id: string
           keyword_score: number
+          resume_version: number
           role_selection_id: string
           scored_at?: string
         }
@@ -84,6 +86,7 @@ export type Database = {
           id?: string
           job_id?: string
           keyword_score?: number
+          resume_version?: number
           role_selection_id?: string
           scored_at?: string
         }
@@ -263,6 +266,7 @@ export type Database = {
           parsed_text: string
           skills: string[]
           uploaded_at: string
+          version: number
         }
         Insert: {
           file_path: string
@@ -271,6 +275,7 @@ export type Database = {
           parsed_text?: string
           skills?: string[]
           uploaded_at?: string
+          version?: number
         }
         Update: {
           file_path?: string
@@ -279,6 +284,7 @@ export type Database = {
           parsed_text?: string
           skills?: string[]
           uploaded_at?: string
+          version?: number
         }
         Relationships: []
       }
@@ -368,6 +374,7 @@ export type Database = {
           parsed_text: string
           skills: string[]
           uploaded_at: string
+          version: number
         }[]
         SetofOptions: {
           from: "*"

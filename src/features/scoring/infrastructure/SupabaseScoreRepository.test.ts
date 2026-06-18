@@ -3,13 +3,14 @@ import { mockSupabaseClient } from "@/shared/infrastructure/testing/supabaseQuer
 import { SupabaseScoreRepository } from "./SupabaseScoreRepository";
 
 describe("SupabaseScoreRepository", () => {
-  it("insertScore upserts on (job_id, role_selection_id) and updates on conflict (retryable null ai_score)", async () => {
+  it("insertScore upserts on (job_id, role_selection_id, resume_version) and updates on conflict (retryable null ai_score)", async () => {
     const { client, builder } = mockSupabaseClient({ data: null, error: null });
     const repo = new SupabaseScoreRepository(client);
 
     await repo.insertScore({
       jobId: "job-1",
       roleSelectionId: "role-selection-1",
+      resumeVersion: 1,
       keywordScore: 1,
       aiScore: 0.85,
       aiReasoning: "Strong match",
@@ -19,11 +20,12 @@ describe("SupabaseScoreRepository", () => {
       {
         job_id: "job-1",
         role_selection_id: "role-selection-1",
+        resume_version: 1,
         keyword_score: 1,
         ai_score: 0.85,
         ai_reasoning: "Strong match",
       },
-      { onConflict: "job_id,role_selection_id", ignoreDuplicates: false },
+      { onConflict: "job_id,role_selection_id,resume_version", ignoreDuplicates: false },
     );
   });
 
@@ -31,7 +33,7 @@ describe("SupabaseScoreRepository", () => {
     const { client, builder } = mockSupabaseClient({ data: null, error: null });
     const repo = new SupabaseScoreRepository(client);
 
-    await repo.insertScore({ jobId: "job-1", roleSelectionId: "role-selection-1", keywordScore: 0 });
+    await repo.insertScore({ jobId: "job-1", roleSelectionId: "role-selection-1", resumeVersion: 1, keywordScore: 0 });
 
     expect(builder.upsert).toHaveBeenCalledWith(
       expect.objectContaining({ ai_score: null, ai_reasoning: null }),

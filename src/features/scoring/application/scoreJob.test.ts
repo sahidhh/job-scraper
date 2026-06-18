@@ -39,6 +39,7 @@ function makeResume(overrides: Partial<Resume> = {}): Resume {
     skills: ["React", "Node.js"],
     uploadedAt: "2026-01-01T00:00:00Z",
     isActive: true,
+    version: 1,
     ...overrides,
   };
 }

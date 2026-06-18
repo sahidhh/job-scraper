@@ -11,11 +11,12 @@ export class SupabaseScoreRepository implements ScoreRepository {
       {
         job_id: score.jobId,
         role_selection_id: score.roleSelectionId,
+        resume_version: score.resumeVersion,
         keyword_score: score.keywordScore,
         ai_score: score.aiScore ?? null,
         ai_reasoning: score.aiReasoning ?? null,
       },
-      { onConflict: "job_id,role_selection_id", ignoreDuplicates: false },
+      { onConflict: "job_id,role_selection_id,resume_version", ignoreDuplicates: false },
     );
 
     if (error) throw error;
