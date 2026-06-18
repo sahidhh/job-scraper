@@ -1,11 +1,13 @@
 import type { JobRepository } from "@/features/jobs/domain/JobRepository";
 import type {
+  CreateStatusInput,
   Job,
   JobFilters,
   JobsPage,
   JobStatus,
   JobWithScore,
   NormalizedJob,
+  UpdateStatusInput,
   UpsertResult,
 } from "@/features/jobs/domain/types";
 import type { JobSource } from "@/shared/domain/enums";
@@ -297,6 +299,54 @@ export class SupabaseJobRepository implements JobRepository {
         jobIds.map((jobId) => ({ job_id: jobId, status_id: statusId, updated_at: now })),
         { onConflict: "job_id" },
       );
+    if (error) throw error;
+  }
+
+  async createStatus(input: CreateStatusInput): Promise<JobStatus> {
+    const { data: maxData, error: maxError } = await this.client
+      .from("job_statuses")
+      .select("sort_order")
+      .order("sort_order", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (maxError) throw maxError;
+    const nextSortOrder = (maxData?.sort_order ?? 0) + 1;
+
+    const { data, error } = await this.client
+      .from("job_statuses")
+      .insert({ label: input.label, color: input.color, sort_order: nextSortOrder })
+      .select("id, label, color, sort_order")
+      .single();
+    if (error) throw error;
+    return toJobStatus(data);
+  }
+
+  async updateStatus(id: string, input: UpdateStatusInput): Promise<JobStatus> {
+    const updates: Partial<{ label: string; color: string }> = {};
+    if (input.label !== undefined) updates.label = input.label;
+    if (input.color !== undefined) updates.color = input.color;
+
+    const { data, error } = await this.client
+      .from("job_statuses")
+      .update(updates)
+      .eq("id", id)
+      .select("id, label, color, sort_order")
+      .single();
+    if (error) throw error;
+    return toJobStatus(data);
+  }
+
+  async deleteStatus(id: string): Promise<void> {
+    const { error: nullifyError } = await this.client
+      .from("job_state")
+      .update({ status_id: null })
+      .eq("status_id", id);
+    if (nullifyError) throw nullifyError;
+
+    const { error } = await this.client
+      .from("job_statuses")
+      .delete()
+      .eq("id", id);
     if (error) throw error;
   }
 }

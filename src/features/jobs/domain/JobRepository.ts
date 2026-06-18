@@ -1,4 +1,4 @@
-import type { Job, JobFilters, JobsPage, JobStatus, NormalizedJob, UpsertResult } from "./types";
+import type { CreateStatusInput, Job, JobFilters, JobsPage, JobStatus, NormalizedJob, UpdateStatusInput, UpsertResult } from "./types";
 
 export interface JobRepository {
   /**
@@ -6,6 +6,21 @@ export interface JobRepository {
    * Drives the per-row status dropdown and the dashboard status filter.
    */
   listStatuses(): Promise<JobStatus[]>;
+
+  /**
+   * Create a new status entry in job_statuses (P3 settings CRUD).
+   */
+  createStatus(input: CreateStatusInput): Promise<JobStatus>;
+
+  /**
+   * Update an existing status's label and/or color by id (P3).
+   */
+  updateStatus(id: string, input: UpdateStatusInput): Promise<JobStatus>;
+
+  /**
+   * Delete a status. Nullifies any job_state rows referencing it first (P3).
+   */
+  deleteStatus(id: string): Promise<void>;
 
   /**
    * Assign `statusId` to every job in `jobIds` (upsert into job_state on

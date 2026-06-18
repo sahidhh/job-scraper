@@ -28,6 +28,9 @@ function makeRepository(): JobRepository {
     countMatchingExpandedRoles: vi.fn(),
     listStatuses: vi.fn(),
     setJobStatus: vi.fn(),
+    createStatus: vi.fn(),
+    updateStatus: vi.fn(),
+    deleteStatus: vi.fn(),
   };
 }
 
