@@ -14,6 +14,8 @@ interface UnnotifiedMatchRow {
   location_tags: LocationTag[];
   source: JobSource;
   url: string;
+  description: string;
+  min_years: number | null;
   job_scores: { ai_score: number | null; ai_reasoning: string | null }[];
   notifications_log: { id: string }[] | null;
 }
@@ -35,7 +37,7 @@ export class SupabaseNotificationRepository implements NotificationRepository {
     const { data, error } = await this.client
       .from("jobs")
       .select(
-        "id, title, company_name, location_tags, source, url, job_scores!inner(ai_score, ai_reasoning), notifications_log(id)",
+        "id, title, company_name, location_tags, source, url, description, min_years, job_scores!inner(ai_score, ai_reasoning), notifications_log(id)",
       )
       .eq("job_scores.role_selection_id", roleSelectionId)
       .gte("job_scores.ai_score", threshold)
@@ -57,6 +59,8 @@ export class SupabaseNotificationRepository implements NotificationRepository {
           url: row.url,
           aiScore: score.ai_score!, // non-null: filtered by the gte("job_scores.ai_score", threshold) clause
           aiReasoning: score.ai_reasoning,
+          description: row.description,
+          minYears: row.min_years,
         };
       });
   }

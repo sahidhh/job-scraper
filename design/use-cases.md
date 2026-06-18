@@ -176,12 +176,29 @@
 **Actor:** Cron  
 **Trigger:** Immediately after UC-11 in the same GitHub Actions job  
 **Main Flow:**
-1. Query: jobs where `ai_score >= NOTIFY_THRESHOLD` AND no row in `notifications_log`
-2. For each match (isolated):
+1. Load notification preferences from `app_settings` (optional; absent = notify all)
+2. Query: jobs where `ai_score >= NOTIFY_THRESHOLD` AND no row in `notifications_log`
+3. Apply notification preferences filter (role, skill, location, experience, source) if set
+4. For each passing match (isolated):
    a. Format Telegram HTML message (title, company, location, source, URL, AI reasoning)
    b. POST to Telegram Bot API
    c. On success: upsert `notifications_log` row (prevents re-send)
-3. Per-match failure is logged; does not block remaining matches
+5. Per-match failure is logged; does not block remaining matches
+
+**Note:** Filtered-out jobs are NOT marked notified; they re-evaluate on future runs.
+
+---
+
+### UC-13 — Configure Notification Preferences
+
+**Actor:** User  
+**Trigger:** User sets notification preferences (via server action or direct DB)  
+**Main Flow:**
+1. User calls `setNotificationPreferencesAction(prefs)` with desired filters
+2. Preferences stored as JSON in `app_settings` under key `notification_preferences`
+3. Next notify cron run applies filters before sending
+
+**Alternate Flow (clear):** `setNotificationPreferencesAction(null)` removes the row; cron reverts to notify-all
 
 ---
 
@@ -199,3 +216,4 @@
 | US-08 | add company board tokens | the scraper covers my target companies |
 | US-09 | view score distributions | I understand the quality of matches over time |
 | US-10 | edit extracted skills | I correct any parsing errors |
+| US-11 | configure notification filters | I only receive alerts for jobs matching my criteria |

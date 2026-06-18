@@ -15,6 +15,8 @@ function makeMatch(overrides: Partial<JobMatch> = {}): JobMatch {
     url: "https://example.com/jobs/123",
     aiScore: 0.87,
     aiReasoning: "Strong match on React and Node.js experience.",
+    description: "We are looking for a Senior React Developer.",
+    minYears: 3,
     ...overrides,
   };
 }
@@ -114,5 +116,40 @@ describe("sendNotification", () => {
     );
 
     consoleErrorSpy.mockRestore();
+  });
+
+  it("applies preferences filter before sending: filtered-out matches are skipped and not marked notified", async () => {
+    const matches = [
+      makeMatch({ jobId: "job-1", title: "Backend Engineer", locationTags: ["remote"] }),
+      makeMatch({ jobId: "job-2", title: "Frontend Developer", locationTags: ["remote"] }),
+    ];
+    const notificationRepository = makeNotificationRepository(matches);
+    const telegramSender = makeTelegramSender();
+
+    const sent = await sendNotification("role-selection-1", {
+      notificationRepository,
+      telegramSender,
+      notifyThreshold: 0.75,
+      preferences: { roles: ["backend engineer"] },
+    });
+
+    expect(sent).toBe(1);
+    expect(notificationRepository.markNotified).toHaveBeenCalledWith("job-1");
+    expect(notificationRepository.markNotified).not.toHaveBeenCalledWith("job-2");
+  });
+
+  it("sends all matches when preferences is null (no filtering)", async () => {
+    const matches = [makeMatch({ jobId: "job-1" }), makeMatch({ jobId: "job-2" })];
+    const notificationRepository = makeNotificationRepository(matches);
+    const telegramSender = makeTelegramSender();
+
+    const sent = await sendNotification("role-selection-1", {
+      notificationRepository,
+      telegramSender,
+      notifyThreshold: 0.75,
+      preferences: null,
+    });
+
+    expect(sent).toBe(2);
   });
 });

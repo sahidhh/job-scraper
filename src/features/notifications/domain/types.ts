@@ -29,4 +29,18 @@ export interface JobMatch {
   url: string;
   aiScore: number; // [0,1], guaranteed non-null by the query (scoring.md §4)
   aiReasoning: string | null;
+  description: string;     // used for skill-based filtering
+  minYears: number | null; // used for experience-based filtering
+}
+
+// Configurable include-only filters applied before Telegram delivery.
+// All specified filters are ANDed; within each filter any match passes (OR).
+// Absent or empty-array fields are skipped, preserving existing behaviour.
+export interface NotificationPreferences {
+  roles?: string[];          // title must contain at least one (case-insensitive)
+  skills?: string[];         // description must match at least one skill from the dictionary
+  locations?: LocationTag[]; // locationTags must include at least one
+  minExperience?: number;    // min_years must be >= this (null min_years always passes)
+  maxExperience?: number;    // min_years must be <= this (null min_years always passes)
+  sources?: JobSource[];     // source must be in this list
 }
