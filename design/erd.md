@@ -26,8 +26,11 @@ erDiagram
         text url
         timestamptz posted_at "nullable"
         timestamptz first_seen_at
+        timestamptz last_seen_at "updated on every upsert"
         timestamptz updated_at
         integer min_years "nullable"
+        boolean is_active "false when not seen for JOB_EXPIRATION_DAYS"
+        text inactive_reason "nullable; 'expired' when set by sweep"
     }
 
     JOB_SCORES {

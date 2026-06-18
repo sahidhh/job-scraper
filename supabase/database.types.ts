@@ -168,6 +168,9 @@ export type Database = {
           description: string
           first_seen_at: string
           id: string
+          inactive_reason: string | null
+          is_active: boolean
+          last_seen_at: string
           location_raw: string
           location_tags: Database["public"]["Enums"]["location_tag"][]
           min_years: number | null
@@ -184,6 +187,9 @@ export type Database = {
           description?: string
           first_seen_at?: string
           id?: string
+          inactive_reason?: string | null
+          is_active?: boolean
+          last_seen_at?: string
           location_raw?: string
           location_tags?: Database["public"]["Enums"]["location_tag"][]
           min_years?: number | null
@@ -200,6 +206,9 @@ export type Database = {
           description?: string
           first_seen_at?: string
           id?: string
+          inactive_reason?: string | null
+          is_active?: boolean
+          last_seen_at?: string
           location_raw?: string
           location_tags?: Database["public"]["Enums"]["location_tag"][]
           min_years?: number | null

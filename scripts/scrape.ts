@@ -7,6 +7,9 @@ import { SupabaseRoleRepository } from "@/features/roles/infrastructure/Supabase
 import { sourceScrapers } from "@/features/sources/infrastructure/registry";
 import { SupabaseScrapeRunRepository } from "@/features/sources/infrastructure/SupabaseScrapeRunRepository";
 import { createSupabaseServiceClient } from "@/shared/infrastructure/supabaseClient";
+import { optionalEnv } from "@/shared/infrastructure/env";
+
+const DEFAULT_EXPIRATION_DAYS = 14;
 
 // Cron entry point (AD-04): scrapes every registered source, tags and
 // filters jobs by location (architecture.md §3.1 steps 4-5), and ingests
@@ -71,6 +74,16 @@ async function main(): Promise<void> {
 
       console.error(`[scrape] ${scraper.source}: failed - ${message}`);
     }
+  }
+
+  const expirationDays = parseInt(optionalEnv("JOB_EXPIRATION_DAYS", String(DEFAULT_EXPIRATION_DAYS)), 10);
+  try {
+    const expired = await jobRepository.markExpiredJobs(expirationDays);
+    if (expired > 0) {
+      console.log(`[scrape] marked ${expired} job(s) inactive (not seen for ${expirationDays}+ days)`);
+    }
+  } catch (err) {
+    console.error("[scrape] expiration sweep failed:", err instanceof Error ? err.message : String(err));
   }
 }
 

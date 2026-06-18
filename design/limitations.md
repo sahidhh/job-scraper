@@ -18,7 +18,7 @@ Location tagging is hardcoded to four tags: India, Singapore, UAE, Remote. Jobs 
 Only jobs seen after the platform was set up are stored. There is no backfill of historical postings from ATS sources.
 
 ### 1.6 Job Expiration
-The platform does not detect when a job is removed from the source board. Closed or expired postings remain in the database indefinitely (no soft-delete or expiration polling).
+Jobs not seen in recent scrapes are soft-deactivated after `JOB_EXPIRATION_DAYS` (default 14). Inactive jobs are excluded from the dashboard, scoring, and notifications but are never deleted. Jobs may reactivate automatically if they reappear on the source board (upsert sets `is_active = true` and refreshes `last_seen_at`).
 
 ---
 
@@ -118,6 +118,5 @@ Skill gap and skill demand insights are meaningful only when both an active resu
 |---|---|---|
 | No AI score invalidation on resume change | Stale scores after resume update | P2 |
 | Sequential AI scoring (no batching) | Slow for large job backlogs | P2 |
-| No expired/closed job detection | Dashboard fills with stale postings over time | P2 |
 | In-memory analytics aggregation | Slow for large datasets | P3 |
 | Manual wellfound feed URL configuration | Non-obvious setup step | P3 |

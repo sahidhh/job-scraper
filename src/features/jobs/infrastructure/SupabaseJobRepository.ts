@@ -30,6 +30,11 @@ interface DashboardJobRow extends Omit<JobRow, "description"> {
   job_state: { status_id: string | null; job_statuses: { id: string; label: string; color: string } | null }[];
 }
 
+// Columns selected in findForDashboard; mirrors DashboardJobRow but without
+// the embedded foreign-table columns (those are added by PostgREST).
+const DASHBOARD_SELECT =
+  "id, source, source_job_id, company_id, company_name, title, location_raw, location_tags, url, posted_at, first_seen_at, last_seen_at, updated_at, is_active, inactive_reason, job_scores!left(keyword_score, ai_score, ai_reasoning, role_selection_id), job_state!left(status_id, job_statuses(id, label, color))";
+
 const UPSERT_BATCH_SIZE = 500;
 
 function toJob(row: JobRow): Job {
@@ -46,7 +51,10 @@ function toJob(row: JobRow): Job {
     url: row.url,
     postedAt: row.posted_at,
     firstSeenAt: row.first_seen_at,
+    lastSeenAt: row.last_seen_at,
     updatedAt: row.updated_at,
+    isActive: row.is_active,
+    inactiveReason: row.inactive_reason,
   };
 }
 
@@ -65,7 +73,10 @@ function toDashboardJob(row: DashboardJobRow): JobWithScore {
     url: row.url,
     postedAt: row.posted_at,
     firstSeenAt: row.first_seen_at,
+    lastSeenAt: row.last_seen_at,
     updatedAt: row.updated_at,
+    isActive: row.is_active,
+    inactiveReason: row.inactive_reason,
     keywordScore: score?.keyword_score ?? null,
     aiScore: score?.ai_score ?? null,
     aiReasoning: score?.ai_reasoning ?? null,
@@ -81,7 +92,10 @@ function toJobStatus(row: Pick<JobStatusRow, "id" | "label" | "color" | "sort_or
 
 // `excluded.first_seen_at` is never written, so the existing value (or the
 // `first_seen_at` column default on insert) is preserved on conflict.
+// `last_seen_at` IS always written -- it stamps the current scrape run on
+// every touch (new or existing job), which is what the expiration sweep reads.
 function toUpsertRow(job: NormalizedJob): JobInsertRow {
+  const now = new Date().toISOString();
   return {
     source: job.source,
     source_job_id: job.sourceJobId,
@@ -93,7 +107,9 @@ function toUpsertRow(job: NormalizedJob): JobInsertRow {
     description: job.description,
     url: job.url,
     posted_at: job.postedAt,
-    updated_at: new Date().toISOString(),
+    updated_at: now,
+    last_seen_at: now,
+    is_active: true,
     min_years: job.minYears ?? null,
   };
 }
@@ -178,7 +194,7 @@ export class SupabaseJobRepository implements JobRepository {
 
     const aiScoredIds = (aiScored ?? []).map((row) => row.job_id);
 
-    let query = this.client.from("jobs").select("*").or(roleFilter);
+    let query = this.client.from("jobs").select("*").eq("is_active", true).or(roleFilter);
     if (aiScoredIds.length > 0) {
       query = query.not("id", "in", `(${aiScoredIds.join(",")})`);
     }
@@ -192,7 +208,11 @@ export class SupabaseJobRepository implements JobRepository {
     const roleFilter = buildRoleFilter(expandedRoles);
     if (!roleFilter) return 0;
 
-    const { count, error } = await this.client.from("jobs").select("id", { count: "exact", head: true }).or(roleFilter);
+    const { count, error } = await this.client
+      .from("jobs")
+      .select("id", { count: "exact", head: true })
+      .eq("is_active", true)
+      .or(roleFilter);
     if (error) throw error;
     return count ?? 0;
   }
@@ -209,9 +229,8 @@ export class SupabaseJobRepository implements JobRepository {
 
     let query = this.client
       .from("jobs")
-      .select(
-        "id, source, source_job_id, company_id, company_name, title, location_raw, location_tags, url, posted_at, first_seen_at, updated_at, job_scores!left(keyword_score, ai_score, ai_reasoning, role_selection_id), job_state!left(status_id, job_statuses(id, label, color))",
-      )
+      .select(DASHBOARD_SELECT)
+      .eq("is_active", true)
       .eq("job_scores.role_selection_id", roleSelectionId);
 
     if (filters.locationTags && filters.locationTags.length > 0) {
@@ -348,5 +367,18 @@ export class SupabaseJobRepository implements JobRepository {
       .delete()
       .eq("id", id);
     if (error) throw error;
+  }
+
+  async markExpiredJobs(thresholdDays: number): Promise<number> {
+    const cutoff = new Date(Date.now() - thresholdDays * 24 * 60 * 60 * 1000).toISOString();
+
+    const { data, error } = await this.client
+      .from("jobs")
+      .update({ is_active: false, inactive_reason: "expired" })
+      .eq("is_active", true)
+      .lt("last_seen_at", cutoff)
+      .select("id");
+    if (error) throw error;
+    return (data ?? []).length;
   }
 }

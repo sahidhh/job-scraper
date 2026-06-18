@@ -14,7 +14,10 @@ export interface Job {
   url: string;
   postedAt: string | null;
   firstSeenAt: string;
+  lastSeenAt: string;
   updatedAt: string;
+  isActive: boolean;
+  inactiveReason: string | null;
 }
 
 // Input to JobRepository.upsertMany() -- a TaggedRawJob ready to persist.

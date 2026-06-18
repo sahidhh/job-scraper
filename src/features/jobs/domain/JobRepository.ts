@@ -59,4 +59,11 @@ export interface JobRepository {
    * (reports/dashboard-scoring-discrepancy.md).
    */
   countMatchingExpandedRoles(expandedRoles: string[]): Promise<number>;
+
+  /**
+   * Marks active jobs that haven't been seen for `thresholdDays` as inactive
+   * (is_active=false, inactive_reason='expired'). Called once per scrape run
+   * after all sources have been ingested. Returns the count of jobs marked.
+   */
+  markExpiredJobs(thresholdDays: number): Promise<number>;
 }
