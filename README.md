@@ -166,7 +166,8 @@ npm run dev
 | `TELEGRAM_CHAT_ID` | GH Actions | ✅ |
 | `KEYWORD_THRESHOLD` | GH Actions | ⬜ default `0.25` |
 | `NOTIFY_THRESHOLD` | GH Actions | ⬜ default `0.75` |
-| `WELLFOUND_FEED_URL` | GH Actions | ⬜ Wellfound only |
+| `WELLFOUND_FEED_URL` | GH Actions | ⬜ Wellfound feed URL (see [docs/sources/wellfound.md](docs/sources/wellfound.md)) |
+| `WELLFOUND_DISABLED` | GH Actions | ⬜ Set `true` to disable Wellfound without a config warning |
 
 ---
 
