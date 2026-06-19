@@ -240,6 +240,25 @@
 
 ---
 
+### UC-15 — View Source Quality Analytics
+
+**Actor:** Operator  
+**Trigger:** Manual run of `npx tsx scripts/source-analytics.ts`  
+**Precondition:** `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are set in the environment  
+**Main Flow:**
+1. Script queries `scrape_runs` for the last 30 days
+2. Computes per-source metrics: runs, found, kept, keep rate, inserted, updated, 30-day average found per run
+3. Prints a formatted table to stdout
+4. Flags low performers (keep rate < 10% or avg found < 5)
+5. Exits with code 0
+
+**Postcondition:** Operator sees which sources are producing usable jobs and which are underperforming
+
+**Alternate Flow:** No scrape runs in the last 30 days → prints "No data available" and exits 0
+
+---
+
+
 ## 3. User Story Summary
 
 | Story ID | As a user, I want to… | So that… |
