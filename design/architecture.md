@@ -76,6 +76,7 @@ flowchart TB
     end
 
     subgraph gha ["⏱️ GitHub Actions"]
+        Validate["scripts/validate-sources.ts"]
         Scrape["scripts/scrape.ts"]
         Score["scripts/score.ts"]
         Notify["scripts/notify.ts"]
@@ -91,6 +92,7 @@ flowchart TB
     Score -->|"AI scoring"| OpenRouter["🤖 OpenRouter API"]
     Notify -->|"push alerts"| Telegram["📱 Telegram Bot API"]
     Scrape -->|"board APIs"| ATS["📋 ATS APIs\n(Greenhouse/Lever/Ashby/…)"]
+    Validate -->|"board probe"| ATS
     Actions --> Storage
 ```
 

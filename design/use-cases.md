@@ -10,6 +10,7 @@
 | **Public Job Board** | Wellfound feed, RemoteOK RSS, MyCareersFuture API |
 | **OpenRouter** | LLM gateway for role expansion and AI job scoring |
 | **Telegram Bot API** | Notification delivery service |
+| **Operator** | Person running the validate-sources script manually or via `workflow_dispatch` |
 
 ---
 
@@ -218,6 +219,24 @@
 3. Next notify cron run applies filters before sending
 
 **Alternate Flow (clear):** `setNotificationPreferencesAction(null)` removes the row; cron reverts to notify-all
+
+---
+
+### UC-14 — Validate ATS Board Tokens
+
+**Actor:** Operator (User or GitHub Actions `workflow_dispatch`)
+**Trigger:** Manual run of `npm run validate-sources` or the `validate-sources.yml` workflow
+**Precondition:** At least one active company with a board_token is configured
+**Main Flow:**
+1. Script loads all active companies via `SupabaseCompanyRepository.listActive()`
+2. `validateSources()` maps each company to its matching `SourceValidator`
+3. Boards are probed concurrently via `probeBoard()` (GET, 10s timeout, no retry)
+4. Results are grouped by source and printed with status icons and HTTP codes
+5. Summary counts are printed; exit code 1 if any boards are broken
+
+**Postcondition:** Operator sees which board tokens are healthy and which need to be removed or updated
+
+**Alternate Flow:** No companies configured → script reports "0 boards" and exits cleanly
 
 ---
 
