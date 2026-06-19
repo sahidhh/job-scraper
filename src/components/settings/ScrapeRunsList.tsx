@@ -27,7 +27,7 @@ export function ScrapeRunsList({ runs }: { runs: ScrapeRun[] }) {
             <TableCell>
               <Badge variant={STATUS_VARIANT[run.status]}>{run.status}</Badge>
             </TableCell>
-            <TableCell>{run.jobsFound}</TableCell>
+            <TableCell>{run.foundCount}</TableCell>
             <TableCell className="hidden md:table-cell">{new Date(run.runAt).toLocaleString()}</TableCell>
             <TableCell className="hidden max-w-xs truncate md:table-cell">{run.error ?? "—"}</TableCell>
           </TableRow>

@@ -14,7 +14,8 @@ const DEFAULT_EXPIRATION_DAYS = 14;
 // Cron entry point (AD-04): scrapes every registered source, tags and
 // filters jobs by location (architecture.md §3.1 steps 4-5), and ingests
 // the survivors via jobs.application.ingestJobs (step 6). One scrape_runs
-// row is written per source (scrapers.md §4).
+// row is written per source with full timing and count metrics
+// (docs/operations/observability.md).
 //
 // Role-aware fetching (decisions.md AD-14): the active role selection's
 // expandedRoles are passed to every adapter's fetchJobs so jobs are
@@ -45,30 +46,51 @@ async function main(): Promise<void> {
       continue;
     }
 
+    const startedAt = new Date();
+
     try {
       const rawJobs = await scraper.fetchJobs(companies, roles);
 
       const filtered = tagLocations(rawJobs).filter((job) => hasAllowedLocation(job.locationTags));
       const result = await ingestJobs(filtered, { jobRepository });
 
+      const completedAt = new Date();
+      const durationMs = completedAt.getTime() - startedAt.getTime();
+
       await scrapeRunRepository.recordRun({
         source: scraper.source,
         status: "success",
-        jobsFound: rawJobs.length,
+        foundCount: rawJobs.length,
+        keptCount: filtered.length,
+        insertedCount: result.inserted,
+        updatedCount: result.updated,
+        failedCount: 0,
+        startedAt: startedAt.toISOString(),
+        completedAt: completedAt.toISOString(),
+        durationMs,
         error: null,
       });
 
       console.log(
         `[scrape] ${scraper.source}: found ${rawJobs.length}, kept ${filtered.length}, ` +
-          `inserted ${result.inserted}, updated ${result.updated}`,
+          `inserted ${result.inserted}, updated ${result.updated} (${durationMs}ms)`,
       );
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
+      const completedAt = new Date();
+      const durationMs = completedAt.getTime() - startedAt.getTime();
 
       await scrapeRunRepository.recordRun({
         source: scraper.source,
         status: "failed",
-        jobsFound: 0,
+        foundCount: 0,
+        keptCount: 0,
+        insertedCount: 0,
+        updatedCount: 0,
+        failedCount: 0,
+        startedAt: startedAt.toISOString(),
+        completedAt: completedAt.toISOString(),
+        durationMs,
         error: message,
       });
 

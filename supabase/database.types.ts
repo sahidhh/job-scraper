@@ -385,28 +385,52 @@ export type Database = {
       }
       scrape_runs: {
         Row: {
+          completed_at: string | null
+          duration_ms: number | null
           error: string | null
+          failed_count: number
+          found_count: number
           id: string
-          jobs_found: number
+          inserted_count: number | null
+          kept_count: number | null
+          metadata: Json | null
           run_at: string
           source: Database["public"]["Enums"]["job_source"]
+          started_at: string | null
           status: Database["public"]["Enums"]["scrape_run_status"]
+          updated_count: number | null
         }
         Insert: {
+          completed_at?: string | null
+          duration_ms?: number | null
           error?: string | null
+          failed_count?: number
+          found_count?: number
           id?: string
-          jobs_found?: number
+          inserted_count?: number | null
+          kept_count?: number | null
+          metadata?: Json | null
           run_at?: string
           source: Database["public"]["Enums"]["job_source"]
+          started_at?: string | null
           status: Database["public"]["Enums"]["scrape_run_status"]
+          updated_count?: number | null
         }
         Update: {
+          completed_at?: string | null
+          duration_ms?: number | null
           error?: string | null
+          failed_count?: number
+          found_count?: number
           id?: string
-          jobs_found?: number
+          inserted_count?: number | null
+          kept_count?: number | null
+          metadata?: Json | null
           run_at?: string
           source?: Database["public"]["Enums"]["job_source"]
+          started_at?: string | null
           status?: Database["public"]["Enums"]["scrape_run_status"]
+          updated_count?: number | null
         }
         Relationships: []
       }
