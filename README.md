@@ -148,7 +148,8 @@ npm run dev
 1. Log in → upload your PDF resume at `/resume`
 2. Set your target role at `/roles`
 3. Add company board tokens at `/settings`
-4. Trigger the scrape workflow manually via GitHub Actions → `workflow_dispatch`
+4. **Optional:** validate boards before scraping via Actions → `Validate sources` → `Run workflow`
+5. Trigger the scrape workflow manually via GitHub Actions → `workflow_dispatch`
 
 ---
 
@@ -166,7 +167,8 @@ npm run dev
 | `TELEGRAM_CHAT_ID` | GH Actions | ✅ |
 | `KEYWORD_THRESHOLD` | GH Actions | ⬜ default `0.25` |
 | `NOTIFY_THRESHOLD` | GH Actions | ⬜ default `0.75` |
-| `WELLFOUND_FEED_URL` | GH Actions | ⬜ Wellfound only |
+| `WELLFOUND_FEED_URL` | GH Actions | ⬜ Wellfound feed URL (see [docs/sources/wellfound.md](docs/sources/wellfound.md)) |
+| `WELLFOUND_DISABLED` | GH Actions | ⬜ Set `true` to disable Wellfound without a config warning |
 
 ---
 
@@ -180,6 +182,7 @@ npm run check:service-role-boundary  # CI safety gate
 npm run scrape       # manual scrape run
 npm run score        # manual scoring run
 npm run notify       # manual notification run
+npm run validate-sources  # probe ATS boards; report dead tokens
 ```
 
 ---

@@ -76,6 +76,7 @@ flowchart TB
     end
 
     subgraph gha ["⏱️ GitHub Actions"]
+        Validate["scripts/validate-sources.ts"]
         Scrape["scripts/scrape.ts"]
         Score["scripts/score.ts"]
         Notify["scripts/notify.ts"]
@@ -91,6 +92,7 @@ flowchart TB
     Score -->|"AI scoring"| OpenRouter["🤖 OpenRouter API"]
     Notify -->|"push alerts"| Telegram["📱 Telegram Bot API"]
     Scrape -->|"board APIs"| ATS["📋 ATS APIs\n(Greenhouse/Lever/Ashby/…)"]
+    Validate -->|"board probe"| ATS
     Actions --> Storage
 ```
 
@@ -115,7 +117,7 @@ flowchart LR
         T["tagLocations()\n→ location_tags"]
         D["Drop\n(empty tags)"]
         U["Upsert jobs\n(source + source_job_id)"]
-        L["Log scrape_run"]
+        L["Log scrape_run\n(timing + counts)"]
     end
 
     sources --> N --> F --> T --> D --> U --> L

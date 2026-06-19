@@ -64,7 +64,8 @@ These are explicitly banned by the project rules (CLAUDE.md):
 | `KEYWORD_THRESHOLD` | `0.25` | Minimum keyword score to trigger AI scoring |
 | `NOTIFY_THRESHOLD` | `0.75` | Minimum AI score to send Telegram notification |
 | `NOTIFY_MODE` | `individual` | Notification delivery mode: `individual` (one message per job) or `digest` (single grouped message per run) |
-| `WELLFOUND_FEED_URL` | _(unset)_ | Wellfound custom feed URL; adapter returns [] if unset |
+| `WELLFOUND_FEED_URL` | _(unset)_ | Wellfound custom feed URL; see docs/sources/wellfound.md |
+| `WELLFOUND_DISABLED` | _(unset)_ | Set `true` or `1` to explicitly disable Wellfound ingestion without triggering a config warning |
 
 ## 4. Runtime Targets
 
@@ -117,6 +118,7 @@ These are explicitly banned by the project rules (CLAUDE.md):
 | `scrape` | `tsx scripts/scrape.ts` | Manual scrape run |
 | `score` | `tsx scripts/score.ts` | Manual scoring run |
 | `notify` | `tsx scripts/notify.ts` | Manual notification run |
+| `validate-sources` | `tsx scripts/validate-sources.ts` | Probe all configured ATS boards and report dead tokens |
 
 ## 7. CI / CD
 
@@ -124,5 +126,6 @@ These are explicitly banned by the project rules (CLAUDE.md):
 |---|---|---|
 | `ci.yml` | Push / PR to main | `tsc --noEmit` → `vitest run` → `check:service-role-boundary` |
 | `scrape.yml` | Cron (every 2h) or `workflow_dispatch` | `scrape.ts` → `score.ts` → `notify.ts` |
+| `validate-sources.yml` | `workflow_dispatch` only | `validate-sources.ts` — probe ATS boards, exit 1 if any broken |
 
 The cron `schedule:` entry in `scrape.yml` remains commented out until the user explicitly approves go-live.

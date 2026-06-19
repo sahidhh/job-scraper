@@ -105,9 +105,17 @@ erDiagram
         uuid id PK
         text source
         text status "success | partial | failed"
-        integer jobs_found
+        integer found_count
+        integer kept_count "nullable; after location filter"
+        integer inserted_count "nullable; net-new rows"
+        integer updated_count "nullable; refreshed rows"
+        integer failed_count "sub-run errors; 0 when source failed entirely"
+        timestamptz started_at "nullable"
+        timestamptz completed_at "nullable"
+        integer duration_ms "nullable"
         text error "nullable"
-        timestamptz created_at
+        jsonb metadata "nullable; reserved for future use"
+        timestamptz run_at
     }
 
     APP_SETTINGS {

@@ -168,13 +168,21 @@ One company's API returning 404 (wrong/stale `board_token`) or timing out doesn'
 
 `jobs_found` = count of `RawJob`s returned (before location filtering); `error` = last error message if `status != success`.
 
-## 5. Wellfound feed configuration (`WELLFOUND_FEED_URL`)
+## 5. Wellfound feed configuration (`WELLFOUND_FEED_URL`, `WELLFOUND_DISABLED`)
 
-Wellfound has no official public API (§1, AD-10), so `WellfoundScraper.ts` does not call Wellfound directly. Instead it reads `WELLFOUND_FEED_URL` (`optionalEnv`, default `""`) and `GET`s that URL as the entire Wellfound source.
+Wellfound has no official public API (§1, AD-10), so `WellfoundScraper.ts` does not call Wellfound directly. The adapter calls `validateWellfoundConfig()` on each run, which resolves one of three states:
 
-**Default / degraded mode (unset):** if `WELLFOUND_FEED_URL` is empty, the adapter logs `[wellfound] WELLFOUND_FEED_URL not configured; skipping` and returns `[]` every run — `scrape_runs` records a `success` row with `jobs_found = 0` for `wellfound`. This is intentional (AD-10) and **safe to leave unset for staging/go-live**: every other source is unaffected, and the dashboard simply never shows Wellfound-sourced jobs.
+| State | Condition | Log output | Behaviour |
+|---|---|---|---|
+| **Disabled** | `WELLFOUND_DISABLED=true` or `1` | `[wellfound] disabled` | Returns `[]`, no network call |
+| **Invalid config** | URL unset, malformed, or wrong protocol | `[wellfound] invalid configuration: <reason>` | Returns `[]`, no network call |
+| **Active** | Valid `WELLFOUND_FEED_URL` | Normal run log | Fetches feed, maps and returns `RawJob[]` |
 
-**Configuring a feed (optional):** `WELLFOUND_FEED_URL` must point to an endpoint that returns `200 OK` with a JSON **array** body. Each array item is validated by `isWellfoundEntry` and, if valid, mapped to a `RawJob` (§3); invalid items are silently dropped, not the whole response. Required/optional fields per item:
+**Disabling intentionally:** set `WELLFOUND_DISABLED=true` to suppress the invalid-configuration warning when you have no feed. This is the recommended setting for fresh deployments where Wellfound is not yet configured.
+
+**Configuring a feed:** `WELLFOUND_FEED_URL` must be a `http:` or `https:` URL pointing to an endpoint that returns `200 OK` with a JSON **array** body. Each array item is validated by `isWellfoundEntry` and, if valid, mapped to a `RawJob` (§3); invalid items are silently dropped, not the whole response.
+
+Required/optional fields per item:
 
 | Field | Type | Required | Maps to |
 |---|---|---|---|
@@ -186,4 +194,4 @@ Wellfound has no official public API (§1, AD-10), so `WellfoundScraper.ts` does
 | `description` | `string` | no | `RawJob.description` (HTML stripped, `""` if absent) |
 | `postedAt` | `string` | no | `RawJob.postedAt` (parsed to ISO 8601, `null` if absent/invalid) |
 
-There is no first-party Wellfound API or scraper that produces this shape today — operators who want this source populated must run their own feed (e.g. a small scraping service or scheduled export) that serves this JSON array at a stable URL, then set `WELLFOUND_FEED_URL` to it. Building that feed producer is out of scope for this repo.
+There is no first-party Wellfound API or scraper that produces this shape — operators must run their own feed (e.g. a small scraping service or scheduled export) and set `WELLFOUND_FEED_URL` to it. Building that feed producer is out of scope for this repo. See `docs/sources/wellfound.md` for the full setup guide, feed acquisition options, and troubleshooting steps.

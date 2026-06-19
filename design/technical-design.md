@@ -13,7 +13,7 @@ The Job Intelligence Platform is a single-user, self-hosted web application that
 | Two-stage scoring | Cheap keyword pass first; expensive AI call only for strong keyword matches |
 | Proactive notification | Telegram alerts for postings that pass the AI threshold |
 | Self-service configuration | Web UI for resume, role, company board-tokens, and status workflow |
-| Observability | Scrape-run logs, status breakdowns, and insight charts |
+| Observability | Scrape-run logs with timing, count metrics, and failure visibility; see [docs/operations/observability.md](../docs/operations/observability.md) |
 
 ## 3. Non-Goals
 

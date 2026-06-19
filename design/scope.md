@@ -29,6 +29,7 @@ A single technical professional (software engineer, data scientist, or similar) 
 | Status workflow | Customizable workflow statuses (New, Interested, Applied, Rejected, Archived) |
 | Company configuration | Add/remove Greenhouse/Lever/Ashby board tokens via UI |
 | Observability | scrape_runs log per source |
+| Source validation | Probe Greenhouse/Lever/Ashby boards pre-scrape; report dead tokens |
 
 ### P1 — High Priority
 
@@ -128,3 +129,4 @@ P4 — Future
 | Telegram rate limits | Bot API rate-limited; large notification batches may experience delay |
 | PDF-only resumes | Other formats (DOCX, plain text) not supported |
 | Manual company setup | Board tokens must be entered by user; no auto-discovery |
+| Source validation scope | Only Greenhouse/Lever/Ashby board tokens validated; feed-based sources (RemoteOK, Wellfound, MyCareersFuture) not probed |
