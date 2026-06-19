@@ -148,7 +148,8 @@ npm run dev
 1. Log in → upload your PDF resume at `/resume`
 2. Set your target role at `/roles`
 3. Add company board tokens at `/settings`
-4. Trigger the scrape workflow manually via GitHub Actions → `workflow_dispatch`
+4. **Optional:** validate boards before scraping via Actions → `Validate sources` → `Run workflow`
+5. Trigger the scrape workflow manually via GitHub Actions → `workflow_dispatch`
 
 ---
 
@@ -180,6 +181,7 @@ npm run check:service-role-boundary  # CI safety gate
 npm run scrape       # manual scrape run
 npm run score        # manual scoring run
 npm run notify       # manual notification run
+npm run validate-sources  # probe ATS boards; report dead tokens
 ```
 
 ---
