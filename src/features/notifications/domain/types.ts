@@ -4,6 +4,14 @@ import type { JobSource, LocationTag } from "@/shared/domain/enums";
 // single grouped digest (digest). Mirrors the NOTIFY_MODE env var.
 export type NotifyMode = "individual" | "digest";
 
+// Score thresholds for the MVP digest banding.
+// Strong Match: aiScore >= STRONG_MATCH_THRESHOLD
+// Worth Reviewing: notifyThreshold <= aiScore < STRONG_MATCH_THRESHOLD
+export const STRONG_MATCH_THRESHOLD = 0.8;
+
+// Maximum number of strong-match jobs shown in the digest message.
+export const DIGEST_DISPLAY_LIMIT = 5;
+
 // Mirrors the `notifications_log` table (database.md §2).
 export interface NotificationLogEntry {
   id: string;

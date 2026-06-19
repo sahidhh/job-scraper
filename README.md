@@ -13,7 +13,7 @@
 | 🔍 **Scrape** | Pulls fresh postings every 2 hours from Greenhouse, Lever, Ashby, Wellfound, RemoteOK & MyCareersFuture |
 | 📍 **Filter** | Tags jobs by geography (India / Singapore / UAE / Remote) and drops irrelevant ones |
 | 🎯 **Score** | Runs a two-stage pipeline — cheap keyword match first, then AI scoring via OpenRouter |
-| 🔔 **Notify** | Sends a Telegram alert for every high-score match (AI score ≥ threshold) |
+| 🔔 **Notify** | Sends a structured Telegram digest with inline Apply buttons for high-score matches |
 | 📊 **Insights** | Shows skill gaps, skill demand, and analytics charts on a clean dashboard |
 
 ---
@@ -83,8 +83,9 @@ flowchart LR
 - Expansion filters scrapers, scopes scoring, and tightens notifications
 
 ### 🔔 Telegram Notifications
-- One Telegram message per high-match job — never duplicated
-- Includes title, company, location, source, AI reasoning, and direct apply link
+- **Digest mode** (`NOTIFY_MODE=digest`): one structured message per run with inline Apply buttons, score band counts, and optional "Worth Reviewing" + Dashboard shortcuts
+- **Individual mode** (`NOTIFY_MODE=individual`): one message per matching job with title, company, location, and direct apply link
+- At-most-once delivery guaranteed via `notifications_log` deduplication
 
 ### 📈 Insights & Analytics
 - Skill gap analysis — what matched jobs need that your resume lacks

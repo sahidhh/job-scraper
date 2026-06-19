@@ -63,7 +63,9 @@ These are explicitly banned by the project rules (CLAUDE.md):
 |---|---|---|
 | `KEYWORD_THRESHOLD` | `0.25` | Minimum keyword score to trigger AI scoring |
 | `NOTIFY_THRESHOLD` | `0.75` | Minimum AI score to send Telegram notification |
-| `NOTIFY_MODE` | `individual` | Notification delivery mode: `individual` (one message per job) or `digest` (single grouped message per run) |
+| `NOTIFY_MODE` | `individual` | Notification delivery mode: `individual` (one message per job), `digest` (MVP digest with inline buttons), or `digest_legacy` (old grouped-text format) |
+| `APP_URL` | _(unset)_ | Base URL of the deployed app, e.g. `https://app.example.com`; enables Worth Reviewing and Dashboard buttons in digest mode |
+| `TELEGRAM_CALLBACK_SECRET` | _(unset)_ | Shared secret for signing worth-reviewing callback URLs in digest mode; must also be set in Vercel |
 | `WELLFOUND_FEED_URL` | _(unset)_ | Wellfound custom feed URL; see docs/sources/wellfound.md |
 | `WELLFOUND_DISABLED` | _(unset)_ | Set `true` or `1` to explicitly disable Wellfound ingestion without triggering a config warning |
 

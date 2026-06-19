@@ -32,6 +32,7 @@ function makeNotificationRepository(matches: JobMatch[] = []): NotificationRepos
 function makeTelegramSender(): TelegramSender {
   return {
     sendMessage: vi.fn().mockResolvedValue(undefined),
+    sendMessageWithButtons: vi.fn().mockResolvedValue(undefined),
   };
 }
 
@@ -96,6 +97,7 @@ describe("sendNotification", () => {
         .mockResolvedValueOnce(undefined)
         .mockRejectedValueOnce(new Error("Telegram sendMessage failed: bad request"))
         .mockResolvedValueOnce(undefined),
+      sendMessageWithButtons: vi.fn().mockResolvedValue(undefined),
     };
     const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
 

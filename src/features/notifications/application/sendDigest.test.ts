@@ -32,6 +32,7 @@ function makeNotificationRepository(matches: JobMatch[] = []): NotificationRepos
 function makeTelegramSender(): TelegramSender {
   return {
     sendMessage: vi.fn().mockResolvedValue(undefined),
+    sendMessageWithButtons: vi.fn().mockResolvedValue(undefined),
   };
 }
 
@@ -118,6 +119,7 @@ describe("sendDigest", () => {
     const notificationRepository = makeNotificationRepository(matches);
     const telegramSender: TelegramSender = {
       sendMessage: vi.fn().mockRejectedValue(new Error("Telegram error")),
+      sendMessageWithButtons: vi.fn().mockResolvedValue(undefined),
     };
 
     await expect(

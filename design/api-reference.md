@@ -317,12 +317,29 @@ All routes except `/login` and `/auth/callback` are protected by `middleware.ts`
 **Endpoint:** `POST https://api.telegram.org/bot<token>/sendMessage`  
 **Rate limit:** ~30 msg/s globally; 20 msg/min per chat; `retry_after` respected (capped 30s)
 
-**Request:**
+**Request — plain message:**
 ```json
 {
   "chat_id": "<TELEGRAM_CHAT_ID>",
   "text": "<HTML-formatted message>",
   "parse_mode": "HTML"
+}
+```
+
+**Request — message with inline keyboard (`sendMessageWithButtons`):**
+```json
+{
+  "chat_id": "<TELEGRAM_CHAT_ID>",
+  "text": "<HTML-formatted message>",
+  "parse_mode": "HTML",
+  "disable_web_page_preview": true,
+  "reply_markup": {
+    "inline_keyboard": [
+      [{ "text": "Apply #1", "url": "https://..." }, { "text": "Apply #2", "url": "https://..." }],
+      [{ "text": "\u2713 Worth Reviewing (4)", "url": "https://app.example.com/api/telegram/worth-reviewing?msg=...&token=..." }],
+      [{ "text": "\ud83d\udcca Dashboard", "url": "https://app.example.com/dashboard?minScore=0.80" }]
+    ]
+  }
 }
 ```
 
@@ -335,7 +352,25 @@ Strong match — candidate's Node.js, PostgreSQL, and distributed systems experi
 https://boards.greenhouse.io/stripe/jobs/...
 ```
 
-**Message format — digest mode (`NOTIFY_MODE=digest`):**
+**Message format — digest MVP mode (`NOTIFY_MODE=digest`):**
+```
+📌 Job Matches
+
+⭐ Strong Match: 2   ✓ Worth Reviewing: 3
+
+Showing Top 2 Strong Match(es):
+
+1. Senior Backend Engineer @ Stripe
+   📍 Singapore | 3+ yrs
+
+2. Staff Engineer @ Shopify
+   📍 Remote
+```
+
+Inline keyboard buttons are attached to this single message. No text splitting — the digest
+always fits in one Telegram message (top-5 display limit).
+
+**Message format — legacy digest mode (`NOTIFY_MODE=digest_legacy`):**
 ```
 📋 Jobs Digest
 
@@ -349,18 +384,31 @@ Medium Match
 🎯 78% — Full Stack Developer @ Shopify
 📍 Remote · https://example.com/shopify/jobs/789
 
-New Companies
-
-• Stripe
-• Shopify
-
 Summary
 
 2 jobs processed
 1 high-value job
 ```
 
-Digest messages longer than 4 096 characters are split into multiple sequential sends.
+Legacy digest messages longer than 4 096 characters are split into multiple sequential sends.
+
+---
+
+### 3.3 Telegram Callback Route
+
+**Endpoint:** `GET /api/telegram/worth-reviewing`  
+**Auth:** `?token=<TELEGRAM_CALLBACK_SECRET>` query param  
+**Runtime:** Node.js (`Buffer` required for base64url decode)
+
+| Param | Description |
+|---|---|
+| `msg` | base64url-encoded pre-formatted Telegram HTML of worth-reviewing jobs |
+| `token` | must equal `TELEGRAM_CALLBACK_SECRET` env var |
+
+**Success (200):** HTML page — `✓ Worth Reviewing jobs sent to Telegram.`  
+**Error (400):** Missing params or decode failure  
+**Error (401):** Token mismatch  
+**Error (502):** Telegram API call failed
 
 ---
 

@@ -1,4 +1,4 @@
-import type { TelegramSender } from "@/features/notifications/domain/TelegramSender";
+import type { InlineKeyboardButton, TelegramSender } from "@/features/notifications/domain/TelegramSender";
 import { requireEnv } from "@/shared/infrastructure/env";
 import { fetchWithRetry } from "@/shared/infrastructure/http";
 
@@ -16,17 +16,26 @@ const MAX_RETRY_AFTER_MS = 30_000;
 // failure -- sendNotification has no fallback for an undeliverable message.
 export class TelegramBotSender implements TelegramSender {
   async sendMessage(text: string): Promise<void> {
+    await this.post({ text, parse_mode: "HTML" });
+  }
+
+  async sendMessageWithButtons(text: string, buttons: InlineKeyboardButton[][]): Promise<void> {
+    await this.post({
+      text,
+      parse_mode: "HTML",
+      disable_web_page_preview: true,
+      reply_markup: { inline_keyboard: buttons },
+    });
+  }
+
+  private async post(payload: Record<string, unknown>): Promise<void> {
     const token = requireEnv("TELEGRAM_BOT_TOKEN");
     const chatId = requireEnv("TELEGRAM_CHAT_ID");
     const url = `https://api.telegram.org/bot${token}/sendMessage`;
     const init: RequestInit = {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text,
-        parse_mode: "HTML",
-      }),
+      body: JSON.stringify({ chat_id: chatId, ...payload }),
     };
 
     // retries: 0 — TelegramBotSender owns 429 retry logic below via retry_after;

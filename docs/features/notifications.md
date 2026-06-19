@@ -11,13 +11,16 @@ time the `notify.ts` cron runs, and each job is guaranteed to be notified at mos
 ## Architecture
 
 ```
-scripts/notify.ts           ← cron entry point; reads NOTIFY_MODE
+scripts/notify.ts                   ← cron entry point; reads NOTIFY_MODE
         │
         ├─ NOTIFY_MODE=individual (default)
         │       └─ sendNotification()         one Telegram message per job
         │
-        └─ NOTIFY_MODE=digest
-                └─ sendDigest()               one grouped Telegram message per run
+        ├─ NOTIFY_MODE=digest
+        │       └─ sendDigestMvp()            one message with inline buttons per run
+        │
+        └─ NOTIFY_MODE=digest_legacy
+                └─ sendDigest()               one grouped-text message per run (legacy)
 ```
 
 ### Layers
@@ -25,23 +28,28 @@ scripts/notify.ts           ← cron entry point; reads NOTIFY_MODE
 | Layer | Path | Responsibility |
 |---|---|---|
 | Domain | `src/features/notifications/domain/` | Types, repository interfaces, `TelegramSender` interface |
-| Application | `src/features/notifications/application/` | Use cases: `sendNotification`, `sendDigest`; formatters; filter logic |
+| Application | `src/features/notifications/application/` | Use cases: `sendNotification`, `sendDigestMvp`, `sendDigest`; formatters; filter logic; banding |
 | Infrastructure | `src/features/notifications/infrastructure/` | `TelegramBotSender`, `SupabaseNotificationRepository`, `SupabaseNotificationPreferencesRepository` |
+| API Route | `src/app/api/telegram/worth-reviewing/` | Stateless callback — decodes and forwards worth-reviewing message |
 | Script | `scripts/notify.ts` | Wires dependencies, reads env config, dispatches to the correct use case |
 
 ### Key files
 
 | File | Purpose |
 |---|---|
-| `domain/types.ts` | `JobMatch`, `NotificationPreferences`, `NotifyMode` |
+| `domain/types.ts` | `JobMatch`, `NotificationPreferences`, `NotifyMode`, `STRONG_MATCH_THRESHOLD`, `DIGEST_DISPLAY_LIMIT` |
 | `domain/NotificationRepository.ts` | `findUnnotifiedMatches`, `markNotified`, `listRecent` |
-| `domain/TelegramSender.ts` | `sendMessage` interface |
+| `domain/TelegramSender.ts` | `sendMessage` and `sendMessageWithButtons` interface |
 | `application/sendNotification.ts` | Individual-mode use case |
-| `application/sendDigest.ts` | Digest-mode use case |
+| `application/sendDigestMvp.ts` | MVP digest use case: band → format → keyboard → send → mark |
+| `application/sendDigest.ts` | Legacy digest use case |
+| `application/bandMatches.ts` | Splits matches into strong / worth-reviewing bands |
+| `application/formatDigestMvp.ts` | MVP digest text + worth-reviewing follow-up formatter |
+| `application/buildDigestKeyboard.ts` | Inline keyboard builder (Apply, Worth Reviewing, Dashboard) |
 | `application/formatMatchMessage.ts` | Per-job Telegram HTML formatter |
-| `application/formatDigestMessage.ts` | Digest Telegram HTML formatter + chunk splitter |
+| `application/formatDigestMessage.ts` | Legacy digest formatter + chunk splitter |
 | `application/filterMatches.ts` | Include-only preference filtering |
-| `infrastructure/TelegramBotSender.ts` | Telegram Bot API adapter with 429 retry |
+| `infrastructure/TelegramBotSender.ts` | Telegram Bot API adapter with 429 retry; implements `sendMessageWithButtons` |
 | `infrastructure/SupabaseNotificationRepository.ts` | Supabase persistence for matches + log |
 
 ---
@@ -55,7 +63,9 @@ scripts/notify.ts           ← cron entry point; reads NOTIFY_MODE
 | `TELEGRAM_BOT_TOKEN` | _(required)_ | Token from @BotFather |
 | `TELEGRAM_CHAT_ID` | _(required)_ | Chat or channel ID to send messages to |
 | `NOTIFY_THRESHOLD` | `0.75` | Minimum `ai_score` [0–1] to include a job in notifications |
-| `NOTIFY_MODE` | `individual` | Delivery mode: `individual` or `digest` |
+| `NOTIFY_MODE` | `individual` | Delivery mode: `individual`, `digest` (MVP), or `digest_legacy` |
+| `APP_URL` | _(unset)_ | Base URL of the app; enables Worth Reviewing and Dashboard buttons in digest mode |
+| `TELEGRAM_CALLBACK_SECRET` | _(unset)_ | Shared secret for worth-reviewing callback URL validation |
 
 ### `NOTIFY_MODE=individual` (default)
 
@@ -71,11 +81,36 @@ Strong match — candidate's Node.js, PostgreSQL experience aligns well.
 https://boards.greenhouse.io/acme/jobs/123
 ```
 
-### `NOTIFY_MODE=digest`
+### `NOTIFY_MODE=digest` (MVP — recommended)
 
-One grouped Telegram message per cron run (split into multiple messages automatically if the
-combined text exceeds Telegram's 4 096-character limit). Suitable for high-volume runs where
-individual-mode would flood the chat.
+One structured Telegram message per cron run with Inline Keyboard buttons. Always fits in a
+single message (top-5 display limit). See `docs/features/telegram-digest.md` for full details.
+
+**Message format:**
+```
+📌 Job Matches
+
+⭐ Strong Match: 2   ✓ Worth Reviewing: 3
+
+Showing Top 2 Strong Match(es):
+
+1. Staff Engineer @ Stripe
+   📍 Singapore | 5+ yrs
+
+2. Senior React Developer @ Acme Corp
+   📍 Remote
+```
+
+Inline keyboard below the message (Apply buttons + optional Worth Reviewing + Dashboard).
+
+**Score bands:**
+- **Strong Match** — `ai_score ≥ 0.80`
+- **Worth Reviewing** — `NOTIFY_THRESHOLD ≤ ai_score < 0.80`
+
+### `NOTIFY_MODE=digest_legacy`
+
+One grouped Telegram message per cron run (split into multiple messages if over 4 096
+characters). Legacy format from before the MVP digest.
 
 **Message format:**
 ```
@@ -86,24 +121,15 @@ High Match (≥85%)
 🎯 91% — Staff Engineer @ Stripe
 📍 Singapore · https://boards.greenhouse.io/stripe/jobs/456
 
-🎯 87% — Senior React Developer @ Acme Corp
-📍 Remote · https://boards.greenhouse.io/acme/jobs/123
-
 Medium Match
 
 🎯 78% — Full Stack Developer @ Shopify
 📍 Remote · https://example.com/shopify/789
 
-New Companies
-
-• Stripe
-• Acme Corp
-• Shopify
-
 Summary
 
-3 jobs processed
-2 high-value jobs
+2 jobs processed
+1 high-value job
 ```
 
 **Score sections:**
@@ -175,8 +201,11 @@ Set `NOTIFY_MODE` in the GitHub Actions environment (or `.env` for local runs):
 # Individual mode (default — preserves prior behaviour)
 NOTIFY_MODE=individual
 
-# Digest mode (single grouped message per run)
+# MVP digest mode (single message with inline buttons — recommended)
 NOTIFY_MODE=digest
+
+# Legacy digest mode (old grouped-text format)
+NOTIFY_MODE=digest_legacy
 ```
 
 No database migration is required when switching modes. Both modes read from and write to
@@ -219,12 +248,16 @@ Tests live alongside the application layer:
 | File | Covers |
 |---|---|
 | `application/sendNotification.test.ts` | Individual-mode use case, error isolation, preference filtering |
-| `application/sendDigest.test.ts` | Digest-mode use case, send failure semantics, chunk splitting |
+| `application/sendDigestMvp.test.ts` | MVP digest use case, banding, atomicity, preferences, `buildWorthReviewingUrl` |
+| `application/sendDigest.test.ts` | Legacy digest use case, send failure semantics, chunk splitting |
+| `application/bandMatches.test.ts` | Band splitting, sorting, empty list, custom threshold |
+| `application/formatDigestMvp.test.ts` | MVP digest formatting, HTML escaping, `formatWorthReviewingMessage` |
+| `application/buildDigestKeyboard.test.ts` | Apply button layout, display limit, optional buttons |
 | `application/formatMatchMessage.test.ts` | Per-job message formatting, HTML escaping |
-| `application/formatDigestMessage.test.ts` | Digest formatting, section placement, chunk splitting |
+| `application/formatDigestMessage.test.ts` | Legacy digest formatting, section placement, chunk splitting |
 | `application/filterMatches.test.ts` | All filter types, AND/OR logic |
 | `infrastructure/SupabaseNotificationRepository.test.ts` | DB query construction |
-| `infrastructure/TelegramBotSender.test.ts` | HTTP adapter, 429 retry logic |
+| `infrastructure/TelegramBotSender.test.ts` | HTTP adapter, 429 retry logic, `sendMessageWithButtons` |
 
 Run all tests:
 
