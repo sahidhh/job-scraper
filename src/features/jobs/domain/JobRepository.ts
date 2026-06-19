@@ -39,11 +39,14 @@ export interface JobRepository {
   /**
    * Jobs whose title matches one of expandedRoles, and which either have
    * no job_scores row for (roleSelectionId, resumeVersion), or have one
-   * with ai_score IS NULL (stage 2 never ran or previously failed --
-   * retried). Jobs scored against a prior resume version are included so
-   * they are re-scored against the current version. Feeds scripts/score.ts.
+   * with keyword_score >= keywordThreshold and ai_score IS NULL (stage 2
+   * failed -- retried on the next run). Jobs that were intentionally skipped
+   * at the keyword gate (keyword_score < keywordThreshold, ai_score IS NULL)
+   * are excluded so they are not re-queued forever. Jobs scored against a
+   * prior resume version are included so they are re-scored against the
+   * current version. Feeds scripts/score.ts.
    */
-  findUnscored(roleSelectionId: string, expandedRoles: string[], resumeVersion: number): Promise<Job[]>;
+  findUnscored(roleSelectionId: string, expandedRoles: string[], resumeVersion: number, keywordThreshold: number): Promise<Job[]>;
 
   /**
    * Jobs joined with job_scores for (roleSelectionId, resumeVersion),

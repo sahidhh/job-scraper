@@ -10,5 +10,5 @@ export interface ScoreRepository {
    */
   insertScore(score: NewJobScore): Promise<void>;
 
-  hasScore(jobId: string, roleSelectionId: string): Promise<boolean>;
+  hasScore(jobId: string, roleSelectionId: string, resumeVersion: number): Promise<boolean>;
 }

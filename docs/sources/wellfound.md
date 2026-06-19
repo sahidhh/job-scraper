@@ -102,21 +102,21 @@ The feed must return a top-level JSON **array**. Each element is validated by
 
 The adapter recognises three states, logged at startup/run time:
 
-### A — Disabled intentionally
+### A — Disabled (intentionally or unconfigured)
 
-Set `WELLFOUND_DISABLED=true` (or `1`) to explicitly opt out. The adapter
-emits `[wellfound] disabled` and returns zero jobs without attempting a
-network call. Use this when you have no feed and want to suppress the
-"invalid configuration" warning.
+When `WELLFOUND_FEED_URL` is not set, the adapter treats the source as
+unconfigured and emits `[wellfound] disabled` — no warning, no network call,
+zero jobs. This is the clean default for deployments that do not use Wellfound.
 
-```
-WELLFOUND_DISABLED=true
-```
+Set `WELLFOUND_DISABLED=true` (or `1`) to explicitly opt out even when
+`WELLFOUND_FEED_URL` is configured — useful for temporarily disabling the
+source without removing the URL.
+
+Both cases emit `[wellfound] disabled`.
 
 ### B — Misconfigured
 
-If `WELLFOUND_DISABLED` is not set and `WELLFOUND_FEED_URL` is absent or
-invalid, the adapter emits:
+If `WELLFOUND_FEED_URL` is set but the value is invalid, the adapter emits:
 
 ```
 [wellfound] invalid configuration: <reason>
@@ -126,7 +126,6 @@ Possible reasons:
 
 | Log message | Cause |
 |---|---|
-| `WELLFOUND_FEED_URL not set` | The env var is missing or empty |
 | `malformed URL` | The value cannot be parsed as a URL |
 | `unsupported protocol "ftp:"` | URL uses a protocol other than `http:` / `https:` |
 
@@ -155,7 +154,7 @@ const config = validateWellfoundConfig();
 Validation checks (in order):
 
 1. `WELLFOUND_DISABLED` is `"true"` or `"1"` → `disabled`
-2. `WELLFOUND_FEED_URL` is empty or unset → `invalid_config`
+2. `WELLFOUND_FEED_URL` is empty or unset → `disabled` (unconfigured = clean skip)
 3. URL fails `new URL()` parse → `invalid_config` (malformed URL)
 4. URL protocol is not `http:` or `https:` → `invalid_config` (unsupported protocol)
 5. All checks pass → `ok`
@@ -180,10 +179,10 @@ not an error that should alert, just silence.
 
 ## Troubleshooting
 
-**Log: `[wellfound] invalid configuration: WELLFOUND_FEED_URL not set`**
+**Log: `[wellfound] disabled` (but you expected jobs)**
 
-Set `WELLFOUND_FEED_URL` in your environment, or set `WELLFOUND_DISABLED=true`
-to suppress the warning when Wellfound is not in use.
+Check that `WELLFOUND_FEED_URL` is set in your environment and that
+`WELLFOUND_DISABLED` is not set (or is set to any value other than `true`/`1`).
 
 **Log: `[wellfound] invalid configuration: malformed URL`**
 

@@ -1,6 +1,7 @@
 import type { Job } from "@/features/jobs/domain/types";
 import type { Resume } from "@/features/resume/domain/types";
 import type { AiScoreProvider, AiScoreResult } from "@/features/scoring/domain/AiScoreProvider";
+import { requireEnv } from "@/shared/infrastructure/env";
 import { callOpenRouterJson } from "@/shared/infrastructure/openrouterClient";
 
 const SCHEMA = {
@@ -43,6 +44,7 @@ function buildJobPrompt(job: Job): string {
 // scoreJob keeps the keyword score with aiScore/aiReasoning left null.
 export class OpenRouterAiScoreProvider implements AiScoreProvider {
   async score(input: { job: Job; resume: Resume }): Promise<AiScoreResult | null> {
+    const model = requireEnv("OPENROUTER_MODEL");
     try {
       const result = (await callOpenRouterJson({
         messages: [
@@ -63,6 +65,7 @@ export class OpenRouterAiScoreProvider implements AiScoreProvider {
       return {
         score: Math.min(1, Math.max(0, result.score)),
         reasoning: result.reasoning,
+        model,
       };
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);

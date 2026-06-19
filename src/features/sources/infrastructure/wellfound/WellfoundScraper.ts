@@ -33,7 +33,9 @@ export function validateWellfoundConfig(): WellfoundConfigStatus {
 
   const feedUrl = optionalEnv(WELLFOUND_FEED_URL_VAR, "");
   if (!feedUrl) {
-    return { status: "invalid_config", reason: `${WELLFOUND_FEED_URL_VAR} not set` };
+    // Not configured — treat as disabled so unconfigured deployments don't
+    // produce invalid_config noise. Set WELLFOUND_DISABLED=true to be explicit.
+    return { status: "disabled" };
   }
 
   let parsed: URL;

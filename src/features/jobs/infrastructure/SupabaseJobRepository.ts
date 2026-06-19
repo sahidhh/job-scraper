@@ -177,28 +177,30 @@ export class SupabaseJobRepository implements JobRepository {
     return keys;
   }
 
-  async findUnscored(roleSelectionId: string, expandedRoles: string[], resumeVersion: number): Promise<Job[]> {
+  async findUnscored(roleSelectionId: string, expandedRoles: string[], resumeVersion: number, keywordThreshold: number): Promise<Job[]> {
     const roleFilter = buildRoleFilter(expandedRoles);
     if (!roleFilter) return [];
 
-    // Jobs with a job_scores row whose ai_score is already set AND whose
-    // resume_version matches the active resume are fully scored and
-    // excluded. Jobs with NO matching row, a row with ai_score IS NULL
-    // (stage 2 never ran or failed), or a row scored against a prior
-    // resume version are included so the scoring pipeline (re)tries them.
-    const { data: aiScored, error: scoredError } = await this.client
+    // A job is "done" for this (role_selection, resume_version) and must be
+    // excluded from the scoring queue if either:
+    //   (a) ai_score IS NOT NULL — fully scored, or
+    //   (b) keyword_score < keywordThreshold — intentionally skipped at the
+    //       keyword gate (ai_score is null by design, not by failure).
+    // Rows with keyword_score >= keywordThreshold AND ai_score IS NULL are NOT
+    // excluded — they represent genuine AI call failures that should be retried.
+    const { data: doneRows, error: scoredError } = await this.client
       .from("job_scores")
       .select("job_id")
       .eq("role_selection_id", roleSelectionId)
       .eq("resume_version", resumeVersion)
-      .not("ai_score", "is", null);
+      .or(`ai_score.not.is.null,keyword_score.lt.${keywordThreshold}`);
     if (scoredError) throw toAppError(scoredError);
 
-    const aiScoredIds = (aiScored ?? []).map((row) => row.job_id);
+    const doneIds = (doneRows ?? []).map((row) => row.job_id);
 
     let query = this.client.from("jobs").select("*").eq("is_active", true).or(roleFilter);
-    if (aiScoredIds.length > 0) {
-      query = query.not("id", "in", `(${aiScoredIds.join(",")})`);
+    if (doneIds.length > 0) {
+      query = query.not("id", "in", `(${doneIds.join(",")})`);
     }
 
     const { data, error } = await query;

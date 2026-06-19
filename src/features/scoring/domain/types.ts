@@ -16,4 +16,5 @@ export interface NewJobScore {
   keywordScore: number;
   aiScore?: number | null;
   aiReasoning?: string | null;
+  model?: string | null;
 }

@@ -41,6 +41,7 @@ erDiagram
         real keyword_score "0.0 – 1.0, always set"
         real ai_score "0.0 – 1.0, null if below threshold or pending"
         text ai_reasoning "nullable"
+        text model "OPENROUTER_MODEL used for this score; null if no AI call"
         timestamptz scored_at
     }
 
