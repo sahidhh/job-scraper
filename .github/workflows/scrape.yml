@@ -48,3 +48,4 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           NOTIFY_THRESHOLD: ${{ vars.NOTIFY_THRESHOLD }}
+          NOTIFY_MODE: ${{ vars.NOTIFY_MODE }}
