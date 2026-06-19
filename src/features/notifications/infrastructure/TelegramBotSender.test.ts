@@ -33,6 +33,26 @@ describe("TelegramBotSender", () => {
     });
   });
 
+  it("sendMessageWithButtons includes reply_markup and disable_web_page_preview", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ ok: true }), { status: 200 }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const buttons = [[{ text: "Apply #1", url: "https://example.com/job/1" }]];
+    const sender = new TelegramBotSender();
+    await sender.sendMessageWithButtons("📌 Job Matches", buttons);
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("https://api.telegram.org/bottest-token/sendMessage");
+
+    const body = JSON.parse(init.body as string);
+    expect(body.text).toBe("📌 Job Matches");
+    expect(body.parse_mode).toBe("HTML");
+    expect(body.disable_web_page_preview).toBe(true);
+    expect(body.reply_markup).toEqual({ inline_keyboard: buttons });
+  });
+
   it("throws when Telegram responds with ok: false", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(JSON.stringify({ ok: false, description: "chat not found" }), { status: 200 }),
