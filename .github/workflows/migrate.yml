@@ -16,6 +16,9 @@ jobs:
         with:
           version: latest
 
-      - run: supabase db push --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+      - name: Extract project ref from Supabase URL
+        run: echo "PROJECT_REF=$(echo '${{ secrets.SUPABASE_URL }}' | sed 's|https://||; s|\.supabase\.co.*||')" >> $GITHUB_ENV
+
+      - run: supabase db push --project-ref $PROJECT_REF
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
