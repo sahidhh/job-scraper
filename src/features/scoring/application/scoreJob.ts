@@ -32,12 +32,14 @@ export async function scoreJob(
 
   let aiScore: number | null = null;
   let aiReasoning: string | null = null;
+  let model: string | null = null;
 
   if (keywordScore >= deps.keywordThreshold) {
     const result = await deps.aiScoreProvider.score({ job, resume });
     if (result) {
       aiScore = result.score;
       aiReasoning = result.reasoning;
+      model = result.model;
     }
   }
 
@@ -48,6 +50,7 @@ export async function scoreJob(
     keywordScore,
     aiScore,
     aiReasoning,
+    model,
   };
 
   validateNewJobScore(score);

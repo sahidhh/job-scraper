@@ -26,10 +26,9 @@ describe("validateWellfoundConfig", () => {
     expect(validateWellfoundConfig()).toEqual({ status: "disabled" });
   });
 
-  it("returns invalid_config when WELLFOUND_FEED_URL is not set", () => {
+  it("returns disabled when WELLFOUND_FEED_URL is not set (unconfigured = clean skip)", () => {
     const result = validateWellfoundConfig();
-    expect(result.status).toBe("invalid_config");
-    expect((result as { status: "invalid_config"; reason: string }).reason).toMatch(/WELLFOUND_FEED_URL/);
+    expect(result.status).toBe("disabled");
   });
 
   it("returns invalid_config for a malformed URL", () => {
@@ -99,8 +98,8 @@ describe("wellfoundScraper", () => {
     consoleSpy.mockRestore();
   });
 
-  it("returns [] and warns 'invalid configuration' when no feed URL is configured", async () => {
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+  it("returns [] and logs 'disabled' when no feed URL is configured (clean skip)", async () => {
+    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
 
@@ -108,8 +107,8 @@ describe("wellfoundScraper", () => {
 
     expect(result).toEqual([]);
     expect(fetchMock).not.toHaveBeenCalled();
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("[wellfound] invalid configuration"));
-    warnSpy.mockRestore();
+    expect(consoleSpy).toHaveBeenCalledWith("[wellfound] disabled");
+    consoleSpy.mockRestore();
   });
 
   it("returns [] and warns 'invalid configuration' when the feed URL is malformed", async () => {

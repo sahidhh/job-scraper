@@ -16,6 +16,7 @@ export class SupabaseScoreRepository implements ScoreRepository {
         keyword_score: score.keywordScore,
         ai_score: score.aiScore ?? null,
         ai_reasoning: score.aiReasoning ?? null,
+        model: score.model ?? null,
       },
       { onConflict: "job_id,role_selection_id,resume_version", ignoreDuplicates: false },
     );
@@ -23,12 +24,13 @@ export class SupabaseScoreRepository implements ScoreRepository {
     if (error) throw toAppError(error);
   }
 
-  async hasScore(jobId: string, roleSelectionId: string): Promise<boolean> {
+  async hasScore(jobId: string, roleSelectionId: string, resumeVersion: number): Promise<boolean> {
     const { count, error } = await this.client
       .from("job_scores")
       .select("id", { count: "exact", head: true })
       .eq("job_id", jobId)
-      .eq("role_selection_id", roleSelectionId);
+      .eq("role_selection_id", roleSelectionId)
+      .eq("resume_version", resumeVersion);
 
     if (error) throw toAppError(error);
     return (count ?? 0) > 0;

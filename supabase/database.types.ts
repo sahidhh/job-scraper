@@ -66,6 +66,7 @@ export type Database = {
           id: string
           job_id: string
           keyword_score: number
+          model: string | null
           resume_version: number
           role_selection_id: string
           scored_at: string
@@ -76,6 +77,7 @@ export type Database = {
           id?: string
           job_id: string
           keyword_score: number
+          model?: string | null
           resume_version: number
           role_selection_id: string
           scored_at?: string
@@ -86,6 +88,7 @@ export type Database = {
           id?: string
           job_id?: string
           keyword_score?: number
+          model?: string | null
           resume_version?: number
           role_selection_id?: string
           scored_at?: string

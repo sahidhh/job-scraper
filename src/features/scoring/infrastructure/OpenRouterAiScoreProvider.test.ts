@@ -47,14 +47,14 @@ describe("OpenRouterAiScoreProvider", () => {
     delete process.env.OPENROUTER_MODEL;
   });
 
-  it("returns a score and reasoning from a well-formed response", async () => {
+  it("returns a score, reasoning, and model name from a well-formed response", async () => {
     const fetchMock = vi.fn().mockResolvedValue(chatResponse({ score: 0.85, reasoning: "Strong match" }));
     vi.stubGlobal("fetch", fetchMock);
 
     const provider = new OpenRouterAiScoreProvider();
     const result = await provider.score({ job, resume });
 
-    expect(result).toEqual({ score: 0.85, reasoning: "Strong match" });
+    expect(result).toEqual({ score: 0.85, reasoning: "Strong match", model: "test-model" });
 
     const body = JSON.parse((fetchMock.mock.calls[0]![1] as RequestInit).body as string);
     expect(body.messages[1].content).toContain("Senior React Developer");

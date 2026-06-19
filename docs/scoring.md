@@ -45,12 +45,12 @@ Triggered only when `keyword_score >= KEYWORD_THRESHOLD` (config default `0.25`,
 3. Request has a timeout and **one retry** on timeout/5xx. On repeated failure: `ai_score`/`ai_reasoning` stay `null`, `keyword_score` row already upserted — job still visible in dashboard, just unscored at stage 2.
 4. On success: the same `job_scores` row is upserted with `ai_score = $score, ai_reasoning = $reasoning` (on conflict `(job_id, role_selection_id)` → update, not ignore — `repositories.md` §5).
 
-**Retry of null `ai_score` rows (decisions.md AD-07 follow-up):** `JobRepository.findUnscored()` returns a job if it has *no* `job_scores` row for the active `role_selection_id`, **or** if its existing row has `ai_score IS NULL` (stage 2 never ran, below the old/the current gate, or a previous AI call failed). Such jobs are re-run through `scoreJob` on the next `score.ts` invocation:
-   - If `keyword_score` still falls below `KEYWORD_THRESHOLD`, the row is re-upserted with `ai_score` still `null` (logged as "skipped: keyword below gate") — it remains eligible for retry on a future run if the threshold or job content changes.
-   - If `keyword_score` clears the threshold and the AI call succeeds, `ai_score`/`ai_reasoning` are written and the row is excluded from `findUnscored` on subsequent runs (logged as "scored").
-   - If the AI call fails again, `ai_score` stays `null` and the row remains eligible for retry on the next run (logged as "AI provider returned null (call failed)").
+**Retry logic for `ai_score IS NULL` rows:** `JobRepository.findUnscored()` receives `keywordThreshold` and uses an OR filter to exclude two categories of "done" jobs:
 
-   Only rows with a non-null `ai_score` are considered "fully scored" and excluded going forward — this supersedes the previous "permanent null, never retried" behavior.
+   - **`ai_score IS NOT NULL`** — fully scored; excluded always.
+   - **`keyword_score < keywordThreshold`** — intentionally skipped at the keyword gate; `ai_score` is null by design. These are also excluded so they are not re-queued forever (see `docs/fixes/scoring-loop-fix.md`).
+
+   Jobs where `keyword_score >= keywordThreshold AND ai_score IS NULL` (genuine AI call failure) are **not** excluded — they are returned by `findUnscored` and retried on the next `score.ts` run. This preserves retry behavior for transient AI provider failures while preventing infinite re-queuing of below-gate jobs.
 
 **Cost bound:** AI calls per cron run ≤ number of jobs with `keyword_score >= KEYWORD_THRESHOLD` among jobs returned by `findUnscored` (new jobs, plus null-`ai_score` retries). Switching the active role selection increases this set once (new role_selection_id → all matching jobs are "unscored" again for it) — an expected, bounded one-time cost per role change. The lower default threshold (`0.25` vs the prior `0.5`) increases the fraction of jobs that reach stage 2, but stage 1 (role-title filter + skill overlap) still bounds it to skill-relevant candidates.
 

@@ -88,14 +88,14 @@ describe("SupabaseJobRepository", () => {
   });
 
   describe("findUnscored", () => {
-    it("excludes only jobs with an existing ai_score and filters by title", async () => {
+    it("uses an OR filter to exclude fully-scored and keyword-skipped jobs", async () => {
       const { client, builders } = queuedSupabaseClient([
-        { data: [{ job_id: "job-2" }], error: null }, // job_scores rows with ai_score set
+        { data: [{ job_id: "job-2" }], error: null }, // done job ids
         { data: [jobRow], error: null }, // matching jobs
       ]);
       const repo = new SupabaseJobRepository(client);
 
-      const result = await repo.findUnscored("role-selection-1", ["React Developer", "Frontend Engineer"], 1);
+      const result = await repo.findUnscored("role-selection-1", ["React Developer", "Frontend Engineer"], 1, 0.25);
 
       expect(result).toEqual([
         {
@@ -125,24 +125,25 @@ describe("SupabaseJobRepository", () => {
       ];
       expect(scoredBuilder.eq).toHaveBeenCalledWith("role_selection_id", "role-selection-1");
       expect(scoredBuilder.eq).toHaveBeenCalledWith("resume_version", 1);
-      expect(scoredBuilder.not).toHaveBeenCalledWith("ai_score", "is", null);
+      // The OR filter covers both fully-scored (ai_score not null) and
+      // keyword-skipped (keyword_score < threshold) jobs.
+      expect(scoredBuilder.or).toHaveBeenCalledWith("ai_score.not.is.null,keyword_score.lt.0.25");
       expect(jobsBuilder.or).toHaveBeenCalledWith(
         "title.ilike.%React Developer%,description.ilike.%React Developer%,title.ilike.%Frontend Engineer%,description.ilike.%Frontend Engineer%",
       );
       expect(jobsBuilder.not).toHaveBeenCalledWith("id", "in", "(job-2)");
     });
 
-    it("includes jobs whose job_scores row has ai_score IS NULL (retry)", async () => {
-      // The "ai_score is not null" filter excludes only fully-scored rows,
-      // so a job whose previous run left ai_score null is not in the
-      // exclusion set and is re-fetched here for retry.
+    it("includes jobs with keyword_score >= threshold and ai_score IS NULL (AI failure retry)", async () => {
+      // Jobs where the keyword gate passed but AI failed have ai_score IS NULL.
+      // They are NOT in the "done" set and must be retried.
       const { client, builders } = queuedSupabaseClient([
-        { data: [], error: null }, // no job_scores rows with ai_score set
-        { data: [jobRow], error: null }, // matching jobs, including the null-ai_score one
+        { data: [], error: null }, // no done rows (keyword-passed AI-failed job not returned by OR filter)
+        { data: [jobRow], error: null }, // job returned for retry
       ]);
       const repo = new SupabaseJobRepository(client);
 
-      const result = await repo.findUnscored("role-selection-1", ["React Developer"], 1);
+      const result = await repo.findUnscored("role-selection-1", ["React Developer"], 1, 0.25);
 
       expect(result).toEqual([expect.objectContaining({ id: "job-1" })]);
 
@@ -150,7 +151,7 @@ describe("SupabaseJobRepository", () => {
         Record<string, ReturnType<typeof vi.fn>>,
         Record<string, ReturnType<typeof vi.fn>>,
       ];
-      // No exclusion filter applied when there are no fully-scored ids.
+      // No exclusion filter when the done-ids set is empty.
       expect(jobsBuilder.not).not.toHaveBeenCalledWith("id", "in", expect.anything());
     });
 
@@ -158,18 +159,18 @@ describe("SupabaseJobRepository", () => {
       const { client, builders } = queuedSupabaseClient([]);
       const repo = new SupabaseJobRepository(client);
 
-      expect(await repo.findUnscored("role-selection-1", [], 1)).toEqual([]);
+      expect(await repo.findUnscored("role-selection-1", [], 1, 0.25)).toEqual([]);
       expect(builders).toHaveLength(0);
     });
 
     it("strips PostgREST .or() filter syntax characters from role names", async () => {
       const { client, builders } = queuedSupabaseClient([
-        { data: [], error: null }, // scored job ids
+        { data: [], error: null }, // done job ids
         { data: [], error: null }, // matching jobs
       ]);
       const repo = new SupabaseJobRepository(client);
 
-      await repo.findUnscored("role-selection-1", ["Engineer, Backend (Remote)"], 1);
+      await repo.findUnscored("role-selection-1", ["Engineer, Backend (Remote)"], 1, 0.25);
 
       const [, jobsBuilder] = builders as [
         Record<string, ReturnType<typeof vi.fn>>,
@@ -184,7 +185,7 @@ describe("SupabaseJobRepository", () => {
       const { client, builders } = queuedSupabaseClient([]);
       const repo = new SupabaseJobRepository(client);
 
-      expect(await repo.findUnscored("role-selection-1", ["(),.%*"], 1)).toEqual([]);
+      expect(await repo.findUnscored("role-selection-1", ["(),.%*"], 1, 0.25)).toEqual([]);
       expect(builders).toHaveLength(0);
     });
   });

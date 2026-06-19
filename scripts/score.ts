@@ -36,7 +36,7 @@ async function main(): Promise<void> {
   // letting the AI stage actually run. Override via KEYWORD_THRESHOLD.
   const keywordThreshold = Number(optionalEnv("KEYWORD_THRESHOLD", "0.25"));
 
-  const jobs = await jobRepository.findUnscored(roleSelection.id, roleSelection.expandedRoles, resume.version);
+  const jobs = await jobRepository.findUnscored(roleSelection.id, roleSelection.expandedRoles, resume.version, keywordThreshold);
   console.log(`[score] scoring ${jobs.length} unscored/retry job(s) for role selection ${roleSelection.id}`);
 
   let scored = 0;
