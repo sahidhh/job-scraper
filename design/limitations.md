@@ -49,6 +49,9 @@ The AI scoring stage adds 1–15 seconds per job (OpenRouter call). Scoring thou
 ### 3.3 AI Score Nullability
 If the OpenRouter call fails (timeout, 5xx, or invalid response), `ai_score` is left null. The job appears in the dashboard but without an AI score. The next cron run will attempt rescoring automatically.
 
+### 3.6 `findUnscored` URL Size — Resolved
+The original `findUnscored` implementation excluded "done" jobs by placing all their IDs into a PostgREST `NOT IN (...)` URL query parameter. As the done-set grew past ~200 entries the request URI exceeded the 8 KB Supabase API gateway limit, producing a 414 URI Too Long error. This was resolved by switching to a three-step pattern: (1) fetch done IDs as a response body, (2) fetch candidate job IDs as a response body, (3) compute the set difference in memory and fetch full rows in bounded IN chunks of ≤ 100 IDs. The URL size is now permanently bounded regardless of database growth. See `docs/reports/findUnscored-regression-fix.md`.
+
 ### 3.4 AI Model Dependency
 Scoring quality depends entirely on the configured `OPENROUTER_MODEL`. Changing the model may alter score distributions and require re-scoring existing jobs (no automatic re-score on model change).
 

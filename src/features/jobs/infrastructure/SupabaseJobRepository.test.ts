@@ -88,10 +88,13 @@ describe("SupabaseJobRepository", () => {
   });
 
   describe("findUnscored", () => {
-    it("uses an OR filter to exclude fully-scored and keyword-skipped jobs", async () => {
+    it("uses an OR filter to exclude fully-scored and keyword-skipped jobs via set difference", async () => {
+      // Three queries: (1) done IDs, (2) candidate IDs, (3) full rows for eligible IDs.
+      // job-2 is "done"; job-1 is the only eligible candidate.
       const { client, builders } = queuedSupabaseClient([
-        { data: [{ job_id: "job-2" }], error: null }, // done job ids
-        { data: [jobRow], error: null }, // matching jobs
+        { data: [{ job_id: "job-2" }], error: null }, // Query 1: done IDs
+        { data: [{ id: "job-1" }], error: null },      // Query 2: candidate IDs
+        { data: [jobRow], error: null },                // Query 3: chunk fetch for job-1
       ]);
       const repo = new SupabaseJobRepository(client);
 
@@ -118,41 +121,50 @@ describe("SupabaseJobRepository", () => {
         },
       ]);
 
-      expect(builders).toHaveLength(2);
-      const [scoredBuilder, jobsBuilder] = builders as [
+      expect(builders).toHaveLength(3);
+      const [doneBuilder, candidatesBuilder, chunkBuilder] = builders as [
+        Record<string, ReturnType<typeof vi.fn>>,
         Record<string, ReturnType<typeof vi.fn>>,
         Record<string, ReturnType<typeof vi.fn>>,
       ];
-      expect(scoredBuilder.eq).toHaveBeenCalledWith("role_selection_id", "role-selection-1");
-      expect(scoredBuilder.eq).toHaveBeenCalledWith("resume_version", 1);
-      // The OR filter covers both fully-scored (ai_score not null) and
-      // keyword-skipped (keyword_score < threshold) jobs.
-      expect(scoredBuilder.or).toHaveBeenCalledWith("ai_score.not.is.null,keyword_score.lt.0.25");
-      expect(jobsBuilder.or).toHaveBeenCalledWith(
+
+      // Query 1: done IDs query uses the scoring-loop-fix OR filter.
+      expect(doneBuilder.eq).toHaveBeenCalledWith("role_selection_id", "role-selection-1");
+      expect(doneBuilder.eq).toHaveBeenCalledWith("resume_version", 1);
+      expect(doneBuilder.or).toHaveBeenCalledWith("ai_score.not.is.null,keyword_score.lt.0.25");
+
+      // Query 2: candidates query selects only id (no large NOT IN in URL).
+      expect(candidatesBuilder.select).toHaveBeenCalledWith("id");
+      expect(candidatesBuilder.eq).toHaveBeenCalledWith("is_active", true);
+      expect(candidatesBuilder.or).toHaveBeenCalledWith(
         "title.ilike.%React Developer%,description.ilike.%React Developer%,title.ilike.%Frontend Engineer%,description.ilike.%Frontend Engineer%",
       );
-      expect(jobsBuilder.not).toHaveBeenCalledWith("id", "in", "(job-2)");
+      expect(candidatesBuilder.not).not.toHaveBeenCalled();
+
+      // Query 3: chunk fetch uses IN, not NOT IN.
+      expect(chunkBuilder.in).toHaveBeenCalledWith("id", ["job-1"]);
     });
 
     it("includes jobs with keyword_score >= threshold and ai_score IS NULL (AI failure retry)", async () => {
       // Jobs where the keyword gate passed but AI failed have ai_score IS NULL.
-      // They are NOT in the "done" set and must be retried.
+      // They are NOT in the "done" set and must be retried — they appear in
+      // candidateIds and end up in eligibleIds.
       const { client, builders } = queuedSupabaseClient([
-        { data: [], error: null }, // no done rows (keyword-passed AI-failed job not returned by OR filter)
-        { data: [jobRow], error: null }, // job returned for retry
+        { data: [], error: null },              // Query 1: no done rows
+        { data: [{ id: "job-1" }], error: null }, // Query 2: job-1 is a candidate
+        { data: [jobRow], error: null },          // Query 3: chunk returns job-1
       ]);
       const repo = new SupabaseJobRepository(client);
 
       const result = await repo.findUnscored("role-selection-1", ["React Developer"], 1, 0.25);
 
       expect(result).toEqual([expect.objectContaining({ id: "job-1" })]);
+      expect(builders).toHaveLength(3);
 
-      const [, jobsBuilder] = builders as [
-        Record<string, ReturnType<typeof vi.fn>>,
-        Record<string, ReturnType<typeof vi.fn>>,
-      ];
-      // No exclusion filter when the done-ids set is empty.
-      expect(jobsBuilder.not).not.toHaveBeenCalledWith("id", "in", expect.anything());
+      // The chunk builder uses IN (inclusion), never NOT IN.
+      const chunkBuilder = builders[2] as Record<string, ReturnType<typeof vi.fn>>;
+      expect(chunkBuilder.in).toHaveBeenCalledWith("id", ["job-1"]);
+      expect(chunkBuilder.not).not.toHaveBeenCalled();
     });
 
     it("returns an empty array without querying when there are no expanded roles", async () => {
@@ -164,19 +176,18 @@ describe("SupabaseJobRepository", () => {
     });
 
     it("strips PostgREST .or() filter syntax characters from role names", async () => {
+      // No eligible jobs — candidateIds returns empty so no chunk query fires.
       const { client, builders } = queuedSupabaseClient([
-        { data: [], error: null }, // done job ids
-        { data: [], error: null }, // matching jobs
+        { data: [], error: null }, // Query 1: done IDs
+        { data: [], error: null }, // Query 2: candidate IDs (empty → early return)
       ]);
       const repo = new SupabaseJobRepository(client);
 
       await repo.findUnscored("role-selection-1", ["Engineer, Backend (Remote)"], 1, 0.25);
 
-      const [, jobsBuilder] = builders as [
-        Record<string, ReturnType<typeof vi.fn>>,
-        Record<string, ReturnType<typeof vi.fn>>,
-      ];
-      expect(jobsBuilder.or).toHaveBeenCalledWith(
+      expect(builders).toHaveLength(2);
+      const candidatesBuilder = builders[1] as Record<string, ReturnType<typeof vi.fn>>;
+      expect(candidatesBuilder.or).toHaveBeenCalledWith(
         "title.ilike.%Engineer Backend Remote%,description.ilike.%Engineer Backend Remote%",
       );
     });
@@ -187,6 +198,78 @@ describe("SupabaseJobRepository", () => {
 
       expect(await repo.findUnscored("role-selection-1", ["(),.%*"], 1, 0.25)).toEqual([]);
       expect(builders).toHaveLength(0);
+    });
+
+    it("excludes done jobs via in-memory set difference without a NOT IN URL parameter", async () => {
+      // Simulates a large done set: 3 done IDs, 2 eligible IDs.
+      // The candidates query returns all 5; set difference yields only the 2 eligible.
+      const doneIds = ["done-1", "done-2", "done-3"];
+      const eligibleJobRows = [
+        { ...jobRow, id: "eligible-1" },
+        { ...jobRow, id: "eligible-2" },
+      ];
+      const { client, builders } = queuedSupabaseClient([
+        { data: doneIds.map((id) => ({ job_id: id })), error: null },           // Query 1: done IDs
+        {                                                                         // Query 2: all 5 candidates
+          data: [...doneIds, "eligible-1", "eligible-2"].map((id) => ({ id })),
+          error: null,
+        },
+        { data: eligibleJobRows, error: null },                                   // Query 3: chunk for 2 eligible
+      ]);
+      const repo = new SupabaseJobRepository(client);
+
+      const result = await repo.findUnscored("role-selection-1", ["React Developer"], 1, 0.25);
+
+      expect(result.map((j) => j.id)).toEqual(["eligible-1", "eligible-2"]);
+      expect(builders).toHaveLength(3);
+
+      // Candidates query must not use NOT IN — that's the URL-bloat root cause.
+      const candidatesBuilder = builders[1] as Record<string, ReturnType<typeof vi.fn>>;
+      expect(candidatesBuilder.not).not.toHaveBeenCalled();
+
+      // Chunk query receives only the eligible IDs.
+      const chunkBuilder = builders[2] as Record<string, ReturnType<typeof vi.fn>>;
+      expect(chunkBuilder.in).toHaveBeenCalledWith("id", ["eligible-1", "eligible-2"]);
+    });
+
+    it("splits eligible IDs into multiple chunk queries when count exceeds CHUNK_SIZE", async () => {
+      // 150 eligible IDs → chunk 1 (ids 0–99) + chunk 2 (ids 100–149) = 2 chunk queries.
+      const eligibleIds = Array.from({ length: 150 }, (_, i) => `job-${i}`);
+      const chunkRows1 = eligibleIds.slice(0, 100).map((id) => ({ ...jobRow, id }));
+      const chunkRows2 = eligibleIds.slice(100).map((id) => ({ ...jobRow, id }));
+      const { client, builders } = queuedSupabaseClient([
+        { data: [], error: null },                                // Query 1: no done IDs
+        { data: eligibleIds.map((id) => ({ id })), error: null }, // Query 2: 150 candidates
+        { data: chunkRows1, error: null },                        // Query 3: chunk 1 (100 IDs)
+        { data: chunkRows2, error: null },                        // Query 4: chunk 2 (50 IDs)
+      ]);
+      const repo = new SupabaseJobRepository(client);
+
+      const result = await repo.findUnscored("role-selection-1", ["React Developer"], 1, 0.25);
+
+      expect(result).toHaveLength(150);
+      // 4 builders: done, candidates, chunk-1, chunk-2.
+      expect(builders).toHaveLength(4);
+
+      const chunk1Builder = builders[2] as Record<string, ReturnType<typeof vi.fn>>;
+      const chunk2Builder = builders[3] as Record<string, ReturnType<typeof vi.fn>>;
+      expect(chunk1Builder.in).toHaveBeenCalledWith("id", eligibleIds.slice(0, 100));
+      expect(chunk2Builder.in).toHaveBeenCalledWith("id", eligibleIds.slice(100));
+    });
+
+    it("returns an empty array and skips chunk queries when all candidates are already done", async () => {
+      // All candidates are in the done set → eligibleIds is empty → no chunk query.
+      const { client, builders } = queuedSupabaseClient([
+        { data: [{ job_id: "job-1" }], error: null },  // Query 1: job-1 is done
+        { data: [{ id: "job-1" }], error: null },       // Query 2: job-1 is the only candidate
+        // No Query 3 — eligibleIds is empty after set difference.
+      ]);
+      const repo = new SupabaseJobRepository(client);
+
+      const result = await repo.findUnscored("role-selection-1", ["React Developer"], 1, 0.25);
+
+      expect(result).toEqual([]);
+      expect(builders).toHaveLength(2);
     });
   });
 
