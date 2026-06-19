@@ -41,6 +41,9 @@ alter table job_scores
 
 -- 4. Update set_active_resume to auto-increment version so each new
 --    upload gets a monotonically increasing version number.
+--    Drop first because CREATE OR REPLACE cannot change the return type.
+drop function if exists set_active_resume(text, text, text[]);
+
 create or replace function set_active_resume(
   p_file_path   text,
   p_parsed_text text,
