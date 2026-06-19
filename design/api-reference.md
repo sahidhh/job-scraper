@@ -326,18 +326,41 @@ All routes except `/login` and `/auth/callback` are protected by `middleware.ts`
 }
 ```
 
-**Message format:**
+**Message format — individual mode (`NOTIFY_MODE=individual`, default):**
 ```
-<b>Senior Backend Engineer</b>
-<i>Stripe · Singapore · Remote</i>
-
-Source: Greenhouse | Posted: 2026-06-17
-Score: 92%
-
-<i>AI Reasoning: Strong match — candidate's Node.js, PostgreSQL, and distributed systems experience aligns well with the role requirements.</i>
-
-<a href="https://boards.greenhouse.io/stripe/jobs/...">Apply →</a>
+🎯 New match (92%)
+Senior Backend Engineer @ Stripe
+📍 Singapore
+Strong match — candidate's Node.js, PostgreSQL, and distributed systems experience aligns well with the role requirements.
+https://boards.greenhouse.io/stripe/jobs/...
 ```
+
+**Message format — digest mode (`NOTIFY_MODE=digest`):**
+```
+📋 Jobs Digest
+
+High Match (≥85%)
+
+🎯 92% — Senior Backend Engineer @ Stripe
+📍 Singapore · https://boards.greenhouse.io/stripe/jobs/...
+
+Medium Match
+
+🎯 78% — Full Stack Developer @ Shopify
+📍 Remote · https://example.com/shopify/jobs/789
+
+New Companies
+
+• Stripe
+• Shopify
+
+Summary
+
+2 jobs processed
+1 high-value job
+```
+
+Digest messages longer than 4 096 characters are split into multiple sequential sends.
 
 ---
 

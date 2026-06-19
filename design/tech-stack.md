@@ -63,6 +63,7 @@ These are explicitly banned by the project rules (CLAUDE.md):
 |---|---|---|
 | `KEYWORD_THRESHOLD` | `0.25` | Minimum keyword score to trigger AI scoring |
 | `NOTIFY_THRESHOLD` | `0.75` | Minimum AI score to send Telegram notification |
+| `NOTIFY_MODE` | `individual` | Notification delivery mode: `individual` (one message per job) or `digest` (single grouped message per run) |
 | `WELLFOUND_FEED_URL` | _(unset)_ | Wellfound custom feed URL; see docs/sources/wellfound.md |
 | `WELLFOUND_DISABLED` | _(unset)_ | Set `true` or `1` to explicitly disable Wellfound ingestion without triggering a config warning |
 

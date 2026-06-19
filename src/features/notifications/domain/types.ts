@@ -1,5 +1,9 @@
 import type { JobSource, LocationTag } from "@/shared/domain/enums";
 
+// Controls whether the cron sends one message per job (individual) or a
+// single grouped digest (digest). Mirrors the NOTIFY_MODE env var.
+export type NotifyMode = "individual" | "digest";
+
 // Mirrors the `notifications_log` table (database.md §2).
 export interface NotificationLogEntry {
   id: string;
