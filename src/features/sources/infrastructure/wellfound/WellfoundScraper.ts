@@ -8,9 +8,49 @@ import { normalizeWhitespace, stripHtml } from "@/shared/infrastructure/text";
 import { toIsoOrNull } from "../normalize";
 
 // Wellfound has no documented public API (scrapers.md §1, decisions.md
-// AD-10) -- the feed URL is a deploy-time config value. If unset, this
-// source contributes zero jobs rather than guessing an endpoint.
+// AD-10) -- the feed URL is a deploy-time config value. See docs/sources/wellfound.md
+// for setup instructions and feed acquisition process.
 const WELLFOUND_FEED_URL_VAR = "WELLFOUND_FEED_URL";
+const WELLFOUND_DISABLED_VAR = "WELLFOUND_DISABLED";
+
+// --- Config validation ---
+
+export type WellfoundConfigStatus =
+  | { status: "disabled" }
+  | { status: "invalid_config"; reason: string }
+  | { status: "ok"; feedUrl: string };
+
+/**
+ * Validates the Wellfound source configuration at startup.
+ * Returns a discriminated union describing whether the source is disabled,
+ * misconfigured, or ready to use.
+ */
+export function validateWellfoundConfig(): WellfoundConfigStatus {
+  const disabled = optionalEnv(WELLFOUND_DISABLED_VAR, "");
+  if (disabled === "true" || disabled === "1") {
+    return { status: "disabled" };
+  }
+
+  const feedUrl = optionalEnv(WELLFOUND_FEED_URL_VAR, "");
+  if (!feedUrl) {
+    return { status: "invalid_config", reason: `${WELLFOUND_FEED_URL_VAR} not set` };
+  }
+
+  let parsed: URL;
+  try {
+    parsed = new URL(feedUrl);
+  } catch {
+    return { status: "invalid_config", reason: "malformed URL" };
+  }
+
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    return { status: "invalid_config", reason: `unsupported protocol "${parsed.protocol}"` };
+  }
+
+  return { status: "ok", feedUrl };
+}
+
+// --- Feed parsing ---
 
 interface WellfoundEntry {
   id: string | number;
@@ -49,6 +89,8 @@ function toRawJob(entry: WellfoundEntry): RawJob {
   };
 }
 
+// --- Scraper ---
+
 export const wellfoundScraper: JobSourceScraper = {
   source: "wellfound",
   requiresCompanyConfig: false,
@@ -57,11 +99,19 @@ export const wellfoundScraper: JobSourceScraper = {
   // parameter -- fetch the whole feed, then filter client-side via the
   // shared `jobMatchesRoles` helper.
   async fetchJobs(_companies: Company[], roles: readonly string[]): Promise<RawJob[]> {
-    const feedUrl = optionalEnv(WELLFOUND_FEED_URL_VAR, "");
-    if (!feedUrl) {
-      console.warn(`[wellfound] ${WELLFOUND_FEED_URL_VAR} not configured; skipping`);
+    const config = validateWellfoundConfig();
+
+    if (config.status === "disabled") {
+      console.log("[wellfound] disabled");
       return [];
     }
+
+    if (config.status === "invalid_config") {
+      console.warn(`[wellfound] invalid configuration: ${config.reason}`);
+      return [];
+    }
+
+    const { feedUrl } = config;
 
     try {
       const response = await fetchWithRetry(feedUrl);

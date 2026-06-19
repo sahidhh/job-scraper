@@ -6,7 +6,7 @@
 Only six sources are integrated (Greenhouse, Lever, Ashby, Wellfound, RemoteOK, MyCareersFuture). Major platforms like LinkedIn, Indeed, Glassdoor, and Naukri are not supported because they either have no public API, require authentication, or prohibit scraping in their ToS.
 
 ### 1.2 Wellfound Dependency
-The Wellfound adapter requires a custom feed URL (`WELLFOUND_FEED_URL`). If this is not configured, the adapter returns zero results silently (with a warning log). Users without a Wellfound feed receive no Wellfound data.
+The Wellfound adapter requires a custom feed URL (`WELLFOUND_FEED_URL`) because Wellfound has no documented public API. If the URL is not configured, the adapter logs `[wellfound] invalid configuration` and returns zero results. Set `WELLFOUND_DISABLED=true` to opt out explicitly (suppresses the warning). Users without a Wellfound feed receive no Wellfound data. See `docs/sources/wellfound.md` for setup instructions.
 
 ### 1.3 Scrape Cadence
 Jobs are fetched every 2 hours. New postings may be up to 2 hours old before appearing in the dashboard. There is no webhook or push mechanism from any ATS source.
