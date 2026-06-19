@@ -181,6 +181,7 @@ export class SupabaseJobRepository implements JobRepository {
     const roleFilter = buildRoleFilter(expandedRoles);
     if (!roleFilter) return [];
 
+    // Query 1: fetch "done" IDs from job_scores.
     // A job is "done" for this (role_selection, resume_version) and must be
     // excluded from the scoring queue if either:
     //   (a) ai_score IS NOT NULL — fully scored, or
@@ -188,24 +189,43 @@ export class SupabaseJobRepository implements JobRepository {
     //       keyword gate (ai_score is null by design, not by failure).
     // Rows with keyword_score >= keywordThreshold AND ai_score IS NULL are NOT
     // excluded — they represent genuine AI call failures that should be retried.
-    const { data: doneRows, error: scoredError } = await this.client
+    const { data: doneRows, error: doneError } = await this.client
       .from("job_scores")
       .select("job_id")
       .eq("role_selection_id", roleSelectionId)
       .eq("resume_version", resumeVersion)
       .or(`ai_score.not.is.null,keyword_score.lt.${keywordThreshold}`);
-    if (scoredError) throw toAppError(scoredError);
+    if (doneError) throw toAppError(doneError);
+    const doneIdSet = new Set((doneRows ?? []).map((row) => row.job_id));
 
-    const doneIds = (doneRows ?? []).map((row) => row.job_id);
+    // Query 2: fetch IDs of all active candidate jobs matching the role filter.
+    // Selecting only `id` keeps this query URL small regardless of how large
+    // the done set grows (fixes the 414 URI Too Long regression introduced when
+    // the scoring-loop fix expanded doneIds from ~50 to ~400+ entries).
+    const { data: candidateRows, error: candidateError } = await this.client
+      .from("jobs")
+      .select("id")
+      .eq("is_active", true)
+      .or(roleFilter);
+    if (candidateError) throw toAppError(candidateError);
 
-    let query = this.client.from("jobs").select("*").eq("is_active", true).or(roleFilter);
-    if (doneIds.length > 0) {
-      query = query.not("id", "in", `(${doneIds.join(",")})`);
+    // Set difference in memory: candidates not already done.
+    const eligibleIds = (candidateRows ?? [])
+      .map((row) => (row as { id: string }).id)
+      .filter((id) => !doneIdSet.has(id));
+    if (eligibleIds.length === 0) return [];
+
+    // Query 3+: fetch full job rows for eligible IDs in bounded chunks so that
+    // no single IN list URL exceeds the 8 KB gateway limit.
+    const CHUNK_SIZE = 100;
+    const jobs: Job[] = [];
+    for (let i = 0; i < eligibleIds.length; i += CHUNK_SIZE) {
+      const chunk = eligibleIds.slice(i, i + CHUNK_SIZE);
+      const { data, error } = await this.client.from("jobs").select("*").in("id", chunk);
+      if (error) throw toAppError(error);
+      jobs.push(...(data ?? []).map(toJob));
     }
-
-    const { data, error } = await query;
-    if (error) throw toAppError(error);
-    return (data ?? []).map(toJob);
+    return jobs;
   }
 
   async countMatchingExpandedRoles(expandedRoles: string[]): Promise<number> {
