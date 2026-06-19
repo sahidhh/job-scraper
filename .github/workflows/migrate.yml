@@ -1,0 +1,24 @@
+name: Database migrations
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    environment: Production
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Extract project ref from Supabase URL
+        run: echo "PROJECT_REF=$(echo '${{ secrets.SUPABASE_URL }}' | sed 's|https://||; s|\.supabase\.co.*||')" >> $GITHUB_ENV
+
+      - run: supabase db push --project-ref $PROJECT_REF
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
