@@ -9,27 +9,76 @@ const row: ScrapeRunRow = {
   id: "run-1",
   source: "greenhouse",
   status: "success",
-  jobs_found: 12,
+  found_count: 12,
+  kept_count: 8,
+  inserted_count: 3,
+  updated_count: 5,
+  failed_count: 0,
+  started_at: "2026-01-01T00:00:00Z",
+  completed_at: "2026-01-01T00:00:01Z",
+  duration_ms: 1000,
   error: null,
+  metadata: null,
   run_at: "2026-01-01T00:00:00Z",
 };
 
 describe("SupabaseScrapeRunRepository", () => {
-  it("recordRun inserts a row with error defaulted to null", async () => {
+  it("recordRun inserts a row with all metric fields", async () => {
     const { client, builder } = mockSupabaseClient({ data: null, error: null });
     const repo = new SupabaseScrapeRunRepository(client);
 
-    await repo.recordRun({ source: "greenhouse", status: "success", jobsFound: 12 });
+    await repo.recordRun({
+      source: "greenhouse",
+      status: "success",
+      foundCount: 12,
+      keptCount: 8,
+      insertedCount: 3,
+      updatedCount: 5,
+      failedCount: 0,
+      startedAt: "2026-01-01T00:00:00Z",
+      completedAt: "2026-01-01T00:00:01Z",
+      durationMs: 1000,
+    });
 
     expect(builder.insert).toHaveBeenCalledWith({
       source: "greenhouse",
       status: "success",
-      jobs_found: 12,
+      found_count: 12,
+      kept_count: 8,
+      inserted_count: 3,
+      updated_count: 5,
+      failed_count: 0,
+      started_at: "2026-01-01T00:00:00Z",
+      completed_at: "2026-01-01T00:00:01Z",
+      duration_ms: 1000,
       error: null,
+      metadata: null,
     });
   });
 
-  it("listRecent orders by run_at desc and maps rows", async () => {
+  it("recordRun defaults optional metric fields to null/0", async () => {
+    const { client, builder } = mockSupabaseClient({ data: null, error: null });
+    const repo = new SupabaseScrapeRunRepository(client);
+
+    await repo.recordRun({ source: "greenhouse", status: "failed", foundCount: 0 });
+
+    expect(builder.insert).toHaveBeenCalledWith({
+      source: "greenhouse",
+      status: "failed",
+      found_count: 0,
+      kept_count: null,
+      inserted_count: null,
+      updated_count: null,
+      failed_count: 0,
+      started_at: null,
+      completed_at: null,
+      duration_ms: null,
+      error: null,
+      metadata: null,
+    });
+  });
+
+  it("listRecent orders by run_at desc and maps all metric fields", async () => {
     const { client, builder } = mockSupabaseClient({ data: [row], error: null });
     const repo = new SupabaseScrapeRunRepository(client);
 
@@ -40,8 +89,16 @@ describe("SupabaseScrapeRunRepository", () => {
         id: "run-1",
         source: "greenhouse",
         status: "success",
-        jobsFound: 12,
+        foundCount: 12,
+        keptCount: 8,
+        insertedCount: 3,
+        updatedCount: 5,
+        failedCount: 0,
+        startedAt: "2026-01-01T00:00:00Z",
+        completedAt: "2026-01-01T00:00:01Z",
+        durationMs: 1000,
         error: null,
+        metadata: null,
         runAt: "2026-01-01T00:00:00Z",
       },
     ]);

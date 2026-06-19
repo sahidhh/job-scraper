@@ -117,7 +117,7 @@ flowchart LR
         T["tagLocations()\n→ location_tags"]
         D["Drop\n(empty tags)"]
         U["Upsert jobs\n(source + source_job_id)"]
-        L["Log scrape_run"]
+        L["Log scrape_run\n(timing + counts)"]
     end
 
     sources --> N --> F --> T --> D --> U --> L
