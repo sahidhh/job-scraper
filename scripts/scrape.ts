@@ -39,7 +39,7 @@ async function main(): Promise<void> {
   const roles = roleSelection.expandedRoles;
 
   for (const scraper of sourceScrapers) {
-    const companies = scraper.requiresCompanyConfig ? await companyRepository.listActive(scraper.source) : [];
+    const companies = scraper.requiresCompanyConfig ? await companyRepository.listActiveHealthy(scraper.source) : [];
 
     if (scraper.requiresCompanyConfig && companies.length === 0) {
       console.log(`[scrape] ${scraper.source}: no active companies configured, skipping`);

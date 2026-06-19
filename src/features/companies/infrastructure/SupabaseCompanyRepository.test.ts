@@ -12,6 +12,10 @@ const row: CompanyRow = {
   board_token: "acme",
   active: true,
   created_at: "2026-01-01T00:00:00Z",
+  health_status: "active",
+  consecutive_failures: 0,
+  last_success_at: null,
+  last_failure_at: null,
 };
 
 describe("SupabaseCompanyRepository", () => {
@@ -29,6 +33,10 @@ describe("SupabaseCompanyRepository", () => {
         boardToken: "acme",
         active: true,
         createdAt: "2026-01-01T00:00:00Z",
+        healthStatus: "active",
+        consecutiveFailures: 0,
+        lastSuccessAt: null,
+        lastFailureAt: null,
       },
     ]);
     expect(builder.eq).toHaveBeenCalledWith("active", true);

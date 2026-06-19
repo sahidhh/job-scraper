@@ -36,24 +36,36 @@ export type Database = {
         Row: {
           active: boolean
           board_token: string | null
+          consecutive_failures: number
           created_at: string
+          health_status: Database["public"]["Enums"]["source_health_status"]
           id: string
+          last_failure_at: string | null
+          last_success_at: string | null
           name: string
           source: Database["public"]["Enums"]["job_source"]
         }
         Insert: {
           active?: boolean
           board_token?: string | null
+          consecutive_failures?: number
           created_at?: string
+          health_status?: Database["public"]["Enums"]["source_health_status"]
           id?: string
+          last_failure_at?: string | null
+          last_success_at?: string | null
           name: string
           source: Database["public"]["Enums"]["job_source"]
         }
         Update: {
           active?: boolean
           board_token?: string | null
+          consecutive_failures?: number
           created_at?: string
+          health_status?: Database["public"]["Enums"]["source_health_status"]
           id?: string
+          last_failure_at?: string | null
+          last_success_at?: string | null
           name?: string
           source?: Database["public"]["Enums"]["job_source"]
         }
@@ -488,6 +500,7 @@ export type Database = {
       location_tag: "india" | "singapore" | "uae" | "remote"
       role_map_source: "seed" | "ai"
       scrape_run_status: "success" | "partial" | "failed"
+      source_health_status: "active" | "unhealthy" | "disabled"
     }
     CompositeTypes: {
       [_ in never]: never

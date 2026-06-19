@@ -11,6 +11,10 @@ erDiagram
         text board_token
         boolean active
         timestamptz created_at
+        source_health_status health_status "active | unhealthy | disabled"
+        integer consecutive_failures "incremented on each probe failure"
+        timestamptz last_success_at "nullable; set on healthy/redirected probe"
+        timestamptz last_failure_at "nullable; set on failed probe"
     }
 
     JOBS {
@@ -149,6 +153,7 @@ erDiagram
 | `notifications_log` | `UNIQUE (job_id)` | Guarantee at-most-one Telegram send |
 | `role_pack_roles` | `INDEX (pack_id)` | Fast lookup of roles for a pack |
 | `companies` | `UNIQUE (source, board_token) WHERE board_token IS NOT NULL` | No duplicate board configs |
+| `companies` | `INDEX (health_status)` | Fast lookup of unhealthy/disabled sources |
 
 ---
 
@@ -178,10 +183,11 @@ Both functions run in a single transaction, ensuring exactly one active record a
 ## Enum Values
 
 ```
-job_source        → greenhouse, lever, ashby, wellfound, remoteok, mycareersfuture
-location_tag      → india, singapore, uae, remote
-role_map_source   → seed, ai
-scrape_run_status → success, partial, failed
+job_source           → greenhouse, lever, ashby, wellfound, remoteok, mycareersfuture
+location_tag         → india, singapore, uae, remote
+role_map_source      → seed, ai
+scrape_run_status    → success, partial, failed
+source_health_status → active, unhealthy, disabled
 ```
 
 ---

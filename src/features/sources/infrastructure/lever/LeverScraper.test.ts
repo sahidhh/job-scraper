@@ -10,6 +10,10 @@ function makeCompany(overrides: Partial<Company> = {}): Company {
     boardToken: "acme",
     active: true,
     createdAt: "2026-01-01T00:00:00Z",
+    healthStatus: "active",
+    consecutiveFailures: 0,
+    lastSuccessAt: null,
+    lastFailureAt: null,
     ...overrides,
   };
 }
