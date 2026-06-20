@@ -12,7 +12,7 @@ interface MatchedJobRow {
 
 interface ScrapeRunRow {
   run_at: string;
-  jobs_found: number;
+  found_count: number;
   source: string;
 }
 
@@ -59,7 +59,7 @@ export class SupabaseMatchedJobsRepository implements MatchedJobsRepository {
   async getScrapeRuns(): Promise<ScrapeRunDataPoint[]> {
     const { data, error } = await this.client
       .from("scrape_runs")
-      .select("run_at, jobs_found, source")
+      .select("run_at, found_count, source")
       .eq("status", "success")
       .order("run_at", { ascending: true })
       .returns<ScrapeRunRow[]>();
@@ -67,7 +67,7 @@ export class SupabaseMatchedJobsRepository implements MatchedJobsRepository {
 
     return (data ?? []).map((row) => ({
       runAt: row.run_at,
-      jobsFound: row.jobs_found,
+      jobsFound: row.found_count,
       source: row.source,
     }));
   }
