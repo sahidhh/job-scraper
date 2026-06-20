@@ -1,7 +1,7 @@
 import { SupabaseCompanyRepository } from "@/features/companies/infrastructure/SupabaseCompanyRepository";
 import { validateSources } from "@/features/sources/application/validateSources";
 import { SOURCE_HEALTH_CONFIG } from "@/features/sources/domain/sourceHealthConfig";
-import type { ValidationGroup, ValidationStatus } from "@/features/sources/domain/sourceValidation";
+import type { ProbeOutcome, ValidationGroup, ValidationStatus } from "@/features/sources/domain/sourceValidation";
 import { sourceValidators } from "@/features/sources/infrastructure/validators/index";
 import { createSupabaseServiceClient } from "@/shared/infrastructure/supabaseClient";
 
@@ -19,7 +19,9 @@ function printGroup(group: ValidationGroup): void {
 
   for (const r of group.results) {
     const suffix = r.httpStatus !== null ? ` (${r.httpStatus})` : "";
-    console.log(`${r.companyName} ${statusIcon(r.status)} ${r.status}${suffix}`);
+    const wasActive = r.previousHealthStatus === "active" && r.status !== "healthy" && r.status !== "redirected";
+    const transition = wasActive ? " ⚠️ NEW" : "";
+    console.log(`${r.companyName} ${statusIcon(r.status)} ${r.status}${suffix}${transition}`);
   }
 }
 
@@ -28,7 +30,7 @@ function printSummary(groups: ValidationGroup[], totalDisabled: number): void {
     printGroup(group);
   }
 
-  const all = groups.flatMap((g) => g.results);
+  const all: ProbeOutcome[] = groups.flatMap((g) => g.results);
   const activeHealthy = all.filter((r) => r.status === "healthy" || r.status === "redirected").length;
   const unhealthy = all.filter(
     (r) => r.status !== "healthy" && r.status !== "redirected",
@@ -41,10 +43,17 @@ function printSummary(groups: ValidationGroup[], totalDisabled: number): void {
   console.log(`Disabled:         ${totalDisabled}`);
   console.log(`Total probed:     ${totalProbed}  (disabled sources skipped)`);
 
-  const newFailures = all.filter((r) => r.status !== "healthy" && r.status !== "redirected").length;
+  // A "new failure" is a company that was active before this probe and is now broken.
+  // Companies already in unhealthy state are known-bad and don't trigger CI failure.
+  const newFailures = all.filter(
+    (r) =>
+      r.previousHealthStatus === "active" &&
+      r.status !== "healthy" &&
+      r.status !== "redirected",
+  ).length;
 
   if (newFailures > 0) {
-    console.log("\n❌ New failures detected — previously-active sources are now broken");
+    console.log(`\n❌ New failure(s) detected — ${newFailures} source(s) transitioned from active to broken`);
     process.exitCode = 1;
   } else if (activeHealthy < SOURCE_HEALTH_CONFIG.minimumHealthyCount) {
     console.log(

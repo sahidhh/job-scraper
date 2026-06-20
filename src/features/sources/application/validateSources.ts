@@ -1,6 +1,6 @@
 import type { CompanyRepository } from "@/features/companies/domain/CompanyRepository";
 import type { Company } from "@/features/companies/domain/types";
-import type { SourceValidator, ValidationGroup, ValidationResult } from "@/features/sources/domain/sourceValidation";
+import type { ProbeOutcome, SourceValidator, ValidationGroup, ValidationResult } from "@/features/sources/domain/sourceValidation";
 import { SOURCE_HEALTH_CONFIG } from "@/features/sources/domain/sourceHealthConfig";
 
 const FAILURE_STATUSES = new Set(["not_found", "unauthorized", "rate_limited", "unknown"]);
@@ -52,10 +52,11 @@ export async function validateSources(
           (includeDisabled || c.healthStatus !== "disabled"),
       );
       const results = await Promise.all(
-        matching.map(async (c) => {
+        matching.map(async (c): Promise<ProbeOutcome> => {
+          const previousHealthStatus = c.healthStatus;
           const result = await validator.validate(c.boardToken!, c.name);
           await applyHealthUpdate(c, result, companyRepository);
-          return result;
+          return { ...result, previousHealthStatus };
         }),
       );
       return { source: validator.source, results };

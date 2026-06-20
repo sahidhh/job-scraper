@@ -1,4 +1,5 @@
 import type { JobSource } from "@/shared/domain/enums";
+import type { SourceHealthStatus } from "@/features/companies/domain/types";
 
 // Status returned by a single board probe.
 // - healthy: 200, no redirect
@@ -22,9 +23,15 @@ export interface ValidationResult {
   httpStatus: number | null;
 }
 
+// What a single probe produces after the application layer enriches it
+// with the company's health status captured BEFORE the probe ran.
+export interface ProbeOutcome extends ValidationResult {
+  previousHealthStatus: SourceHealthStatus;
+}
+
 export interface ValidationGroup {
   source: JobSource;
-  results: ValidationResult[];
+  results: ProbeOutcome[];
 }
 
 export interface SourceValidator {
