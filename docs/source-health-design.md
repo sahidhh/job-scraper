@@ -14,13 +14,15 @@ Add source health tracking to the `companies` table. Each company tracks its con
                 probe OK
   active ──────────────────► active
     │                           ▲
-    │ probe fails               │ probe OK
+    │ probe fails               │ probe OK (any run)
     ▼                           │
   unhealthy ──────────────────► (reset)
-    │
-    │ consecutive_failures ≥ SOURCE_DISABLE_THRESHOLD
-    ▼
-  disabled  (excluded from scraping and validation)
+    │                           ▲
+    │ consecutive_failures       │ manual DB update
+    │   ≥ SOURCE_DISABLE_        │   OR --include-disabled
+    │   THRESHOLD                │   + probe OK
+    ▼                           │
+  disabled ────────────────────►
 ```
 
 | Status | Description | consecutive_failures |
@@ -57,10 +59,8 @@ Before: exits 1 if ANY source is broken (including 25 permanently-disabled ones)
 
 After:
 - Skips companies with `health_status = 'disabled'` (unless `--include-disabled` flag passed)
-- Exits 1 only when:
-  - A previously-active/unhealthy source probe fails (newly broken)
-  - OR the count of active+healthy probes drops below `MIN_HEALTHY_SOURCE_COUNT`
-- Exits 0 when only disabled sources exist (they are excluded from the probe loop)
+- Exits 1 only when: An `active` source fails its probe for the first time in this run (transitions to `unhealthy`), OR the count of healthy probes drops below `MIN_HEALTHY_SOURCE_COUNT`
+- Exits 0 when all probed sources are healthy, or when only `unhealthy` sources (known-bad, not newly broken) fail
 
 Summary output:
 ```
@@ -87,4 +87,22 @@ When a probe returns `healthy` or `redirected`:
 - `health_status` is set to `active`
 - `last_success_at` is updated
 
-To manually re-enable a disabled source, update `health_status = 'active'` and `consecutive_failures = 0` directly in the database, or wait for the next successful probe (which auto-resets).
+### Re-enabling a disabled source
+
+Disabled sources are **excluded from all normal validation runs** and cannot self-heal. Manual intervention is required.
+
+**Option A — Database update (fastest):**
+```sql
+UPDATE companies
+SET health_status = 'active', consecutive_failures = 0
+WHERE name = '<company-name>' AND source = '<source>';
+```
+The source will be included in the next scrape and validation run immediately.
+
+**Option B — Validation with `--include-disabled`:**
+```
+npx tsx scripts/validate-sources.ts --include-disabled
+```
+Disabled sources are probed once. If the probe returns healthy, the source is automatically reset to `active` with `consecutive_failures = 0`. If it still fails, it remains `disabled`.
+
+Use Option B when you want to test whether the board token has been fixed before restoring to active.
