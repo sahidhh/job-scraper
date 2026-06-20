@@ -7,7 +7,7 @@
 | Greenhouse | ATS public API | `https://boards-api.greenhouse.io/v1/boards/{board_token}/jobs?content=true` | yes (per company) |
 | Lever | ATS public API | `https://api.lever.co/v0/postings/{board_token}?mode=json` | yes (per company) |
 | Ashby | ATS public API (Job Board API) | `https://api.ashbyhq.com/posting-api/job-board/{board_token}` | yes (per company) |
-| RemoteOK | Public job feed | `https://remoteok.com/api` | no — single global feed |
+| RemoteOK | Public job feed (deprecated — low yield) | `https://remoteok.com/api` | no — single global feed |
 | Wellfound | Unofficial / scraped feed | Web search results (no stable public API) | no — single query-based feed |
 
 Greenhouse, Lever, and Ashby require a `companies` row per employer (`board_token` = the slug in the URL, e.g. `stripe`, `figma`, `ramp`). RemoteOK and Wellfound return many companies' postings from one feed and ignore `companies`.
@@ -195,3 +195,14 @@ Required/optional fields per item:
 | `postedAt` | `string` | no | `RawJob.postedAt` (parsed to ISO 8601, `null` if absent/invalid) |
 
 There is no first-party Wellfound API or scraper that produces this shape — operators must run their own feed (e.g. a small scraping service or scheduled export) and set `WELLFOUND_FEED_URL` to it. Building that feed producer is out of scope for this repo. See `docs/sources/wellfound.md` for the full setup guide, feed acquisition options, and troubleshooting steps.
+
+## 6. RemoteOK configuration (`REMOTEOK_DISABLED`)
+
+RemoteOK is a global job feed with no geographic filter. It consistently produces 0 usable jobs for India/Singapore/UAE/Remote markets because location strings ("Worldwide", "USA", etc.) do not match the location allowlist. The API also rate-limits aggressively. See `docs/remoteok-evaluation.md` for the full evaluation.
+
+**Disabling (recommended):** set `REMOTEOK_DISABLED=true` or `REMOTEOK_DISABLED=1` to skip this source entirely. The adapter returns `[]` immediately with no network call.
+
+| State | Condition | Log output | Behaviour |
+|---|---|---|---|
+| **Disabled** | `REMOTEOK_DISABLED=true` or `1` | `[remoteok] disabled via REMOTEOK_DISABLED env var` | Returns `[]`, no network call |
+| **Active** | env var unset or any other value | Normal run log | Fetches feed, maps and returns `RawJob[]` |
