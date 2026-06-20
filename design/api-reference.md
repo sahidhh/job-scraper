@@ -95,12 +95,13 @@ Actions **never throw** to the client. On success they call `revalidatePath()` t
 
 ---
 
-#### `updateSkillsAction(skills)`
+#### `updateResumeSkillsAction(resumeId, skills)`
 **File:** `src/features/resume/actions.ts`  
-**Description:** Overrides the skills list on the currently active resume.
+**Description:** Overrides the skills list on the specified resume.
 
 | Param | Type | Description |
 |---|---|---|
+| resumeId | string (UUID) | Resume to update |
 | skills | string[] | Full replacement skill list |
 
 **Returns:** `ActionResult<Resume>`
@@ -121,7 +122,7 @@ Actions **never throw** to the client. On success they call `revalidatePath()` t
 
 ---
 
-#### `setActiveRoleSelectionAction(primaryRole, expandedRoles)`
+#### `confirmRoleSelectionAction(primaryRole, expandedRoles)`
 **File:** `src/features/roles/actions.ts`  
 **Description:** Atomically creates a new role_selection and deactivates the previous one via `set_active_role_selection` RPC.
 
