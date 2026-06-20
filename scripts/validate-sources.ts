@@ -86,6 +86,13 @@ async function main(): Promise<void> {
 }
 
 main().catch((err) => {
-  console.error("[validate-sources] fatal error:", err instanceof Error ? err.message : String(err));
+  if (err instanceof Error) {
+    console.error("[validate-sources] fatal error:", err.message);
+    if (err.stack) {
+      console.error(err.stack);
+    }
+  } else {
+    console.error("[validate-sources] fatal error:", JSON.stringify(err, null, 2));
+  }
   process.exit(1);
 });
