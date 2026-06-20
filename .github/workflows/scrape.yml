@@ -39,7 +39,7 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           OPENROUTER_MODEL: ${{ secrets.OPENROUTER_MODEL }}
-          KEYWORD_THRESHOLD: ${{ vars.KEYWORD_THRESHOLD }}
+          KEYWORD_THRESHOLD: ${{ vars.KEYWORD_THRESHOLD || '0.25' }}
 
       - run: npm run notify
         env:
@@ -47,5 +47,5 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          NOTIFY_THRESHOLD: ${{ vars.NOTIFY_THRESHOLD }}
-          NOTIFY_MODE: ${{ vars.NOTIFY_MODE }}
+          NOTIFY_THRESHOLD: ${{ vars.NOTIFY_THRESHOLD || '0.75' }}
+          NOTIFY_MODE: ${{ vars.NOTIFY_MODE || 'digest' }}
