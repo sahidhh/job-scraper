@@ -410,6 +410,8 @@ Legacy digest messages longer than 4 096 characters are split into multiple sequ
 **Error (401):** Token mismatch  
 **Error (502):** Telegram API call failed
 
+The secondary message posted to Telegram includes a `📊 Dashboard` inline keyboard button when `APP_URL` is configured. The button URL is constructed from `APP_URL` in the same way as the digest message: `${APP_URL}/dashboard?minScore=0.80`. When `APP_URL` is absent the message is sent without `reply_markup`.
+
 ---
 
 ### 3.3 ATS Board APIs
