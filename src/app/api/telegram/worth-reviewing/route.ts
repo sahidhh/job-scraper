@@ -37,16 +37,27 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     return new NextResponse("Bad Request", { status: 400 });
   }
 
+  const appUrl = process.env.APP_URL?.replace(/\/$/, "");
+  const dashboardUrl = appUrl ? `${appUrl}/dashboard?minScore=0.80` : undefined;
+
+  const messageBody: Record<string, unknown> = {
+    chat_id: chatId,
+    text,
+    parse_mode: "HTML",
+    disable_web_page_preview: true,
+  };
+
+  if (dashboardUrl) {
+    messageBody.reply_markup = {
+      inline_keyboard: [[{ text: "📊 Dashboard", url: dashboardUrl }]],
+    };
+  }
+
   const telegramUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
   const telegramRes = await fetch(telegramUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      chat_id: chatId,
-      text,
-      parse_mode: "HTML",
-      disable_web_page_preview: true,
-    }),
+    body: JSON.stringify(messageBody),
   });
 
   if (!telegramRes.ok) {

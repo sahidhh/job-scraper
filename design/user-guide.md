@@ -190,13 +190,24 @@ Telegram notifications are sent automatically by the cron pipeline after each sc
 - The job's `ai_score` must be ≥ `NOTIFY_THRESHOLD` (default: 75%)
 - The job must not have been notified before (checked via `notifications_log`)
 
-### Notification Content
-Each Telegram message includes:
-- Job title and company name
-- Location tags
-- Source and posting date
-- Direct URL to apply
-- AI reasoning (why this job was scored highly)
+### Notification Modes
+
+Set `NOTIFY_MODE` in your GitHub Actions secrets to select the delivery style.
+
+#### `individual` (default)
+One Telegram message per matched job. Each message includes job title, company, location, source, direct apply URL, and AI reasoning.
+
+#### `digest` (MVP)
+A single grouped Telegram message per cron run containing:
+- **⭐ Strong Match count** — jobs with `ai_score ≥ 0.80`
+- **✓ Worth Reviewing count** — jobs with `ai_score < 0.80` (above `NOTIFY_THRESHOLD`)
+- **Top 5 strong match listings** with company, location, and experience
+- **Inline keyboard buttons:**
+  - One `Apply #N` button per listed strong match (up to 5), linking directly to the application URL
+  - `✓ Worth Reviewing (N)` button — tapping it sends a follow-up Telegram message listing the worth-reviewing jobs, with a `📊 Dashboard` button appended
+  - `📊 Dashboard` button — opens `APP_URL/dashboard?minScore=0.80`
+
+The Worth Reviewing and Dashboard buttons require `APP_URL` and `TELEGRAM_CALLBACK_SECRET` to be set. When either is absent those buttons are omitted silently.
 
 ### Adjust the Threshold
 Set `NOTIFY_THRESHOLD` in your GitHub Actions secrets (and Vercel env vars if you want the setting visible in the UI).
