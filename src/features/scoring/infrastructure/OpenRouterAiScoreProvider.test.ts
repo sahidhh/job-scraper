@@ -89,4 +89,63 @@ describe("OpenRouterAiScoreProvider", () => {
 
     expect(result).toBeNull();
   });
+
+  it("getStats tracks successful and failed calls", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(chatResponse({ score: 0.9, reasoning: "Great fit" }))
+      .mockResolvedValueOnce(new Response(null, { status: 404 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const provider = new OpenRouterAiScoreProvider();
+    await provider.score({ job, resume });
+    await provider.score({ job, resume });
+
+    const stats = provider.getStats();
+    expect(stats.successful).toBe(1);
+    expect(stats.failed).toBe(1);
+  });
+
+  it("getStats classifies quota_exceeded failures from 402 responses", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response("insufficient credits", { status: 402 }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const provider = new OpenRouterAiScoreProvider();
+    await provider.score({ job, resume });
+    await provider.score({ job, resume });
+
+    const stats = provider.getStats();
+    expect(stats.failed).toBe(2);
+    expect(stats.failuresByReason.quota_exceeded).toBe(2);
+  });
+
+  it("getStats classifies malformed_response when score/reasoning types are wrong", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(chatResponse({ score: "not-a-number" }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const provider = new OpenRouterAiScoreProvider();
+    await provider.score({ job, resume });
+
+    const stats = provider.getStats();
+    expect(stats.failed).toBe(1);
+    expect(stats.failuresByReason.malformed_response).toBe(1);
+  });
+
+  it("getStats returns a snapshot that does not mutate with subsequent calls", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockImplementation(() => Promise.resolve(chatResponse({ score: 0.5, reasoning: "ok" })));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const provider = new OpenRouterAiScoreProvider();
+    await provider.score({ job, resume });
+    const snapshot = provider.getStats();
+
+    await provider.score({ job, resume });
+
+    expect(snapshot.successful).toBe(1);
+    expect(provider.getStats().successful).toBe(2);
+  });
 });
