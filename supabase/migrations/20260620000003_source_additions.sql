@@ -6,7 +6,7 @@
 --              and Remote coverage to replace boards removed in batch 2 and to
 --              expand overall source yield.
 --
--- Grouped by ATS: Greenhouse (6), Lever (2), Ashby (1).
+-- Grouped by ATS: Greenhouse (7), Lever (2), Ashby (1).
 --
 -- Idempotent: ON CONFLICT guard on the partial unique index
 --             companies_source_token_uq (source, board_token WHERE NOT NULL)
