@@ -9,6 +9,8 @@ export interface SendNotificationDeps {
   notificationRepository: NotificationRepository;
   telegramSender: TelegramSender;
   notifyThreshold: number;
+  /** Active resume version; scopes the job_scores join to prevent duplicate results. */
+  resumeVersion: number;
   /** Optional include-filters applied before delivery. null or absent = notify all (default). */
   preferences?: NotificationPreferences | null;
 }
@@ -25,7 +27,7 @@ export interface SendNotificationDeps {
 export async function sendNotification(roleSelectionId: string, deps: SendNotificationDeps): Promise<number> {
   validateNotifyThreshold(deps.notifyThreshold);
 
-  const rawMatches = await deps.notificationRepository.findUnnotifiedMatches(roleSelectionId, deps.notifyThreshold);
+  const rawMatches = await deps.notificationRepository.findUnnotifiedMatches(roleSelectionId, deps.notifyThreshold, deps.resumeVersion);
   const matches = deps.preferences ? filterMatches(rawMatches, deps.preferences) : rawMatches;
 
   let sent = 0;

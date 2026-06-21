@@ -34,13 +34,14 @@ interface NotificationLogRow {
 export class SupabaseNotificationRepository implements NotificationRepository {
   constructor(private readonly client: TypedSupabaseClient) {}
 
-  async findUnnotifiedMatches(roleSelectionId: string, threshold: number): Promise<JobMatch[]> {
+  async findUnnotifiedMatches(roleSelectionId: string, threshold: number, resumeVersion: number): Promise<JobMatch[]> {
     const { data, error } = await this.client
       .from("jobs")
       .select(
         "id, title, company_name, location_tags, source, url, description, min_years, job_scores!inner(ai_score, ai_reasoning), notifications_log(id)",
       )
       .eq("job_scores.role_selection_id", roleSelectionId)
+      .eq("job_scores.resume_version", resumeVersion)
       .gte("job_scores.ai_score", threshold)
       .returns<UnnotifiedMatchRow[]>();
 

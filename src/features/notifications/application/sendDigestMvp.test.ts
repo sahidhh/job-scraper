@@ -53,6 +53,7 @@ describe("sendDigestMvp", () => {
       notificationRepository: repo,
       telegramSender: sender,
       notifyThreshold: 0.75,
+      resumeVersion: 1,
     });
     expect(result).toEqual({ strongCount: 0, worthReviewingCount: 0 });
     expect(sender.sendMessageWithButtons).not.toHaveBeenCalled();
@@ -70,6 +71,7 @@ describe("sendDigestMvp", () => {
       notificationRepository: repo,
       telegramSender: sender,
       notifyThreshold: 0.65,
+      resumeVersion: 1,
     });
     expect(result).toEqual({ strongCount: 1, worthReviewingCount: 1 });
     expect(sender.sendMessageWithButtons).toHaveBeenCalledTimes(1);
@@ -91,6 +93,7 @@ describe("sendDigestMvp", () => {
       notificationRepository: repo,
       telegramSender: sender,
       notifyThreshold: 0.65,
+      resumeVersion: 1,
     });
     expect(result.strongCount).toBe(2);
     expect(result.worthReviewingCount).toBe(2);
@@ -102,6 +105,7 @@ describe("sendDigestMvp", () => {
         notificationRepository: makeRepo(),
         telegramSender: makeSender(),
         notifyThreshold: 1.5,
+        resumeVersion: 1,
       }),
     ).rejects.toThrow(DomainValidationError);
   });
@@ -118,6 +122,7 @@ describe("sendDigestMvp", () => {
         notificationRepository: repo,
         telegramSender: sender,
         notifyThreshold: 0.75,
+        resumeVersion: 1,
       }),
     ).rejects.toThrow("Telegram error");
     expect(repo.markNotified).not.toHaveBeenCalled();
@@ -134,6 +139,7 @@ describe("sendDigestMvp", () => {
       notificationRepository: repo,
       telegramSender: sender,
       notifyThreshold: 0.75,
+      resumeVersion: 1,
       preferences: { roles: ["backend engineer"] },
     });
     expect(result.strongCount).toBe(1);
@@ -154,6 +160,7 @@ describe("sendDigestMvp", () => {
       notificationRepository: repo,
       telegramSender: sender,
       notifyThreshold: 0.65,
+      resumeVersion: 1,
       digestSessionRepository: sessionRepo,
     });
 
@@ -173,6 +180,7 @@ describe("sendDigestMvp", () => {
         notificationRepository: repo,
         telegramSender: sender,
         notifyThreshold: 0.65,
+        resumeVersion: 1,
       }),
     ).resolves.toEqual({ strongCount: 1, worthReviewingCount: 1 });
   });
@@ -188,6 +196,7 @@ describe("sendDigestMvp", () => {
       notificationRepository: repo,
       telegramSender: sender,
       notifyThreshold: 0.65,
+      resumeVersion: 1,
     });
     const [, buttons] = (sender.sendMessageWithButtons as ReturnType<typeof vi.fn>).mock.calls[0] as [
       string,
@@ -207,6 +216,7 @@ describe("sendDigestMvp", () => {
       notificationRepository: repo,
       telegramSender: sender,
       notifyThreshold: 0.75,
+      resumeVersion: 1,
     });
     const [, buttons] = (sender.sendMessageWithButtons as ReturnType<typeof vi.fn>).mock.calls[0] as [
       string,
@@ -224,6 +234,7 @@ describe("sendDigestMvp", () => {
       notificationRepository: repo,
       telegramSender: sender,
       notifyThreshold: 0.75,
+      resumeVersion: 1,
       preferences: null,
     });
     expect(result.strongCount + result.worthReviewingCount).toBe(2);
