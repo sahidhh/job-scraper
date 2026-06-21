@@ -49,3 +49,5 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           NOTIFY_THRESHOLD: ${{ vars.NOTIFY_THRESHOLD || '0.75' }}
           NOTIFY_MODE: ${{ vars.NOTIFY_MODE || 'digest' }}
+          APP_URL: ${{ secrets.APP_URL || vars.APP_URL }}
+          TELEGRAM_CALLBACK_SECRET: ${{ secrets.TELEGRAM_CALLBACK_SECRET }}
