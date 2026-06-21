@@ -46,10 +46,11 @@ describe("sendNotification", () => {
       notificationRepository,
       telegramSender,
       notifyThreshold: 0.75,
+      resumeVersion: 1,
     });
 
     expect(sent).toBe(2);
-    expect(notificationRepository.findUnnotifiedMatches).toHaveBeenCalledWith("role-selection-1", 0.75);
+    expect(notificationRepository.findUnnotifiedMatches).toHaveBeenCalledWith("role-selection-1", 0.75, 1);
     expect(telegramSender.sendMessage).toHaveBeenCalledTimes(2);
     expect(notificationRepository.markNotified).toHaveBeenCalledWith("job-1");
     expect(notificationRepository.markNotified).toHaveBeenCalledWith("job-2");
@@ -63,6 +64,7 @@ describe("sendNotification", () => {
       notificationRepository,
       telegramSender,
       notifyThreshold: 0.75,
+      resumeVersion: 1,
     });
 
     expect(sent).toBe(0);
@@ -79,6 +81,7 @@ describe("sendNotification", () => {
         notificationRepository,
         telegramSender,
         notifyThreshold: 1.5,
+        resumeVersion: 1,
       }),
     ).rejects.toThrow(DomainValidationError);
     expect(notificationRepository.findUnnotifiedMatches).not.toHaveBeenCalled();
@@ -105,6 +108,7 @@ describe("sendNotification", () => {
       notificationRepository,
       telegramSender,
       notifyThreshold: 0.75,
+      resumeVersion: 1,
     });
 
     expect(sent).toBe(2);
@@ -132,6 +136,7 @@ describe("sendNotification", () => {
       notificationRepository,
       telegramSender,
       notifyThreshold: 0.75,
+      resumeVersion: 1,
       preferences: { roles: ["backend engineer"] },
     });
 
@@ -149,6 +154,7 @@ describe("sendNotification", () => {
       notificationRepository,
       telegramSender,
       notifyThreshold: 0.75,
+      resumeVersion: 1,
       preferences: null,
     });
 

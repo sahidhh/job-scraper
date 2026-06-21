@@ -6,6 +6,7 @@ import { SupabaseDigestSessionRepository } from "@/features/notifications/infras
 import { SupabaseNotificationPreferencesRepository } from "@/features/notifications/infrastructure/SupabaseNotificationPreferencesRepository";
 import { SupabaseNotificationRepository } from "@/features/notifications/infrastructure/SupabaseNotificationRepository";
 import { TelegramBotSender } from "@/features/notifications/infrastructure/TelegramBotSender";
+import { SupabaseResumeRepository } from "@/features/resume/infrastructure/SupabaseResumeRepository";
 import { SupabaseRoleRepository } from "@/features/roles/infrastructure/SupabaseRoleRepository";
 import { optionalEnv } from "@/shared/infrastructure/env";
 import { createSupabaseServiceClient } from "@/shared/infrastructure/supabaseClient";
@@ -18,9 +19,16 @@ import { createSupabaseServiceClient } from "@/shared/infrastructure/supabaseCli
 async function main(): Promise<void> {
   const client = createSupabaseServiceClient();
   const roleRepository = new SupabaseRoleRepository(client);
+  const resumeRepository = new SupabaseResumeRepository(client);
   const notificationRepository = new SupabaseNotificationRepository(client);
   const preferencesRepository = new SupabaseNotificationPreferencesRepository(client);
   const telegramSender = new TelegramBotSender();
+
+  const resume = await resumeRepository.getActive();
+  if (!resume) {
+    console.log("[notify] no active resume, skipping");
+    return;
+  }
 
   const roleSelection = await roleRepository.getActiveSelection();
   if (!roleSelection) {
@@ -37,7 +45,7 @@ async function main(): Promise<void> {
     console.log("[notify] applying notification preferences filter");
   }
 
-  const deps = { notificationRepository, telegramSender, notifyThreshold, preferences };
+  const deps = { notificationRepository, telegramSender, notifyThreshold, resumeVersion: resume.version, preferences };
 
   if (notifyMode === "digest") {
     const appUrl = optionalEnv("APP_URL", "").replace(/\/$/, "");

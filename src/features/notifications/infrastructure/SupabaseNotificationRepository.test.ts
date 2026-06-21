@@ -47,7 +47,7 @@ describe("SupabaseNotificationRepository", () => {
     });
     const repo = new SupabaseNotificationRepository(client);
 
-    const result = await repo.findUnnotifiedMatches("role-selection-1", 0.8);
+    const result = await repo.findUnnotifiedMatches("role-selection-1", 0.8, 2);
 
     expect(result).toEqual([
       {
@@ -76,6 +76,7 @@ describe("SupabaseNotificationRepository", () => {
       },
     ]);
     expect(builder.eq).toHaveBeenCalledWith("job_scores.role_selection_id", "role-selection-1");
+    expect(builder.eq).toHaveBeenCalledWith("job_scores.resume_version", 2);
     expect(builder.gte).toHaveBeenCalledWith("job_scores.ai_score", 0.8);
   });
 

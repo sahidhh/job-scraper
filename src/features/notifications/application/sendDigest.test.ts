@@ -46,6 +46,7 @@ describe("sendDigest", () => {
       notificationRepository,
       telegramSender,
       notifyThreshold: 0.75,
+      resumeVersion: 1,
     });
 
     expect(count).toBe(2);
@@ -62,6 +63,7 @@ describe("sendDigest", () => {
       notificationRepository,
       telegramSender,
       notifyThreshold: 0.75,
+      resumeVersion: 1,
     });
 
     expect(count).toBe(0);
@@ -75,6 +77,7 @@ describe("sendDigest", () => {
         notificationRepository: makeNotificationRepository(),
         telegramSender: makeTelegramSender(),
         notifyThreshold: 1.5,
+        resumeVersion: 1,
       }),
     ).rejects.toThrow(DomainValidationError);
   });
@@ -91,6 +94,7 @@ describe("sendDigest", () => {
       notificationRepository,
       telegramSender,
       notifyThreshold: 0.75,
+      resumeVersion: 1,
       preferences: { roles: ["backend engineer"] },
     });
 
@@ -108,6 +112,7 @@ describe("sendDigest", () => {
       notificationRepository,
       telegramSender,
       notifyThreshold: 0.75,
+      resumeVersion: 1,
       preferences: null,
     });
 
@@ -127,6 +132,7 @@ describe("sendDigest", () => {
         notificationRepository,
         telegramSender,
         notifyThreshold: 0.75,
+        resumeVersion: 1,
       }),
     ).rejects.toThrow("Telegram error");
 
@@ -151,6 +157,7 @@ describe("sendDigest", () => {
       notificationRepository,
       telegramSender,
       notifyThreshold: 0.75,
+      resumeVersion: 1,
     });
 
     expect(count).toBe(60);

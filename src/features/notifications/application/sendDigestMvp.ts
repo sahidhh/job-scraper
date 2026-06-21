@@ -13,6 +13,8 @@ export interface SendDigestMvpDeps {
   notificationRepository: NotificationRepository;
   telegramSender: TelegramSender;
   notifyThreshold: number;
+  /** Active resume version; scopes the job_scores join to prevent duplicate results. */
+  resumeVersion: number;
   /** Optional include-filters applied before delivery. null or absent = notify all. */
   preferences?: NotificationPreferences | null;
   /** Pre-built dashboard URL for the keyboard button. Omit to hide the button. */
@@ -44,6 +46,7 @@ export async function sendDigestMvp(
   const rawMatches = await deps.notificationRepository.findUnnotifiedMatches(
     roleSelectionId,
     deps.notifyThreshold,
+    deps.resumeVersion,
   );
   const matches = deps.preferences ? filterMatches(rawMatches, deps.preferences) : rawMatches;
 
