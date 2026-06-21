@@ -53,12 +53,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   const page = Math.max(0, parseInt(cq.data.split(":")[1] ?? "0", 10));
 
+  // Answer immediately — Telegram shows loading spinner until this is called (10s timeout).
+  // DB queries happen after so cold starts don't cause spinner to stick.
+  await answerCallbackQuery(cq.id);
+
   const client = createSupabaseServiceClient();
   const sessionRepo = new SupabaseDigestSessionRepository(client);
   const session = await sessionRepo.getLatest();
 
   if (!session || session.worthReviewingJobIds.length === 0) {
-    await answerCallbackQuery(cq.id, "No worth-reviewing jobs found.");
     return new NextResponse("OK", { status: 200 });
   }
 
@@ -71,7 +74,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     .returns<JobRow[]>();
 
   if (error || !jobRows) {
-    await answerCallbackQuery(cq.id, "Failed to load jobs.");
     return new NextResponse("OK", { status: 200 });
   }
 
