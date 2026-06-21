@@ -7,7 +7,13 @@ import { join, relative } from "node:path";
 const ROOT = process.cwd();
 const SCAN_DIRS = ["src", "scripts"];
 const PATTERNS = ["SUPABASE_SERVICE_ROLE_KEY", "createSupabaseServiceClient"];
-const ALLOWED_FILES = new Set(["src/shared/infrastructure/supabaseClient.ts"]);
+const ALLOWED_FILES = new Set([
+  "src/shared/infrastructure/supabaseClient.ts",
+  // Telegram webhook is server-only (Next.js Route Handler, never runs client-side).
+  // Access is gated by X-Telegram-Bot-Api-Secret-Token header validation before any
+  // DB call — service role is needed to read jobs/scores across RLS boundaries.
+  "src/app/api/telegram/webhook/route.ts",
+]);
 const ALLOWED_PREFIX = "scripts/";
 const EXTENSIONS = new Set([".ts", ".tsx"]);
 const SKIP_DIRS = new Set(["node_modules", ".next"]);
