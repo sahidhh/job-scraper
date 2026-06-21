@@ -43,6 +43,7 @@ async function main(): Promise<void> {
     // Build optional URLs for inline keyboard buttons.
     const appUrl = optionalEnv("APP_URL", "").replace(/\/$/, "");
     const callbackSecret = optionalEnv("TELEGRAM_CALLBACK_SECRET", "");
+    console.log(`[notify] env debug: APP_URL="${appUrl || "(empty)"}" TELEGRAM_CALLBACK_SECRET="${callbackSecret ? "configured (len: " + callbackSecret.length + ")" : "(empty)"}"`);
     const dashboardUrl = appUrl ? `${appUrl}/dashboard?minScore=0.80` : undefined;
 
     const buildWorthReviewingUrl = appUrl && callbackSecret

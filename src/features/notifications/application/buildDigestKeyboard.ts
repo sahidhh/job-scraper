@@ -25,6 +25,7 @@ export function buildDigestKeyboard(
   options: DigestKeyboardOptions = {},
 ): InlineKeyboardButton[][] {
   const { worthReviewingUrl, dashboardUrl, displayLimit = DIGEST_DISPLAY_LIMIT } = options;
+  console.log(`[buildDigestKeyboard] inputs: strongMatchesCount=${strongMatches.length} worthReviewingCount=${worthReviewingCount} hasWorthReviewingUrl=${!!worthReviewingUrl} hasDashboardUrl=${!!dashboardUrl}`);
   const top = strongMatches.slice(0, displayLimit);
   const rows: InlineKeyboardButton[][] = [];
 
@@ -49,5 +50,6 @@ export function buildDigestKeyboard(
     rows.push([{ text: "📊 Dashboard", url: dashboardUrl }]);
   }
 
+  console.log(`[buildDigestKeyboard] generated layout:`, rows.map(r => r.map(b => b.text)));
   return rows;
 }
