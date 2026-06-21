@@ -106,6 +106,14 @@ erDiagram
         timestamptz sent_at
     }
 
+    DIGEST_SESSIONS {
+        uuid id PK
+        uuid role_selection_id "FK — role selection used for this digest run"
+        text[] worth_reviewing_job_ids "job IDs in the worth-reviewing band"
+        bigint pagination_message_id "nullable — Telegram message_id once first page is shown"
+        timestamptz created_at
+    }
+
     SCRAPE_RUNS {
         uuid id PK
         text source
@@ -136,6 +144,7 @@ erDiagram
     JOBS ||--o| JOB_STATE : "has status"
     JOB_STATUSES ||--o{ JOB_STATE : "assigned to"
     JOBS ||--o| NOTIFICATIONS_LOG : "notified once"
+    ROLE_SELECTIONS ||--o{ DIGEST_SESSIONS : "scopes"
 ```
 
 ---
@@ -154,6 +163,7 @@ erDiagram
 | `role_pack_roles` | `INDEX (pack_id)` | Fast lookup of roles for a pack |
 | `companies` | `UNIQUE (source, board_token) WHERE board_token IS NOT NULL` | No duplicate board configs |
 | `companies` | `INDEX (health_status)` | Fast lookup of unhealthy/disabled sources |
+| `digest_sessions` | `INDEX (created_at DESC)` | Fast latest-session lookup for webhook pagination |
 
 ---
 

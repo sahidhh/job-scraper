@@ -1,3 +1,4 @@
+import type { DigestSessionRepository } from "@/features/notifications/domain/DigestSessionRepository";
 import type { NotificationRepository } from "@/features/notifications/domain/NotificationRepository";
 import type { TelegramSender } from "@/features/notifications/domain/TelegramSender";
 import type { JobMatch, NotificationPreferences } from "@/features/notifications/domain/types";
@@ -16,13 +17,8 @@ export interface SendDigestMvpDeps {
   preferences?: NotificationPreferences | null;
   /** Pre-built dashboard URL for the keyboard button. Omit to hide the button. */
   dashboardUrl?: string;
-  /**
-   * Called with the worth-reviewing matches to produce the signed callback URL
-   * embedded in the Worth Reviewing button. The URL is constructed at the
-   * composition root (scripts/notify.ts) where Node.js Buffer is available for
-   * base64url encoding. Return undefined to hide the button.
-   */
-  buildWorthReviewingUrl?: (worthReviewing: JobMatch[]) => string | undefined;
+  /** Saves worth-reviewing job IDs for Telegram pagination. Omit to skip persistence. */
+  digestSessionRepository?: DigestSessionRepository;
 }
 
 export interface DigestMvpResult {
@@ -35,7 +31,7 @@ export interface DigestMvpResult {
 //
 // Score banding (using STRONG_MATCH_THRESHOLD):
 //   Strong Match  → ai_score >= STRONG_MATCH_THRESHOLD  (shown in message + Apply buttons)
-//   Worth Reviewing → ai_score <  STRONG_MATCH_THRESHOLD  (count shown; detail on demand)
+//   Worth Reviewing → ai_score <  STRONG_MATCH_THRESHOLD  (callback button, paginated on tap)
 //
 // A send failure throws and leaves all jobs unmarked for retry on the next run.
 // Returns 0 counts when there are no unnotified matches.
@@ -55,11 +51,9 @@ export async function sendDigestMvp(
 
   const { strongMatches, worthReviewing } = bandMatches(matches, STRONG_MATCH_THRESHOLD);
 
-  const worthReviewingUrl = deps.buildWorthReviewingUrl?.(worthReviewing);
-
   const text = formatDigestMvp(strongMatches, worthReviewing.length, DIGEST_DISPLAY_LIMIT);
   const buttons = buildDigestKeyboard(strongMatches, worthReviewing.length, {
-    worthReviewingUrl,
+    showWorthReviewing: worthReviewing.length > 0,
     dashboardUrl: deps.dashboardUrl,
     displayLimit: DIGEST_DISPLAY_LIMIT,
   });
@@ -69,6 +63,14 @@ export async function sendDigestMvp(
   // Mark ALL matches (both bands) as notified to prevent re-delivery on the next cron run.
   for (const match of matches) {
     await deps.notificationRepository.markNotified(match.jobId);
+  }
+
+  // Persist worth-reviewing IDs so the webhook can paginate them on demand.
+  if (deps.digestSessionRepository && worthReviewing.length > 0) {
+    await deps.digestSessionRepository.save(
+      roleSelectionId,
+      worthReviewing.map((j: JobMatch) => j.jobId),
+    );
   }
 
   return { strongCount: strongMatches.length, worthReviewingCount: worthReviewing.length };

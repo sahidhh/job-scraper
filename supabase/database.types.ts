@@ -71,6 +71,30 @@ export type Database = {
         }
         Relationships: []
       }
+      digest_sessions: {
+        Row: {
+          id: string
+          role_selection_id: string
+          worth_reviewing_job_ids: string[]
+          pagination_message_id: number | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          role_selection_id: string
+          worth_reviewing_job_ids?: string[]
+          pagination_message_id?: number | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          role_selection_id?: string
+          worth_reviewing_job_ids?: string[]
+          pagination_message_id?: number | null
+          created_at?: string
+        }
+        Relationships: []
+      }
       job_scores: {
         Row: {
           ai_reasoning: string | null

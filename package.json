@@ -13,7 +13,8 @@
     "score": "tsx scripts/score.ts",
     "notify": "tsx scripts/notify.ts",
     "check:service-role-boundary": "tsx scripts/checkServiceRoleBoundary.ts",
-    "validate-sources": "tsx scripts/validate-sources.ts"
+    "validate-sources": "tsx scripts/validate-sources.ts",
+    "setup:webhook": "tsx scripts/setup-webhook.ts"
   },
   "dependencies": {
     "@radix-ui/react-collapsible": "^1.1.13",

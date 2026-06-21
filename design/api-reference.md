@@ -337,7 +337,7 @@ All routes except `/login` and `/auth/callback` are protected by `middleware.ts`
   "reply_markup": {
     "inline_keyboard": [
       [{ "text": "Apply #1", "url": "https://..." }, { "text": "Apply #2", "url": "https://..." }],
-      [{ "text": "\u2713 Worth Reviewing (4)", "url": "https://app.example.com/api/telegram/worth-reviewing?msg=...&token=..." }],
+      [{ "text": "\u2713 Worth Reviewing (4)", "callback_data": "wr:0" }],
       [{ "text": "\ud83d\udcca Dashboard", "url": "https://app.example.com/dashboard?minScore=0.80" }]
     ]
   }
@@ -395,23 +395,45 @@ Legacy digest messages longer than 4 096 characters are split into multiple sequ
 
 ---
 
-### 3.3 Telegram Callback Route
+### 3.3 Telegram Webhook Route
 
-**Endpoint:** `GET /api/telegram/worth-reviewing`  
-**Auth:** `?token=<TELEGRAM_CALLBACK_SECRET>` query param  
-**Runtime:** Node.js (`Buffer` required for base64url decode)
+**Endpoint:** `POST /api/telegram/webhook`  
+**Auth:** `X-Telegram-Bot-Api-Secret-Token: <TELEGRAM_CALLBACK_SECRET>` header (set via `setWebhook`)  
+**Registration:** Run `npm run setup:webhook` once after deploying to register this URL with Telegram.
 
-| Param | Description |
+Handles `callback_query` updates sent by Telegram when users tap inline keyboard buttons.
+
+**Supported `callback_data` values:**
+
+| Value | Action |
 |---|---|
-| `msg` | base64url-encoded pre-formatted Telegram HTML of worth-reviewing jobs |
-| `token` | must equal `TELEGRAM_CALLBACK_SECRET` env var |
+| `wr:N` | Show page N (0-indexed) of the worth-reviewing job list (5 jobs per page) |
 
-**Success (200):** HTML page — `✓ Worth Reviewing jobs sent to Telegram.`  
-**Error (400):** Missing params or decode failure  
-**Error (401):** Token mismatch  
-**Error (502):** Telegram API call failed
+**Flow for `wr:0` (first tap):**
+1. Validate secret token header (401 if mismatch)
+2. Fetch latest `digest_sessions` row → get `worth_reviewing_job_ids`
+3. Query jobs + scores from Supabase for those IDs
+4. `answerCallbackQuery` (required by Telegram, clears loading spinner)
+5. `sendMessage` with page 0 + Prev/Next + Dashboard buttons → save `message_id` to `digest_sessions.pagination_message_id`
 
-The secondary message posted to Telegram includes a `📊 Dashboard` inline keyboard button when `APP_URL` is configured. The button URL is constructed from `APP_URL` in the same way as the digest message: `${APP_URL}/dashboard?minScore=0.80`. When `APP_URL` is absent the message is sent without `reply_markup`.
+**Flow for `wr:N` (subsequent taps):**  
+Same as above steps 1–4, then `editMessageText` on the stored `pagination_message_id` (in-place pagination, no new messages).
+
+**Success (200):** `OK`  
+**Error (401):** Invalid or missing secret token
+
+**Pagination message format:**
+```
+📋 Worth Reviewing — Page 1/4 (17 total)
+
+1. Senior Backend Engineer — Stripe
+   Score: 76% | Apply
+
+2. Full Stack Developer — Shopify
+   Score: 72% | Apply
+...
+```
+Buttons: `[← Prev]` `[Next →]` (conditional) · `[📊 Dashboard]`
 
 ---
 
