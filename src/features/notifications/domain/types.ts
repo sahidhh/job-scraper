@@ -45,6 +45,15 @@ export interface JobMatch {
   minYears: number | null; // used for experience-based filtering
 }
 
+// One row per digest run — stores worth-reviewing job IDs for Telegram pagination.
+export interface DigestSession {
+  id: string;
+  roleSelectionId: string;
+  worthReviewingJobIds: string[];
+  paginationMessageId: number | null;
+  createdAt: string;
+}
+
 // Configurable include-only filters applied before Telegram delivery.
 // All specified filters are ANDed; within each filter any match passes (OR).
 // Absent or empty-array fields are skipped, preserving existing behaviour.

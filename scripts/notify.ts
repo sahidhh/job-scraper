@@ -1,20 +1,20 @@
 import { sendDigest } from "@/features/notifications/application/sendDigest";
-import { formatWorthReviewingMessage } from "@/features/notifications/application/formatDigestMvp";
 import { sendDigestMvp } from "@/features/notifications/application/sendDigestMvp";
 import { sendNotification } from "@/features/notifications/application/sendNotification";
-import type { JobMatch, NotifyMode } from "@/features/notifications/domain/types";
+import type { NotifyMode } from "@/features/notifications/domain/types";
+import { SupabaseDigestSessionRepository } from "@/features/notifications/infrastructure/SupabaseDigestSessionRepository";
 import { SupabaseNotificationPreferencesRepository } from "@/features/notifications/infrastructure/SupabaseNotificationPreferencesRepository";
 import { SupabaseNotificationRepository } from "@/features/notifications/infrastructure/SupabaseNotificationRepository";
 import { TelegramBotSender } from "@/features/notifications/infrastructure/TelegramBotSender";
 import { SupabaseRoleRepository } from "@/features/roles/infrastructure/SupabaseRoleRepository";
-import { optionalEnv, requireEnv } from "@/shared/infrastructure/env";
+import { optionalEnv } from "@/shared/infrastructure/env";
 import { createSupabaseServiceClient } from "@/shared/infrastructure/supabaseClient";
 
 // Cron entry point (AD-04): sends Telegram notifications for newly-scored
 // matches above NOTIFY_THRESHOLD (scoring.md §4, AD-08).
 // NOTIFY_MODE controls delivery style:
 //   individual (default) — one message per match, preserves pre-digest behaviour
-//   digest               — MVP digest with inline buttons (sendDigestMvp)
+//   digest               — digest with inline buttons + pagination via webhook
 async function main(): Promise<void> {
   const client = createSupabaseServiceClient();
   const roleRepository = new SupabaseRoleRepository(client);
@@ -40,33 +40,20 @@ async function main(): Promise<void> {
   const deps = { notificationRepository, telegramSender, notifyThreshold, preferences };
 
   if (notifyMode === "digest") {
-    // Build optional URLs for inline keyboard buttons.
     const appUrl = optionalEnv("APP_URL", "").replace(/\/$/, "");
-    const callbackSecret = optionalEnv("TELEGRAM_CALLBACK_SECRET", "");
-    console.log(`[notify] env debug: APP_URL="${appUrl || "(empty)"}" TELEGRAM_CALLBACK_SECRET="${callbackSecret ? "configured (len: " + callbackSecret.length + ")" : "(empty)"}"`);
     const dashboardUrl = appUrl ? `${appUrl}/dashboard?minScore=0.80` : undefined;
-    if (dashboardUrl) console.log(`[notify] dashboardUrl: ${dashboardUrl}`);
-
-    const buildWorthReviewingUrl = appUrl && callbackSecret
-      ? (worthReviewing: JobMatch[]): string | undefined => {
-          if (worthReviewing.length === 0) return undefined;
-          const text = formatWorthReviewingMessage(worthReviewing);
-          const msg = Buffer.from(text, "utf8").toString("base64url");
-          return `${appUrl}/api/telegram/worth-reviewing?msg=${msg}&token=${encodeURIComponent(callbackSecret)}`;
-        }
-      : undefined;
+    const digestSessionRepository = new SupabaseDigestSessionRepository(client);
 
     const result = await sendDigestMvp(roleSelection.id, {
       ...deps,
       dashboardUrl,
-      buildWorthReviewingUrl,
+      digestSessionRepository,
     });
     console.log(
       `[notify] digest sent — ${result.strongCount} strong match(es), ` +
         `${result.worthReviewingCount} worth-reviewing (role selection ${roleSelection.id})`,
     );
   } else if (rawMode === "digest_legacy") {
-    // Legacy digest format (pre-MVP): grouped text, no inline buttons.
     const count = await sendDigest(roleSelection.id, deps);
     console.log(`[notify] legacy digest sent for ${count} job(s) (role selection ${roleSelection.id})`);
   } else {
