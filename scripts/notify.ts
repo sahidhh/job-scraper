@@ -45,6 +45,7 @@ async function main(): Promise<void> {
     const callbackSecret = optionalEnv("TELEGRAM_CALLBACK_SECRET", "");
     console.log(`[notify] env debug: APP_URL="${appUrl || "(empty)"}" TELEGRAM_CALLBACK_SECRET="${callbackSecret ? "configured (len: " + callbackSecret.length + ")" : "(empty)"}"`);
     const dashboardUrl = appUrl ? `${appUrl}/dashboard?minScore=0.80` : undefined;
+    if (dashboardUrl) console.log(`[notify] dashboardUrl: ${dashboardUrl}`);
 
     const buildWorthReviewingUrl = appUrl && callbackSecret
       ? (worthReviewing: JobMatch[]): string | undefined => {

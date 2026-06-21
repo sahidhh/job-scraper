@@ -42,11 +42,13 @@ export function buildDigestKeyboard(
 
   // Worth Reviewing button
   if (worthReviewingCount > 0 && worthReviewingUrl) {
+    console.log(`[buildDigestKeyboard] worthReviewingUrl: ${worthReviewingUrl.substring(0, 80)}...`);
     rows.push([{ text: `✓ Worth Reviewing (${worthReviewingCount})`, url: worthReviewingUrl }]);
   }
 
   // Dashboard button
   if (dashboardUrl) {
+    console.log(`[buildDigestKeyboard] dashboardUrl: ${dashboardUrl}`);
     rows.push([{ text: "📊 Dashboard", url: dashboardUrl }]);
   }
 
