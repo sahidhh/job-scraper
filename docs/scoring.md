@@ -43,6 +43,30 @@ Triggered only when `keyword_score >= KEYWORD_THRESHOLD` (config default `0.25`,
    - **Requested output:** structured JSON — `{ "score": number (0-1), "reasoning": string (1-3 sentences) }`, enforced via OpenRouter's JSON response-format / schema feature.
 2. Model is configurable via `OPENROUTER_MODEL` env var (pick a low-cost model suitable for short classification+reasoning tasks — exact model left as a deploy-time choice, not hardcoded).
 3. Request has a timeout and **one retry** on timeout/5xx. On repeated failure: `ai_score`/`ai_reasoning` stay `null`, `keyword_score` row already upserted — job still visible in dashboard, just unscored at stage 2.
+
+**Token budget:** `max_tokens` is set explicitly to `OPENROUTER_MAX_TOKENS` (default 300). This is sufficient for all valid responses (score float + 1-3 sentences ≈ 50-120 tokens). Without an explicit limit, OpenRouter defaults to 65535, which reserves ~500× more credits per request than needed and triggers 402 errors once the balance drops below that reservation.
+
+**Expected token usage per AI call:**
+
+| Component | Typical range |
+|---|---|
+| System prompt (resume text + skills list) | 1 000 – 3 500 tokens |
+| User prompt (job title + description) | 500 – 2 000 tokens |
+| Output (score + reasoning JSON) | 50 – 120 tokens |
+| `max_tokens` ceiling | 300 tokens |
+
+**Failure modes and classification:**
+
+| Reason | Trigger | Retry? |
+|---|---|---|
+| `quota_exceeded` | HTTP 402 | No — fix requires reducing `max_tokens` or adding credits |
+| `provider_rate_limit` | HTTP 429 | Yes — one automatic retry with 2 s backoff |
+| `provider_error` | HTTP 5xx | Yes — one automatic retry with 2 s backoff |
+| `malformed_response` | Missing/invalid `score` or `reasoning` in response | No |
+| `timeout` | AbortError after 15 s | No (retry path via `findUnscored` on next run) |
+| `unknown` | Any other network error | No (retry path via `findUnscored` on next run) |
+
+All failures leave `ai_score` null. `OpenRouterAiScoreProvider.getStats()` returns per-run analytics (`successful`, `failed`, `failuresByReason`), logged by `score.ts` at the end of each batch.
 4. On success: the same `job_scores` row is upserted with `ai_score = $score, ai_reasoning = $reasoning` (on conflict `(job_id, role_selection_id)` → update, not ignore — `repositories.md` §5).
 
 **Retry logic for `ai_score IS NULL` rows:** `JobRepository.findUnscored()` receives `keywordThreshold` and uses an OR filter to exclude two categories of "done" jobs:
@@ -75,3 +99,4 @@ Triggered only when `keyword_score >= KEYWORD_THRESHOLD` (config default `0.25`,
 | `KEYWORD_THRESHOLD` | `0.25` | Minimum stage-1 score to trigger an AI call |
 | `NOTIFY_THRESHOLD` | `0.75` | Minimum `ai_score` to trigger a Telegram message |
 | `OPENROUTER_MODEL` | (set at deploy) | Model used for stage-2 scoring and role-expansion AI fallback |
+| `OPENROUTER_MAX_TOKENS` | `300` | Maximum output tokens for stage-2 AI response (score + reasoning); keep at 300 unless reasoning is being truncated |

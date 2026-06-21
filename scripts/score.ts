@@ -41,7 +41,6 @@ async function main(): Promise<void> {
 
   let scored = 0;
   let skippedBelowGate = 0;
-  let aiCallFailed = 0;
   for (const job of jobs) {
     try {
       const result = await scoreJob(job, resume, roleSelection.id, {
@@ -57,7 +56,6 @@ async function main(): Promise<void> {
           `[score] job ${job.id}: skipped AI (keyword score ${result.keywordScore.toFixed(2)} < threshold ${keywordThreshold})`,
         );
       } else if (result.aiScore == null) {
-        aiCallFailed += 1;
         console.warn(
           `[score] job ${job.id}: AI provider returned null (call failed or malformed response); ai_score left null for retry`,
         );
@@ -72,8 +70,14 @@ async function main(): Promise<void> {
     }
   }
 
+  const aiStats = aiScoreProvider.getStats();
+  const failureSummary =
+    aiStats.failed > 0 ? ` failures=${JSON.stringify(aiStats.failuresByReason)}` : "";
   console.log(
-    `[score] scored ${scored}/${jobs.length} job(s) (${skippedBelowGate} below keyword gate, ${aiCallFailed} AI call failures left for retry)`,
+    `[score] scored ${scored}/${jobs.length} job(s) (${skippedBelowGate} below keyword gate, ${aiStats.failed} AI call failures left for retry)`,
+  );
+  console.log(
+    `[score] AI call stats: successful=${aiStats.successful} failed=${aiStats.failed}${failureSummary}`,
   );
 }
 

@@ -36,8 +36,8 @@ describe("SupabaseMatchedJobsRepository", () => {
   it("getScrapeRuns maps scrape_run rows to ScrapeRunDataPoint", async () => {
     const { client, builder } = mockSupabaseClient({
       data: [
-        { run_at: "2026-06-01T10:00:00Z", jobs_found: 12, source: "greenhouse" },
-        { run_at: "2026-06-02T10:00:00Z", jobs_found: 8, source: "lever" },
+        { run_at: "2026-06-01T10:00:00Z", found_count: 12, source: "greenhouse" },
+        { run_at: "2026-06-02T10:00:00Z", found_count: 8, source: "lever" },
       ],
       error: null,
     });

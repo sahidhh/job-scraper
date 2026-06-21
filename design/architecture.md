@@ -125,7 +125,30 @@ flowchart LR
 
 ---
 
-## 5. Scoring Pipeline
+## 5. Source Health Tracking
+
+```mermaid
+flowchart TD
+    PROBE["Probe ATS board\n(validate-sources.ts)"] --> OK{HTTP 200?}
+    OK -- Yes --> RESET["Reset consecutive_failures = 0\nSet health_status = active\nSet last_success_at"]
+    OK -- No --> INC["Increment consecutive_failures\nSet last_failure_at"]
+    INC --> THRESH{≥ SOURCE_DISABLE_THRESHOLD?}
+    THRESH -- No --> UNHEALTHY["Set health_status = unhealthy"]
+    THRESH -- Yes --> DISABLED["Set health_status = disabled"]
+    DISABLED --> SKIP["Skipped by scraper\n(listActiveHealthy)"]
+```
+
+The three health states:
+
+| State | Meaning | Scraper behavior |
+|---|---|---|
+| `active` | Probing succeeds | Included in scrape runs |
+| `unhealthy` | Consecutive failures below threshold | Included in scrape runs |
+| `disabled` | Failures ≥ SOURCE_DISABLE_THRESHOLD | Excluded from scrape runs |
+
+---
+
+## 6. Scoring Pipeline
 
 ```mermaid
 flowchart TD
@@ -146,7 +169,7 @@ flowchart TD
 
 ---
 
-## 6. Notification Pipeline
+## 7. Notification Pipeline
 
 ```mermaid
 flowchart LR
@@ -162,7 +185,7 @@ flowchart LR
 
 ---
 
-## 7. Authentication Flow
+## 8. Authentication Flow
 
 ```mermaid
 sequenceDiagram
@@ -186,7 +209,7 @@ sequenceDiagram
 
 ---
 
-## 8. Database Access Matrix
+## 9. Database Access Matrix
 
 | Caller | Client | Key | RLS |
 |---|---|---|---|
@@ -198,7 +221,7 @@ The service role is **only** imported in `scripts/` — enforced by the `check:s
 
 ---
 
-## 9. Shared Infrastructure (`src/shared/`)
+## 10. Shared Infrastructure (`src/shared/`)
 
 ```mermaid
 flowchart LR

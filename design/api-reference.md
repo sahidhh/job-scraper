@@ -95,12 +95,13 @@ Actions **never throw** to the client. On success they call `revalidatePath()` t
 
 ---
 
-#### `updateSkillsAction(skills)`
+#### `updateResumeSkillsAction(resumeId, skills)`
 **File:** `src/features/resume/actions.ts`  
-**Description:** Overrides the skills list on the currently active resume.
+**Description:** Overrides the skills list on the specified resume.
 
 | Param | Type | Description |
 |---|---|---|
+| resumeId | string (UUID) | Resume to update |
 | skills | string[] | Full replacement skill list |
 
 **Returns:** `ActionResult<Resume>`
@@ -121,7 +122,7 @@ Actions **never throw** to the client. On success they call `revalidatePath()` t
 
 ---
 
-#### `setActiveRoleSelectionAction(primaryRole, expandedRoles)`
+#### `confirmRoleSelectionAction(primaryRole, expandedRoles)`
 **File:** `src/features/roles/actions.ts`  
 **Description:** Atomically creates a new role_selection and deactivates the previous one via `set_active_role_selection` RPC.
 
@@ -409,6 +410,8 @@ Legacy digest messages longer than 4 096 characters are split into multiple sequ
 **Error (400):** Missing params or decode failure  
 **Error (401):** Token mismatch  
 **Error (502):** Telegram API call failed
+
+The secondary message posted to Telegram includes a `📊 Dashboard` inline keyboard button when `APP_URL` is configured. The button URL is constructed from `APP_URL` in the same way as the digest message: `${APP_URL}/dashboard?minScore=0.80`. When `APP_URL` is absent the message is sent without `reply_markup`.
 
 ---
 

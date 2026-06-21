@@ -1,8 +1,11 @@
 import { SupabaseCompanyRepository } from "@/features/companies/infrastructure/SupabaseCompanyRepository";
 import { validateSources } from "@/features/sources/application/validateSources";
-import type { ValidationGroup, ValidationStatus } from "@/features/sources/domain/sourceValidation";
+import { SOURCE_HEALTH_CONFIG } from "@/features/sources/domain/sourceHealthConfig";
+import type { ProbeOutcome, ValidationGroup, ValidationStatus } from "@/features/sources/domain/sourceValidation";
 import { sourceValidators } from "@/features/sources/infrastructure/validators/index";
 import { createSupabaseServiceClient } from "@/shared/infrastructure/supabaseClient";
+
+const includeDisabled = process.argv.includes("--include-disabled");
 
 function statusIcon(status: ValidationStatus): string {
   return status === "healthy" || status === "redirected" ? "✅" : "❌";
@@ -16,25 +19,49 @@ function printGroup(group: ValidationGroup): void {
 
   for (const r of group.results) {
     const suffix = r.httpStatus !== null ? ` (${r.httpStatus})` : "";
-    console.log(`${r.companyName} ${statusIcon(r.status)} ${r.status}${suffix}`);
+    const wasActive = r.previousHealthStatus === "active" && r.status !== "healthy" && r.status !== "redirected";
+    const transition = wasActive ? " ⚠️ NEW" : "";
+    console.log(`${r.companyName} ${statusIcon(r.status)} ${r.status}${suffix}${transition}`);
   }
 }
 
-function printSummary(groups: ValidationGroup[]): void {
+function printSummary(groups: ValidationGroup[], totalDisabled: number): void {
   for (const group of groups) {
     printGroup(group);
   }
 
-  const all = groups.flatMap((g) => g.results);
-  const healthy = all.filter((r) => r.status === "healthy" || r.status === "redirected").length;
-  const broken = all.length - healthy;
+  const all: ProbeOutcome[] = groups.flatMap((g) => g.results);
+  const activeHealthy = all.filter((r) => r.status === "healthy" || r.status === "redirected").length;
+  const unhealthy = all.filter(
+    (r) => r.status !== "healthy" && r.status !== "redirected",
+  ).length;
+  const totalProbed = all.length;
 
   console.log("\n## Summary\n");
-  console.log(`Healthy: ${healthy}`);
-  console.log(`Broken:  ${broken}`);
+  console.log(`Active (healthy): ${activeHealthy}`);
+  console.log(`Unhealthy:        ${unhealthy}`);
+  console.log(`Disabled:         ${totalDisabled}`);
+  console.log(`Total probed:     ${totalProbed}  (disabled sources skipped)`);
 
-  if (broken > 0) {
+  // A "new failure" is a company that was active before this probe and is now broken.
+  // Companies already in unhealthy state are known-bad and don't trigger CI failure.
+  const newFailures = all.filter(
+    (r) =>
+      r.previousHealthStatus === "active" &&
+      r.status !== "healthy" &&
+      r.status !== "redirected",
+  ).length;
+
+  if (newFailures > 0) {
+    console.log(`\n❌ New failure(s) detected — ${newFailures} source(s) transitioned from active to broken`);
     process.exitCode = 1;
+  } else if (activeHealthy < SOURCE_HEALTH_CONFIG.minimumHealthyCount) {
+    console.log(
+      `\n❌ Healthy source count (${activeHealthy}) dropped below minimum (${SOURCE_HEALTH_CONFIG.minimumHealthyCount})`,
+    );
+    process.exitCode = 1;
+  } else {
+    console.log("\n✅ No new failures detected");
   }
 }
 
@@ -45,15 +72,27 @@ async function main(): Promise<void> {
   console.log("[validate-sources] loading configured companies…");
   const companies = await companyRepository.listActive();
 
-  const total = companies.filter((c) => c.boardToken !== null).length;
-  console.log(`[validate-sources] probing ${total} board(s) across ${sourceValidators.length} ATS source(s)\n`);
+  const disabledCompanies = companies.filter((c) => c.healthStatus === "disabled");
+  const totalDisabled = disabledCompanies.length;
 
-  const groups = await validateSources(sourceValidators, companies);
+  const total = companies.filter(
+    (c) => c.boardToken !== null && (includeDisabled || c.healthStatus !== "disabled"),
+  ).length;
+  console.log(`[validate-sources] probing ${total} board(s) across ${sourceValidators.length} ATS source(s)${totalDisabled > 0 ? ` (${totalDisabled} disabled skipped)` : ""}\n`);
 
-  printSummary(groups);
+  const groups = await validateSources(sourceValidators, companies, companyRepository, includeDisabled);
+
+  printSummary(groups, includeDisabled ? 0 : totalDisabled);
 }
 
 main().catch((err) => {
-  console.error("[validate-sources] fatal error:", err instanceof Error ? err.message : String(err));
+  if (err instanceof Error) {
+    console.error("[validate-sources] fatal error:", err.message);
+    if (err.stack) {
+      console.error(err.stack);
+    }
+  } else {
+    console.error("[validate-sources] fatal error:", JSON.stringify(err, null, 2));
+  }
   process.exit(1);
 });

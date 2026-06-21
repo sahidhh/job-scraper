@@ -2,11 +2,13 @@ import type { Company } from "@/features/companies/domain/types";
 import type { JobSourceScraper } from "@/features/sources/domain/JobSourceScraper";
 import { jobMatchesRoles } from "@/features/sources/domain/roleMatch";
 import type { RawJob } from "@/features/sources/domain/types";
+import { optionalEnv } from "@/shared/infrastructure/env";
 import { fetchWithRetry } from "@/shared/infrastructure/http";
 import { normalizeWhitespace, stripHtml } from "@/shared/infrastructure/text";
 import { toIsoOrNull } from "../normalize";
 
 const REMOTEOK_API_URL = "https://remoteok.com/api";
+const REMOTEOK_DISABLED_VAR = "REMOTEOK_DISABLED";
 
 // The first element of the response is a legal notice with no `id`/`position`
 // -- filter to entries that look like actual job postings.
@@ -46,6 +48,13 @@ export const remoteokScraper: JobSourceScraper = {
   // query parameter -- fetch the whole feed, then filter client-side via
   // the shared `jobMatchesRoles` helper.
   async fetchJobs(_companies: Company[], roles: readonly string[]): Promise<RawJob[]> {
+    const disabled = optionalEnv(REMOTEOK_DISABLED_VAR, "");
+    if (disabled === "true" || disabled === "1") {
+      console.log("[remoteok] disabled via REMOTEOK_DISABLED env var");
+      return [];
+    }
+
+
     const response = await fetchWithRetry(REMOTEOK_API_URL, {
       headers: { "User-Agent": "job-intelligence-platform" },
     });

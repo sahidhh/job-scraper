@@ -8,6 +8,29 @@ function jsonResponse(body: unknown, status = 200): Response {
 describe("remoteokScraper", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  });
+
+  it("returns [] immediately when REMOTEOK_DISABLED=true", async () => {
+    vi.stubEnv("REMOTEOK_DISABLED", "true");
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await remoteokScraper.fetchJobs([]);
+
+    expect(result).toEqual([]);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("returns [] immediately when REMOTEOK_DISABLED=1", async () => {
+    vi.stubEnv("REMOTEOK_DISABLED", "1");
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await remoteokScraper.fetchJobs([]);
+
+    expect(result).toEqual([]);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("declares its source and ignores company config", () => {

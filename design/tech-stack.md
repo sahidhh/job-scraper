@@ -68,6 +68,8 @@ These are explicitly banned by the project rules (CLAUDE.md):
 | `TELEGRAM_CALLBACK_SECRET` | _(unset)_ | Shared secret for signing worth-reviewing callback URLs in digest mode; must also be set in Vercel |
 | `WELLFOUND_FEED_URL` | _(unset)_ | Wellfound custom feed URL; see docs/sources/wellfound.md |
 | `WELLFOUND_DISABLED` | _(unset)_ | Set `true` or `1` to explicitly disable Wellfound ingestion without triggering a config warning |
+| `SOURCE_DISABLE_THRESHOLD` | `7` | Number of consecutive probe failures before a source is auto-disabled |
+| `MIN_HEALTHY_SOURCE_COUNT` | `3` | Minimum number of healthy sources; validation exits 1 if count drops below this |
 
 ## 4. Runtime Targets
 
@@ -120,14 +122,14 @@ These are explicitly banned by the project rules (CLAUDE.md):
 | `scrape` | `tsx scripts/scrape.ts` | Manual scrape run |
 | `score` | `tsx scripts/score.ts` | Manual scoring run |
 | `notify` | `tsx scripts/notify.ts` | Manual notification run |
-| `validate-sources` | `tsx scripts/validate-sources.ts` | Probe all configured ATS boards and report dead tokens |
+| `validate-sources` | `tsx scripts/validate-sources.ts` | Probe all configured ATS boards; exit 1 only on new failures or healthy count below minimum |
 
 ## 7. CI / CD
 
 | Pipeline | Trigger | Steps |
 |---|---|---|
 | `ci.yml` | Push / PR to main | `tsc --noEmit` → `vitest run` → `check:service-role-boundary` |
-| `scrape.yml` | Cron (every 2h) or `workflow_dispatch` | `scrape.ts` → `score.ts` → `notify.ts` |
-| `validate-sources.yml` | `workflow_dispatch` only | `validate-sources.ts` — probe ATS boards, exit 1 if any broken |
+| `scrape.yml` | Cron (every 6h) or `workflow_dispatch` | `scrape.ts` → `score.ts` → `notify.ts` |
+| `validate-sources.yml` | `workflow_dispatch` only | `validate-sources.ts` — probe ATS boards, exit 1 only on new failures or sub-minimum healthy count |
 
 The cron `schedule:` entry in `scrape.yml` remains commented out until the user explicitly approves go-live.

@@ -1,5 +1,5 @@
 import type { CompanyRepository } from "@/features/companies/domain/CompanyRepository";
-import type { Company, CompanyUpdate, NewCompany } from "@/features/companies/domain/types";
+import type { Company, CompanyUpdate, NewCompany, SourceHealthUpdate } from "@/features/companies/domain/types";
 import type { JobSource } from "@/shared/domain/enums";
 import type { TypedSupabaseClient } from "@/shared/infrastructure/supabaseClient";
 import { toAppError } from "@/shared/infrastructure/supabaseError";
@@ -16,6 +16,10 @@ function toCompany(row: CompanyRow): Company {
     boardToken: row.board_token,
     active: row.active,
     createdAt: row.created_at,
+    healthStatus: row.health_status,
+    consecutiveFailures: row.consecutive_failures,
+    lastSuccessAt: row.last_success_at,
+    lastFailureAt: row.last_failure_at,
   };
 }
 
@@ -31,6 +35,21 @@ export class SupabaseCompanyRepository implements CompanyRepository {
 
     const { data, error } = await query;
     if (error) throw toAppError(error);
+    return (data ?? []).map(toCompany);
+  }
+
+  async listActiveHealthy(source?: JobSource): Promise<Company[]> {
+    let query = this.client
+      .from("companies")
+      .select("*")
+      .eq("active", true)
+      .neq("health_status", "disabled");
+    if (source) {
+      query = query.eq("source", source);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
     return (data ?? []).map(toCompany);
   }
 
@@ -67,6 +86,18 @@ export class SupabaseCompanyRepository implements CompanyRepository {
 
     if (error) throw toAppError(error);
     return toCompany(data);
+  }
+
+  async updateHealth(id: string, update: SourceHealthUpdate): Promise<void> {
+    const row: CompanyUpdateRow = {
+      health_status: update.healthStatus,
+      consecutive_failures: update.consecutiveFailures,
+    };
+    if (update.lastSuccessAt !== undefined) row.last_success_at = update.lastSuccessAt;
+    if (update.lastFailureAt !== undefined) row.last_failure_at = update.lastFailureAt;
+
+    const { error } = await this.client.from("companies").update(row).eq("id", id);
+    if (error) throw error;
   }
 
   async remove(id: string): Promise<void> {
