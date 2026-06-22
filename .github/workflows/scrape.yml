@@ -29,6 +29,13 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          # Phase 1A source cleanup (docs/reports/source-validation-2026-06-22.md):
+          # RemoteOK yields 0 kept jobs -- location strings ("Worldwide","USA") never
+          # match India/SG/UAE/Remote tags. Disable explicitly.
+          REMOTEOK_DISABLED: 'true'
+          # Wellfound feed URL is not configured. Adapter already auto-disables when
+          # WELLFOUND_FEED_URL is unset, but explicit flag suppresses any log noise.
+          WELLFOUND_DISABLED: 'true'
           # AD-10/docs/scrapers.md §5 -- optional; if unset, Wellfound
           # adapter degrades to zero jobs per run (not a failure).
           WELLFOUND_FEED_URL: ${{ secrets.WELLFOUND_FEED_URL }}

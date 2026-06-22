@@ -1,9 +1,13 @@
 name: Validate sources
 
-# Manual-only dispatch — no schedule yet (docs/operations/source-validation.md).
-# Run this before a scrape to identify dead ATS board configurations.
+# Runs weekly (Sunday 06:00 UTC) and on manual dispatch.
+# Weekly cadence surfaces newly broken boards within one week of failure.
+# Increase frequency if source churn rate rises.
+# See docs/operations/source-validation.md and docs/reports/source-validation-2026-06-22.md.
 on:
   workflow_dispatch: {}
+  schedule:
+    - cron: "0 6 * * 0"
 
 jobs:
   validate:
