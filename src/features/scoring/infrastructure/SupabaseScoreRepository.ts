@@ -17,6 +17,9 @@ export class SupabaseScoreRepository implements ScoreRepository {
         ai_score: score.aiScore ?? null,
         ai_reasoning: score.aiReasoning ?? null,
         model: score.model ?? null,
+        tokens_input: score.tokensInput ?? null,
+        tokens_output: score.tokensOutput ?? null,
+        estimated_cost_usd: score.estimatedCostUsd ?? null,
       },
       { onConflict: "job_id,role_selection_id,resume_version", ignoreDuplicates: false },
     );

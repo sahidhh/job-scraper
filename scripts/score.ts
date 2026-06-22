@@ -36,6 +36,13 @@ async function main(): Promise<void> {
   // letting the AI stage actually run. Override via KEYWORD_THRESHOLD.
   const keywordThreshold = Number(optionalEnv("KEYWORD_THRESHOLD", "0.25"));
 
+  // Cost tracking: set OPENROUTER_COST_PER_1K_TOKENS to the blended per-1k-token
+  // rate for the model in use (e.g. "0.0008" for $0.80/1M tokens). When unset,
+  // estimated_cost_usd is left null on each score row and the run-cost log line
+  // is omitted. See scoring.md §5.
+  const costPer1kTokensRaw = optionalEnv("OPENROUTER_COST_PER_1K_TOKENS", "");
+  const costPer1kTokens = costPer1kTokensRaw !== "" ? Number(costPer1kTokensRaw) : null;
+
   const jobs = await jobRepository.findUnscored(roleSelection.id, roleSelection.expandedRoles, resume.version, keywordThreshold);
   console.log(`[score] scoring ${jobs.length} unscored/retry job(s) for role selection ${roleSelection.id}`);
 
@@ -48,6 +55,7 @@ async function main(): Promise<void> {
         aiScoreProvider,
         skillsDictionary: SKILLS_DICTIONARY,
         keywordThreshold,
+        costPer1kTokens,
       });
 
       if (result.keywordScore < keywordThreshold) {
@@ -79,6 +87,17 @@ async function main(): Promise<void> {
   console.log(
     `[score] AI call stats: successful=${aiStats.successful} failed=${aiStats.failed}${failureSummary}`,
   );
+
+  const totalTokens = aiStats.totalTokensInput + aiStats.totalTokensOutput;
+  if (totalTokens > 0) {
+    const costLine =
+      costPer1kTokens != null
+        ? ` estimated_cost=$${((totalTokens / 1000) * costPer1kTokens).toFixed(6)}`
+        : "";
+    console.log(
+      `[score] token usage: input=${aiStats.totalTokensInput} output=${aiStats.totalTokensOutput} total=${totalTokens}${costLine}`,
+    );
+  }
 }
 
 main().catch((err) => {

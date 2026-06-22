@@ -100,3 +100,4 @@ All failures leave `ai_score` null. `OpenRouterAiScoreProvider.getStats()` retur
 | `NOTIFY_THRESHOLD` | `0.75` | Minimum `ai_score` to trigger a Telegram message |
 | `OPENROUTER_MODEL` | (set at deploy) | Model used for stage-2 scoring and role-expansion AI fallback |
 | `OPENROUTER_MAX_TOKENS` | `300` | Maximum output tokens for stage-2 AI response (score + reasoning); keep at 300 unless reasoning is being truncated |
+| `OPENROUTER_COST_PER_1K_TOKENS` | _(unset)_ | Blended per-1k-token rate for the model in use (e.g. `0.0008` for $0.80/1M tokens). When set, each successful AI call stores an `estimated_cost_usd` on the `job_scores` row and `score.ts` logs estimated run cost. When unset, `estimated_cost_usd` is left null and the cost log line is omitted. |

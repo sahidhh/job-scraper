@@ -12,6 +12,7 @@ export interface ScoreJobDeps {
   aiScoreProvider: AiScoreProvider;
   skillsDictionary: readonly SkillDictionaryEntry[];
   keywordThreshold: number;
+  costPer1kTokens?: number | null;
 }
 
 /**
@@ -34,12 +35,21 @@ export async function scoreJob(
   let aiReasoning: string | null = null;
   let model: string | null = null;
 
+  let tokensInput: number | null = null;
+  let tokensOutput: number | null = null;
+  let estimatedCostUsd: number | null = null;
+
   if (keywordScore >= deps.keywordThreshold) {
     const result = await deps.aiScoreProvider.score({ job, resume });
     if (result) {
       aiScore = result.score;
       aiReasoning = result.reasoning;
       model = result.model;
+      tokensInput = result.tokensInput;
+      tokensOutput = result.tokensOutput;
+      if (deps.costPer1kTokens != null && tokensInput != null && tokensOutput != null) {
+        estimatedCostUsd = ((tokensInput + tokensOutput) / 1000) * deps.costPer1kTokens;
+      }
     }
   }
 
@@ -51,6 +61,9 @@ export async function scoreJob(
     aiScore,
     aiReasoning,
     model,
+    tokensInput,
+    tokensOutput,
+    estimatedCostUsd,
   };
 
   validateNewJobScore(score);

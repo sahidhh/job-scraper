@@ -17,4 +17,7 @@ export interface NewJobScore {
   aiScore?: number | null;
   aiReasoning?: string | null;
   model?: string | null;
+  tokensInput?: number | null;
+  tokensOutput?: number | null;
+  estimatedCostUsd?: number | null;
 }

@@ -46,6 +46,9 @@ erDiagram
         real ai_score "0.0 – 1.0, null if below threshold or pending"
         text ai_reasoning "nullable"
         text model "OPENROUTER_MODEL used for this score; null if no AI call"
+        integer tokens_input "prompt tokens from OpenRouter usage; null if no AI call"
+        integer tokens_output "completion tokens from OpenRouter usage; null if no AI call"
+        numeric estimated_cost_usd "cost estimate (tokens/1k * OPENROUTER_COST_PER_1K_TOKENS); null if env unset"
         timestamptz scored_at
     }
 

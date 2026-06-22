@@ -3,11 +3,14 @@ import type { Job } from "@/features/jobs/domain/types";
 import type { Resume } from "@/features/resume/domain/types";
 import { OpenRouterAiScoreProvider } from "./OpenRouterAiScoreProvider";
 
-function chatResponse(content: unknown): Response {
-  return new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify(content) } }] }), {
-    status: 200,
-    headers: { "Content-Type": "application/json" },
-  });
+function chatResponse(
+  content: unknown,
+  usage?: { prompt_tokens?: number; completion_tokens?: number },
+): Response {
+  return new Response(
+    JSON.stringify({ choices: [{ message: { content: JSON.stringify(content) } }], usage }),
+    { status: 200, headers: { "Content-Type": "application/json" } },
+  );
 }
 
 const job: Job = {
@@ -54,7 +57,7 @@ describe("OpenRouterAiScoreProvider", () => {
     const provider = new OpenRouterAiScoreProvider();
     const result = await provider.score({ job, resume });
 
-    expect(result).toEqual({ score: 0.85, reasoning: "Strong match", model: "test-model" });
+    expect(result).toEqual({ score: 0.85, reasoning: "Strong match", model: "test-model", tokensInput: null, tokensOutput: null });
 
     const body = JSON.parse((fetchMock.mock.calls[0]![1] as RequestInit).body as string);
     expect(body.messages[1].content).toContain("Senior React Developer");
@@ -147,5 +150,34 @@ describe("OpenRouterAiScoreProvider", () => {
 
     expect(snapshot.successful).toBe(1);
     expect(provider.getStats().successful).toBe(2);
+  });
+
+  it("getStats accumulates token totals from successful calls", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(chatResponse({ score: 0.8, reasoning: "good" }, { prompt_tokens: 1000, completion_tokens: 60 }))
+      .mockResolvedValueOnce(chatResponse({ score: 0.6, reasoning: "ok" }, { prompt_tokens: 800, completion_tokens: 50 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const provider = new OpenRouterAiScoreProvider();
+    await provider.score({ job, resume });
+    await provider.score({ job, resume });
+
+    const stats = provider.getStats();
+    expect(stats.totalTokensInput).toBe(1800);
+    expect(stats.totalTokensOutput).toBe(110);
+  });
+
+  it("score result includes tokensInput and tokensOutput from usage", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(chatResponse({ score: 0.75, reasoning: "nice" }, { prompt_tokens: 1500, completion_tokens: 70 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const provider = new OpenRouterAiScoreProvider();
+    const result = await provider.score({ job, resume });
+
+    expect(result?.tokensInput).toBe(1500);
+    expect(result?.tokensOutput).toBe(70);
   });
 });
