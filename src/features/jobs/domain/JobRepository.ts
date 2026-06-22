@@ -1,4 +1,4 @@
-import type { CreateStatusInput, Job, JobFilters, JobsPage, JobStatus, NormalizedJob, UpdateStatusInput, UpsertResult } from "./types";
+import type { CreateStatusInput, Job, JobFilters, JobStats, JobsPage, JobStatus, NormalizedJob, UpdateStatusInput, UpsertResult } from "./types";
 
 export interface JobRepository {
   /**
@@ -65,6 +65,13 @@ export interface JobRepository {
    * (reports/dashboard-scoring-discrepancy.md).
    */
   countMatchingExpandedRoles(expandedRoles: string[]): Promise<number>;
+
+  /**
+   * Dataset-level scoring stats for (roleSelectionId, resumeVersion).
+   * Counts are derived from job_scores across the full dataset — not from
+   * a single page — so they are stable regardless of the display limit.
+   */
+  countJobStats(roleSelectionId: string, filters: JobFilters, resumeVersion: number): Promise<JobStats>;
 
   /**
    * Marks active jobs that haven't been seen for `thresholdDays` as inactive

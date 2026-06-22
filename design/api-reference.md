@@ -411,13 +411,13 @@ Handles `callback_query` updates sent by Telegram when users tap inline keyboard
 
 **Flow for `wr:0` (first tap):**
 1. Validate secret token header (401 if mismatch)
-2. Fetch latest `digest_sessions` row → get `worth_reviewing_job_ids`
-3. Query jobs + scores from Supabase for those IDs
-4. `answerCallbackQuery` (required by Telegram, clears loading spinner)
+2. `answerCallbackQuery` immediately (clears Telegram loading spinner before any DB work)
+3. Fetch latest `digest_sessions` row → get `worth_reviewing_job_ids` + `resume_version`
+4. Query jobs + scores from Supabase scoped to `(role_selection_id, resume_version)` — ensures scores match the digest that triggered the tap
 5. `sendMessage` with page 0 + Prev/Next + Dashboard buttons → save `message_id` to `digest_sessions.pagination_message_id`
 
 **Flow for `wr:N` (subsequent taps):**  
-Same as above steps 1–4, then `editMessageText` on the stored `pagination_message_id` (in-place pagination, no new messages).
+Same as above steps 1–5, then `editMessageText` on the stored `pagination_message_id` (in-place pagination, no new messages).
 
 **Success (200):** `OK`  
 **Error (401):** Invalid or missing secret token
@@ -494,7 +494,35 @@ Atomically deactivates all role_selections and inserts a new active one.
 
 ---
 
-## 5. Shared HTTP Utility
+## 5. Repository Methods (Internal)
+
+### `JobRepository.countJobStats`
+
+**File:** `src/features/jobs/domain/JobRepository.ts` / `SupabaseJobRepository.ts`
+
+```typescript
+countJobStats(
+  roleSelectionId: string,
+  filters: JobFilters,
+  resumeVersion: number
+): Promise<JobStats>
+```
+
+Returns dataset-level scoring statistics for the dashboard stat line. Runs two COUNT queries against `job_scores` directly (not against the paged `findForDashboard` result), so counts are accurate regardless of `DEFAULT_JOBS_LIMIT`.
+
+| Field | Description |
+|---|---|
+| `scoredCount` | Jobs with `ai_score IS NOT NULL` for the given role + version |
+| `awaitingReviewCount` | Jobs with `keyword_score IS NOT NULL AND ai_score IS NULL` |
+| `notEligibleCount` | Active jobs with no qualifying score row (`total - scored - awaiting`) |
+| `pendingCount` | `awaitingReviewCount + notEligibleCount` |
+| `total` | Total active jobs in the `jobs` table |
+
+Called by `/dashboard` after `findForDashboard`; falls back to page-derived counts on query failure.
+
+---
+
+## 6. Shared HTTP Utility
 
 **File:** `src/shared/infrastructure/http.ts`
 

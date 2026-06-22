@@ -97,3 +97,14 @@ export interface JobsPage {
   jobs: JobWithScore[];
   hasMore: boolean;
 }
+
+// Dataset-level scoring stats for the active (role, resumeVersion) pair.
+// Derived from job_scores counts across the full dataset, not from a page
+// slice — prevents stats from changing as the user pages through results.
+export interface JobStats {
+  scoredCount: number;
+  awaitingReviewCount: number;
+  notEligibleCount: number;
+  pendingCount: number; // awaitingReviewCount + notEligibleCount
+  total: number;
+}

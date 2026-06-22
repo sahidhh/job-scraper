@@ -112,6 +112,7 @@ erDiagram
     DIGEST_SESSIONS {
         uuid id PK
         uuid role_selection_id "FK — role selection used for this digest run"
+        integer resume_version "resume version active at digest send time; DEFAULT 0"
         text[] worth_reviewing_job_ids "job IDs in the worth-reviewing band"
         bigint pagination_message_id "nullable — Telegram message_id once first page is shown"
         timestamptz created_at

@@ -3,6 +3,16 @@
 **Date:** 2026-06-22  
 **Scope:** Read-only analysis. No code changes recommended in this document.
 
+**Resolution status (2026-06-22):**
+- Finding 1 — ✅ Fixed: webhook now filters `job_scores` by `resume_version` (F1, migration 20260622000002)
+- Finding 2 — ✅ Fixed: `digest_sessions` stores `resume_version`; `DigestSessionRepository.save()` and `sendDigestMvp` updated (F2)
+- Finding 3 — ✅ Fixed: `findForDashboard` uses `job_scores!inner` when `minAiScore` is set (F3)
+- Finding 4 — ✅ Fixed: dashboard stats use `countJobStats` dataset-level counts, not page slice (F4)
+- Finding 5 — ✅ Fixed: stat line reworded to separate page-scoped and dataset-scoped metrics (F5)
+- Finding 6 — Tracked (not in this plan)
+- Finding 7 — Tracked (product decision required)
+- Finding 8 — ✅ Fixed opportunistically: removed duplicate `answerCallbackQuery` call in webhook route
+
 ---
 
 ## Executive Summary

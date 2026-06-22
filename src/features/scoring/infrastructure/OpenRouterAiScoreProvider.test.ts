@@ -26,7 +26,10 @@ const job: Job = {
   url: "https://example.com/jobs/123",
   postedAt: null,
   firstSeenAt: "2026-01-01T00:00:00Z",
+  lastSeenAt: "2026-01-01T00:00:00Z",
   updatedAt: "2026-01-01T00:00:00Z",
+  isActive: true,
+  inactiveReason: null,
 };
 
 const resume: Resume = {
@@ -36,6 +39,7 @@ const resume: Resume = {
   skills: ["React", "Node.js"],
   uploadedAt: "2026-01-01T00:00:00Z",
   isActive: true,
+  version: 1,
 };
 
 describe("OpenRouterAiScoreProvider", () => {

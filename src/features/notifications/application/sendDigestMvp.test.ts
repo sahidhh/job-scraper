@@ -164,7 +164,7 @@ describe("sendDigestMvp", () => {
       digestSessionRepository: sessionRepo,
     });
 
-    expect(sessionRepo.save).toHaveBeenCalledWith("role-1", ["w"]);
+    expect(sessionRepo.save).toHaveBeenCalledWith("role-1", ["w"], 1);
   });
 
   it("skips session save when digestSessionRepository is not provided", async () => {
