@@ -3,8 +3,8 @@ import type {
   CreateStatusInput,
   Job,
   JobFilters,
-  JobsPage,
   JobStats,
+  JobsPage,
   JobStatus,
   JobWithScore,
   NormalizedJob,
@@ -242,32 +242,46 @@ export class SupabaseJobRepository implements JobRepository {
     return count ?? 0;
   }
 
-  async countJobStats(roleSelectionId: string, resumeVersion: number, total: number): Promise<JobStats> {
-    const [scoredResult, awaitingResult] = await Promise.all([
-      this.client
-        .from("job_scores")
-        .select("job_id", { count: "exact", head: true })
-        .eq("role_selection_id", roleSelectionId)
-        .eq("resume_version", resumeVersion)
-        .not("ai_score", "is", null),
-      this.client
-        .from("job_scores")
-        .select("job_id", { count: "exact", head: true })
-        .eq("role_selection_id", roleSelectionId)
-        .eq("resume_version", resumeVersion)
-        .not("keyword_score", "is", null)
-        .is("ai_score", null),
-    ]);
+  async countJobStats(roleSelectionId: string, _filters: JobFilters, resumeVersion: number): Promise<JobStats> {
+    // Q1: scored — ai_score IS NOT NULL for this (role, version)
+    const { count: scoredCount, error: scoredError } = await this.client
+      .from("job_scores")
+      .select("job_id", { count: "exact", head: true })
+      .eq("role_selection_id", roleSelectionId)
+      .eq("resume_version", resumeVersion)
+      .not("ai_score", "is", null);
+    if (scoredError) throw toAppError(scoredError);
 
-    if (scoredResult.error) throw toAppError(scoredResult.error);
-    if (awaitingResult.error) throw toAppError(awaitingResult.error);
+    // Q2: awaiting review — keyword_score IS NOT NULL, ai_score IS NULL
+    const { count: awaitingCount, error: awaitingError } = await this.client
+      .from("job_scores")
+      .select("job_id", { count: "exact", head: true })
+      .eq("role_selection_id", roleSelectionId)
+      .eq("resume_version", resumeVersion)
+      .not("keyword_score", "is", null)
+      .is("ai_score", null);
+    if (awaitingError) throw toAppError(awaitingError);
 
-    const scoredCount = scoredResult.count ?? 0;
-    const awaitingReviewCount = awaitingResult.count ?? 0;
-    const notEligibleCount = Math.max(0, total - scoredCount - awaitingReviewCount);
-    const pendingCount = awaitingReviewCount + notEligibleCount;
+    // Q3: total active jobs (full dataset, not page-scoped)
+    const { count: total, error: totalError } = await this.client
+      .from("jobs")
+      .select("id", { count: "exact", head: true })
+      .eq("is_active", true);
+    if (totalError) throw toAppError(totalError);
 
-    return { scoredCount, awaitingReviewCount, notEligibleCount, pendingCount, total };
+    const scored = scoredCount ?? 0;
+    const awaitingReview = awaitingCount ?? 0;
+    const totalJobs = total ?? 0;
+    // notEligible = active jobs with no score row for this role+version
+    const notEligible = Math.max(0, totalJobs - scored - awaitingReview);
+
+    return {
+      scoredCount: scored,
+      awaitingReviewCount: awaitingReview,
+      notEligibleCount: notEligible,
+      pendingCount: awaitingReview + notEligible,
+      total: totalJobs,
+    };
   }
 
   async findForDashboard(roleSelectionId: string, filters: JobFilters, limit: number, resumeVersion: number): Promise<JobsPage> {
@@ -280,9 +294,15 @@ export class SupabaseJobRepository implements JobRepository {
       return { jobs: [], hasMore: false };
     }
 
+    // When minAiScore is set, use !inner so jobs without a qualifying score are
+    // excluded from the result. When minAiScore is absent, keep !left so
+    // unscored jobs remain visible on the dashboard (existing behaviour).
+    const joinType = filters.minAiScore !== undefined ? "inner" : "left";
+    const selectStr = DASHBOARD_SELECT.replace("job_scores!left", `job_scores!${joinType}`);
+
     let query = this.client
       .from("jobs")
-      .select(DASHBOARD_SELECT)
+      .select(selectStr)
       .eq("is_active", true)
       .eq("job_scores.role_selection_id", roleSelectionId)
       .eq("job_scores.resume_version", resumeVersion);

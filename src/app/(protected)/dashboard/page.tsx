@@ -193,8 +193,6 @@ async function JobsSection({
   const settingsRepository = new SupabaseSettingsRepository(client);
   const limit = parseLimit(params);
 
-  // Desired-experience setting is the default soft year cap; an explicit
-  // maxYears search param overrides it for the current view (P2).
   const desiredExperience = await settingsRepository.getDesiredExperienceYears();
   const effectiveFilters: JobFilters =
     filters.maxYears === undefined && desiredExperience !== null
@@ -202,22 +200,16 @@ async function JobsSection({
       : filters;
 
   const activeResume = await resumeRepository.getActive();
-  // If no active resume, version 0 matches no scores (sentinel); jobs show as pending.
   const resumeVersion = activeResume?.version ?? 0;
 
-  // countMatchingExpandedRoles is non-critical (used only for the header stat
-  // line) — isolate its failure so the rest of the dashboard still loads.
   const [{ jobs, hasMore }, matchingRoleCount, statuses] = await Promise.all([
     jobRepository.findForDashboard(roleSelectionId, effectiveFilters, limit, resumeVersion),
     jobRepository.countMatchingExpandedRoles(expandedRoles).catch(() => null),
     jobRepository.listStatuses(),
   ]);
 
-  // countJobStats queries job_scores directly for dataset-level counts,
-  // not page-scoped counts from the jobs array (F4 correctness fix).
-  // Falls back to page-derived counts if the query fails.
   const jobStats = await jobRepository
-    .countJobStats(roleSelectionId, resumeVersion, matchingRoleCount ?? 0)
+    .countJobStats(roleSelectionId, effectiveFilters, resumeVersion)
     .catch((): JobStats => ({
       scoredCount: jobs.filter((j) => j.aiScore !== null).length,
       awaitingReviewCount: jobs.filter((j) => j.aiScore === null && j.keywordScore !== null).length,
@@ -232,10 +224,10 @@ async function JobsSection({
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
         {lastRun ? `Last scraped ${new Date(lastRun.runAt).toLocaleString()} — ` : ""}
-        {jobStats.scoredCount} scored by AI, {jobStats.pendingCount} pending.{" "}
+        {jobs.length} job{jobs.length === 1 ? "" : "s"} shown. {jobStats.scoredCount} scored by AI, {jobStats.pendingCount} pending (across all active jobs).{" "}
         {matchingRoleCount !== null && (
           <>
-            Showing {jobs.length} of {matchingRoleCount} active job{matchingRoleCount === 1 ? "" : "s"} matching &ldquo;{primaryRole}&rdquo;.
+            Across all active jobs: {matchingRoleCount} match "{primaryRole}".
           </>
         )}
       </p>
@@ -249,14 +241,12 @@ async function JobsSection({
         <div className="space-y-1">
           {jobStats.awaitingReviewCount > 0 && (
             <div className="rounded-md border border-border bg-muted/50 p-3 text-sm text-muted-foreground">
-              {jobStats.awaitingReviewCount} of {jobs.length} job{jobs.length === 1 ? "" : "s"} awaiting AI review — keyword
-              match score shown; some may stay below the AI scoring threshold and never receive an AI score.
+              {jobStats.awaitingReviewCount} of {jobs.length} job{jobs.length === 1 ? "" : "s"} awaiting AI review — keyword match score shown; some may stay below the AI scoring threshold and never receive an AI score.
             </div>
           )}
           {jobStats.notEligibleCount > 0 && (
             <div className="rounded-md border border-border bg-muted/50 p-3 text-sm text-muted-foreground">
-              {jobStats.notEligibleCount} of {jobs.length} job{jobs.length === 1 ? "" : "s"} don&rsquo;t match &ldquo;
-              {primaryRole}&rdquo; under the current role selection and won&rsquo;t be scored.
+              {jobStats.notEligibleCount} of {jobs.length} job{jobs.length === 1 ? "" : "s"} don&apos;t match &ldquo;{primaryRole}&rdquo; under the current role selection and won&apos;t be scored.
             </div>
           )}
         </div>

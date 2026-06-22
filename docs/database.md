@@ -143,6 +143,24 @@ create table notifications_log (
 
 
 -- ============================================================
+-- digest_sessions: one row per notify cron run, stores worth-reviewing
+-- job IDs for Telegram webhook pagination.
+-- Migration: 20260621000001_digest_sessions.sql,
+--            20260622000002_digest_sessions_resume_version.sql
+-- ============================================================
+create table digest_sessions (
+  id                       uuid        primary key default gen_random_uuid(),
+  role_selection_id        uuid        not null,
+  resume_version           integer     not null default 0,
+  worth_reviewing_job_ids  text[]      not null default '{}',
+  pagination_message_id    bigint,
+  created_at               timestamptz not null default now()
+);
+
+create index digest_sessions_created_at_idx on digest_sessions (created_at desc);
+
+
+-- ============================================================
 -- scrape_runs: observability log for cron runs, surfaced in /settings
 -- ============================================================
 create table scrape_runs (

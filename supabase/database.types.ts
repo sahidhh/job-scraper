@@ -75,6 +75,7 @@ export type Database = {
         Row: {
           id: string
           role_selection_id: string
+          resume_version: number
           worth_reviewing_job_ids: string[]
           pagination_message_id: number | null
           created_at: string
@@ -82,6 +83,7 @@ export type Database = {
         Insert: {
           id?: string
           role_selection_id: string
+          resume_version?: number
           worth_reviewing_job_ids?: string[]
           pagination_message_id?: number | null
           created_at?: string
@@ -89,6 +91,7 @@ export type Database = {
         Update: {
           id?: string
           role_selection_id?: string
+          resume_version?: number
           worth_reviewing_job_ids?: string[]
           pagination_message_id?: number | null
           created_at?: string

@@ -98,8 +98,9 @@ export interface JobsPage {
   hasMore: boolean;
 }
 
-// Dataset-level scoring statistics for the dashboard stat line.
-// Computed from job_scores directly, not from the paged findForDashboard result.
+// Dataset-level scoring stats for the active (role, resumeVersion) pair.
+// Derived from job_scores counts across the full dataset, not from a page
+// slice — prevents stats from changing as the user pages through results.
 export interface JobStats {
   scoredCount: number;
   awaitingReviewCount: number;
