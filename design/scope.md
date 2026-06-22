@@ -86,6 +86,11 @@ A single technical professional (software engineer, data scientist, or similar) 
 P0 — Core (shipped)
  └── Resume, Role, Role Packs, Scraping, Scoring, Notifications, Dashboard, Status, Companies
 
+P0.5 — Source Health (shipped)
+ └── Phase A: repair 15 broken tokens, remove 10 dead sources
+ └── Phase B: add 10 high-confidence sources (Binance, Samsara, Confluent, Okta, Glean, …)
+ └── Phase 1B: add 4 Bangalore-focused sources (Hevo Data, HackerRank, CommerceIQ, Stable Money)
+
 P1 — Insights (current priority)
  └── Skill gaps, Skill demand
 

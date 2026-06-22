@@ -192,6 +192,26 @@ curl -s -o /dev/null -w "%{http_code}" \
 
 ---
 
+## Phase 1B — Bangalore Source Expansion (2026-06-22)
+
+Migration `20260622000001_bangalore_phase1b_sources.sql` adds 4 Bangalore-focused companies
+identified in `docs/research/source-strategy-review.md` as Tier 1 quick wins. All use
+already-supported ATS platforms; no code changes required.
+
+| Priority | Company | ATS | Token | Confidence | Bangalore signal |
+|----------|---------|-----|-------|------------|-----------------|
+| 1 | Hevo Data | Lever | `hevodata` | HIGH | BLR HQ; data engineering; 29 active roles |
+| 2 | HackerRank | Greenhouse | `hackerrank` | HIGH | BLR office; Backend Engineer II hybrid BLR |
+| 3 | CommerceIQ | Greenhouse | `commerceiq` | HIGH | BLR HQ; Series D; SDE I/II/Senior pipeline |
+| 4 | Stable Money | Lever | `stable-money1` | MEDIUM | BLR fintech; SWE/Senior Backend; small volume |
+
+**Expected impact:** +2–4 healthy Bangalore-focused sources; incremental increase in BLR-tagged jobs.
+
+**Rollback:** Set `active = false` and `health_status = 'disabled'` for the 4 inserted rows, or re-run
+with a compensating UPDATE. No application code was changed; rollback is data-only.
+
+---
+
 ## Commit Log
 
 | SHA | Message |
@@ -200,6 +220,7 @@ curl -s -o /dev/null -w "%{http_code}" \
 | `26e7359` | `fix(sources): deactivate 10 companies with unsupported ATS platforms` |
 | `5532ed0` | `fix(sources): repair 15 unhealthy ATS board tokens and migrate 4 to Lever` |
 | `bc4ccea` | `feat(sources): add top 10 high-confidence companies across India/SG/UAE/Remote` |
+| _(pending)_ | `feat(sources): add 4 Bangalore Phase 1B sources (Hevo Data, HackerRank, CommerceIQ, Stable Money)` |
 
 ---
 
@@ -208,6 +229,7 @@ curl -s -o /dev/null -w "%{http_code}" \
 - [ ] Apply migrations via Supabase dashboard or `supabase db push`
 - [ ] Run `validate-sources` workflow — confirm healthy count increases from 13
 - [ ] Verify Razorpay and Gojek tokens probe healthy (MEDIUM confidence tokens)
+- [ ] **Phase 1B:** Verify Stable Money token (`stable-money1`) probes healthy — MEDIUM confidence slug
 - [ ] Run `source-analytics` script after next scrape cycle — check `found_count` and `kept_count` for new companies
 - [ ] Run `filter-analysis` — confirm location drop rate improving for Greenhouse
 - [ ] Set `REMOTEOK_DISABLED=true` in environment (separate, no migration needed)
