@@ -49,6 +49,7 @@ export interface JobMatch {
 export interface DigestSession {
   id: string;
   roleSelectionId: string;
+  resumeVersion: number;
   worthReviewingJobIds: string[];
   paginationMessageId: number | null;
   createdAt: string;

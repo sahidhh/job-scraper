@@ -71,6 +71,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     .select("id, title, company_name, url, job_scores!inner(ai_score)")
     .in("id", session.worthReviewingJobIds)
     .eq("job_scores.role_selection_id", session.roleSelectionId)
+    .eq("job_scores.resume_version", session.resumeVersion)
     .returns<JobRow[]>();
 
   if (error || !jobRows) {
@@ -94,8 +95,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   const text = formatPage(pageJobs, safePage, totalPages, jobs.length);
   const buttons = buildButtons(safePage, totalPages);
-
-  await answerCallbackQuery(cq.id);
 
   const botToken = process.env.TELEGRAM_BOT_TOKEN!;
   const chatId = process.env.TELEGRAM_CHAT_ID!;

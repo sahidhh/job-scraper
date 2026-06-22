@@ -3,6 +3,7 @@ import type {
   CreateStatusInput,
   Job,
   JobFilters,
+  JobStats,
   JobsPage,
   JobStatus,
   JobWithScore,
@@ -241,6 +242,48 @@ export class SupabaseJobRepository implements JobRepository {
     return count ?? 0;
   }
 
+  async countJobStats(roleSelectionId: string, _filters: JobFilters, resumeVersion: number): Promise<JobStats> {
+    // Q1: scored — ai_score IS NOT NULL for this (role, version)
+    const { count: scoredCount, error: scoredError } = await this.client
+      .from("job_scores")
+      .select("job_id", { count: "exact", head: true })
+      .eq("role_selection_id", roleSelectionId)
+      .eq("resume_version", resumeVersion)
+      .not("ai_score", "is", null);
+    if (scoredError) throw toAppError(scoredError);
+
+    // Q2: awaiting review — keyword_score IS NOT NULL, ai_score IS NULL
+    const { count: awaitingCount, error: awaitingError } = await this.client
+      .from("job_scores")
+      .select("job_id", { count: "exact", head: true })
+      .eq("role_selection_id", roleSelectionId)
+      .eq("resume_version", resumeVersion)
+      .not("keyword_score", "is", null)
+      .is("ai_score", null);
+    if (awaitingError) throw toAppError(awaitingError);
+
+    // Q3: total active jobs (full dataset, not page-scoped)
+    const { count: total, error: totalError } = await this.client
+      .from("jobs")
+      .select("id", { count: "exact", head: true })
+      .eq("is_active", true);
+    if (totalError) throw toAppError(totalError);
+
+    const scored = scoredCount ?? 0;
+    const awaitingReview = awaitingCount ?? 0;
+    const totalJobs = total ?? 0;
+    // notEligible = active jobs with no score row for this role+version
+    const notEligible = Math.max(0, totalJobs - scored - awaitingReview);
+
+    return {
+      scoredCount: scored,
+      awaitingReviewCount: awaitingReview,
+      notEligibleCount: notEligible,
+      pendingCount: awaitingReview + notEligible,
+      total: totalJobs,
+    };
+  }
+
   async findForDashboard(roleSelectionId: string, filters: JobFilters, limit: number, resumeVersion: number): Promise<JobsPage> {
     // Status filtering is resolved to a set of job ids first (mirrors the
     // aiScored-exclusion pattern in findUnscored): PostgREST filters on an
@@ -251,12 +294,11 @@ export class SupabaseJobRepository implements JobRepository {
       return { jobs: [], hasMore: false };
     }
 
-    // When minAiScore is set, use !inner join so jobs without a qualifying
-    // score row are excluded by PostgREST (not just returned with an empty
-    // job_scores array). When minAiScore is absent, keep !left so unscored
-    // jobs remain visible in the dashboard.
+    // When minAiScore is set, use !inner so jobs without a qualifying score are
+    // excluded from the result. When minAiScore is absent, keep !left so
+    // unscored jobs remain visible on the dashboard (existing behaviour).
     const joinType = filters.minAiScore !== undefined ? "inner" : "left";
-    const selectStr = DASHBOARD_SELECT.replace("job_scores!left(", `job_scores!${joinType}(`);
+    const selectStr = DASHBOARD_SELECT.replace("job_scores!left", `job_scores!${joinType}`);
 
     let query = this.client
       .from("jobs")
