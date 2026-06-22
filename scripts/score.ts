@@ -41,7 +41,14 @@ async function main(): Promise<void> {
   // estimated_cost_usd is left null on each score row and the run-cost log line
   // is omitted. See scoring.md §5.
   const costPer1kTokensRaw = optionalEnv("OPENROUTER_COST_PER_1K_TOKENS", "");
-  const costPer1kTokens = costPer1kTokensRaw !== "" ? Number(costPer1kTokensRaw) : null;
+  const costPer1kTokensParsed = costPer1kTokensRaw !== "" ? Number(costPer1kTokensRaw) : null;
+  const costPer1kTokens =
+    costPer1kTokensParsed !== null && !isNaN(costPer1kTokensParsed) ? costPer1kTokensParsed : null;
+  if (costPer1kTokensRaw !== "" && costPer1kTokens === null) {
+    console.warn(
+      `[score] OPENROUTER_COST_PER_1K_TOKENS="${costPer1kTokensRaw}" is not a valid number; cost tracking disabled`,
+    );
+  }
 
   const jobs = await jobRepository.findUnscored(roleSelection.id, roleSelection.expandedRoles, resume.version, keywordThreshold);
   console.log(`[score] scoring ${jobs.length} unscored/retry job(s) for role selection ${roleSelection.id}`);

@@ -51,7 +51,9 @@ function makeScoreRepository(): ScoreRepository {
   };
 }
 
-function makeAiProvider(result: { score: number; reasoning: string; model: string } | null): AiScoreProvider {
+function makeAiProvider(
+  result: { score: number; reasoning: string; model: string; tokensInput: number | null; tokensOutput: number | null } | null,
+): AiScoreProvider {
   return {
     score: vi.fn().mockResolvedValue(result),
   };
@@ -65,7 +67,7 @@ describe("scoreJob", () => {
     });
     const resume = makeResume({ skills: ["React", "Node.js"] });
     const scoreRepository = makeScoreRepository();
-    const aiScoreProvider = makeAiProvider({ score: 0.9, reasoning: "should not be called", model: "x" });
+    const aiScoreProvider = makeAiProvider({ score: 0.9, reasoning: "should not be called", model: "x", tokensInput: null, tokensOutput: null });
 
     const result = await scoreJob(job, resume, "role-selection-1", {
       scoreRepository,
@@ -85,7 +87,7 @@ describe("scoreJob", () => {
     const job = makeJob(); // title+description mention React and Node.js, both in resume
     const resume = makeResume({ skills: ["React", "Node.js"] });
     const scoreRepository = makeScoreRepository();
-    const aiScoreProvider = makeAiProvider({ score: 0.85, reasoning: "Strong match on stack", model: "openai/gpt-4o-mini" });
+    const aiScoreProvider = makeAiProvider({ score: 0.85, reasoning: "Strong match on stack", model: "openai/gpt-4o-mini", tokensInput: null, tokensOutput: null });
 
     const result = await scoreJob(job, resume, "role-selection-1", {
       scoreRepository,
@@ -124,7 +126,7 @@ describe("scoreJob", () => {
     const job = makeJob({ title: "Generic Role", description: "No tech mentioned here" });
     const resume = makeResume({ skills: ["React", "Node.js"] });
     const scoreRepository = makeScoreRepository();
-    const aiScoreProvider = makeAiProvider({ score: 0.5, reasoning: "n/a", model: "x" });
+    const aiScoreProvider = makeAiProvider({ score: 0.5, reasoning: "n/a", model: "x", tokensInput: null, tokensOutput: null });
 
     const result = await scoreJob(job, resume, "role-selection-1", {
       scoreRepository,
