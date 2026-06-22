@@ -33,6 +33,7 @@ function makeRepository(): JobRepository {
     createStatus: vi.fn(),
     updateStatus: vi.fn(),
     deleteStatus: vi.fn(),
+    markExpiredJobs: vi.fn(),
   };
 }
 

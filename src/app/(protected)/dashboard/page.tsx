@@ -193,8 +193,6 @@ async function JobsSection({
   const settingsRepository = new SupabaseSettingsRepository(client);
   const limit = parseLimit(params);
 
-  // Desired-experience setting is the default soft year cap; an explicit
-  // maxYears search param overrides it for the current view (P2).
   const desiredExperience = await settingsRepository.getDesiredExperienceYears();
   const effectiveFilters: JobFilters =
     filters.maxYears === undefined && desiredExperience !== null
@@ -202,19 +200,14 @@ async function JobsSection({
       : filters;
 
   const activeResume = await resumeRepository.getActive();
-  // If no active resume, version 0 matches no scores (sentinel); jobs show as pending.
   const resumeVersion = activeResume?.version ?? 0;
 
-  // countMatchingExpandedRoles is non-critical (used only for the header stat
-  // line) — isolate its failure so the rest of the dashboard still loads.
   const [{ jobs, hasMore }, matchingRoleCount, statuses] = await Promise.all([
     jobRepository.findForDashboard(roleSelectionId, effectiveFilters, limit, resumeVersion),
     jobRepository.countMatchingExpandedRoles(expandedRoles).catch(() => null),
     jobRepository.listStatuses(),
   ]);
 
-  // Dataset-level stats from job_scores — stable regardless of page limit (F4 fix).
-  // Falls back to page-derived counts if the query fails so the page still loads.
   const jobStats = await jobRepository
     .countJobStats(roleSelectionId, effectiveFilters, resumeVersion)
     .catch((): JobStats => ({
@@ -225,18 +218,16 @@ async function JobsSection({
       total: matchingRoleCount ?? jobs.length,
     }));
 
-  const { scoredCount, pendingCount, awaitingReviewCount, notEligibleCount } = jobStats;
   const lastRun = scrapeRuns[0];
 
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
         {lastRun ? `Last scraped ${new Date(lastRun.runAt).toLocaleString()} — ` : ""}
-        {jobs.length} job{jobs.length === 1 ? "" : "s"} shown.{" "}
-        {scoredCount} scored by AI, {pendingCount} pending (across all active jobs).{" "}
+        {jobs.length} job{jobs.length === 1 ? "" : "s"} shown. {jobStats.scoredCount} scored by AI, {jobStats.pendingCount} pending (across all active jobs).{" "}
         {matchingRoleCount !== null && (
           <>
-            Across all active jobs: {matchingRoleCount} match &ldquo;{primaryRole}&rdquo;.
+            Across all active jobs: {matchingRoleCount} match "{primaryRole}".
           </>
         )}
       </p>
@@ -246,23 +237,21 @@ async function JobsSection({
             ? "No jobs scraped yet. The scrape pipeline runs via GitHub Actions — see Settings for details."
             : "No matching jobs yet for this role selection. Jobs are added by the next scheduled scrape run."}
         </div>
-      ) : pendingCount > 0 ? (
+      ) : jobStats.pendingCount > 0 ? (
         <div className="space-y-1">
-          {awaitingReviewCount > 0 && (
+          {jobStats.awaitingReviewCount > 0 && (
             <div className="rounded-md border border-border bg-muted/50 p-3 text-sm text-muted-foreground">
-              {awaitingReviewCount} of {jobs.length} job{jobs.length === 1 ? "" : "s"} awaiting AI review — keyword
-              match score shown; some may stay below the AI scoring threshold and never receive an AI score.
+              {jobStats.awaitingReviewCount} of {jobs.length} job{jobs.length === 1 ? "" : "s"} awaiting AI review — keyword match score shown; some may stay below the AI scoring threshold and never receive an AI score.
             </div>
           )}
-          {notEligibleCount > 0 && (
+          {jobStats.notEligibleCount > 0 && (
             <div className="rounded-md border border-border bg-muted/50 p-3 text-sm text-muted-foreground">
-              {notEligibleCount} of {jobs.length} job{jobs.length === 1 ? "" : "s"} don&rsquo;t match &ldquo;
-              {primaryRole}&rdquo; under the current role selection and won&rsquo;t be scored.
+              {jobStats.notEligibleCount} of {jobs.length} job{jobs.length === 1 ? "" : "s"} don&apos;t match &ldquo;{primaryRole}&rdquo; under the current role selection and won&apos;t be scored.
             </div>
           )}
         </div>
       ) : null}
-      <FilterBar hasAiScores={scoredCount > 0} statuses={statuses} effectiveMaxYears={effectiveFilters.maxYears ?? null} />
+      <FilterBar hasAiScores={jobStats.scoredCount > 0} statuses={statuses} effectiveMaxYears={effectiveFilters.maxYears ?? null} />
       <JobsTable jobs={jobs} statuses={statuses} />
       {hasMore && (
         <Button asChild variant="outline" size="sm">
