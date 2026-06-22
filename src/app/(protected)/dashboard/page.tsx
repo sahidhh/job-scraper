@@ -4,7 +4,7 @@ import { FilterBar } from "@/components/dashboard/FilterBar";
 import { JobsTable } from "@/components/dashboard/JobsTable";
 import { Button } from "@/components/ui/button";
 import { SupabaseCompanyRepository } from "@/features/companies/infrastructure/SupabaseCompanyRepository";
-import type { JobFilters } from "@/features/jobs/domain/types";
+import type { JobFilters, JobStats } from "@/features/jobs/domain/types";
 import { SupabaseJobRepository } from "@/features/jobs/infrastructure/SupabaseJobRepository";
 import { SupabaseResumeRepository } from "@/features/resume/infrastructure/SupabaseResumeRepository";
 import { SupabaseRoleRepository } from "@/features/roles/infrastructure/SupabaseRoleRepository";
@@ -213,28 +213,29 @@ async function JobsSection({
     jobRepository.listStatuses(),
   ]);
 
-  const scoredCount = jobs.filter((job) => job.aiScore !== null).length;
-  // ai_score === null splits into two distinct cases (reports/dashboard-scoring-discrepancy.md):
-  // - keywordScore === null: job has no job_scores row for this role
-  //   selection at all -- its title/description don't match the active
-  //   role's expandedRoles, so it will never be scored.
-  // - keywordScore !== null: scoring ran -- either the keyword score was
-  //   below the AI gate (permanent) or the AI call failed and will be
-  //   retried on the next scoring run.
-  const notEligibleCount = jobs.filter((job) => job.aiScore === null && job.keywordScore === null).length;
-  const awaitingReviewCount = jobs.filter((job) => job.aiScore === null && job.keywordScore !== null).length;
-  const pendingCount = notEligibleCount + awaitingReviewCount;
+  // countJobStats queries job_scores directly for dataset-level counts,
+  // not page-scoped counts from the jobs array (F4 correctness fix).
+  // Falls back to page-derived counts if the query fails.
+  const jobStats = await jobRepository
+    .countJobStats(roleSelectionId, resumeVersion, matchingRoleCount ?? 0)
+    .catch((): JobStats => ({
+      scoredCount: jobs.filter((j) => j.aiScore !== null).length,
+      awaitingReviewCount: jobs.filter((j) => j.aiScore === null && j.keywordScore !== null).length,
+      notEligibleCount: jobs.filter((j) => j.aiScore === null && j.keywordScore === null).length,
+      pendingCount: jobs.filter((j) => j.aiScore === null).length,
+      total: matchingRoleCount ?? jobs.length,
+    }));
+
   const lastRun = scrapeRuns[0];
 
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
         {lastRun ? `Last scraped ${new Date(lastRun.runAt).toLocaleString()} — ` : ""}
-        {jobs.length} job{jobs.length === 1 ? "" : "s"} found, {scoredCount} scored by AI, {pendingCount} pending.{" "}
+        {jobStats.scoredCount} scored by AI, {jobStats.pendingCount} pending.{" "}
         {matchingRoleCount !== null && (
           <>
-            {matchingRoleCount} job{matchingRoleCount === 1 ? "" : "s"} match &ldquo;{primaryRole}&rdquo; and{" "}
-            {matchingRoleCount === 1 ? "is" : "are"} eligible for AI scoring under the current role selection.
+            Showing {jobs.length} of {matchingRoleCount} active job{matchingRoleCount === 1 ? "" : "s"} matching &ldquo;{primaryRole}&rdquo;.
           </>
         )}
       </p>
@@ -244,23 +245,23 @@ async function JobsSection({
             ? "No jobs scraped yet. The scrape pipeline runs via GitHub Actions — see Settings for details."
             : "No matching jobs yet for this role selection. Jobs are added by the next scheduled scrape run."}
         </div>
-      ) : pendingCount > 0 ? (
+      ) : jobStats.pendingCount > 0 ? (
         <div className="space-y-1">
-          {awaitingReviewCount > 0 && (
+          {jobStats.awaitingReviewCount > 0 && (
             <div className="rounded-md border border-border bg-muted/50 p-3 text-sm text-muted-foreground">
-              {awaitingReviewCount} of {jobs.length} job{jobs.length === 1 ? "" : "s"} awaiting AI review — keyword
+              {jobStats.awaitingReviewCount} of {jobs.length} job{jobs.length === 1 ? "" : "s"} awaiting AI review — keyword
               match score shown; some may stay below the AI scoring threshold and never receive an AI score.
             </div>
           )}
-          {notEligibleCount > 0 && (
+          {jobStats.notEligibleCount > 0 && (
             <div className="rounded-md border border-border bg-muted/50 p-3 text-sm text-muted-foreground">
-              {notEligibleCount} of {jobs.length} job{jobs.length === 1 ? "" : "s"} don&rsquo;t match &ldquo;
+              {jobStats.notEligibleCount} of {jobs.length} job{jobs.length === 1 ? "" : "s"} don&rsquo;t match &ldquo;
               {primaryRole}&rdquo; under the current role selection and won&rsquo;t be scored.
             </div>
           )}
         </div>
       ) : null}
-      <FilterBar hasAiScores={scoredCount > 0} statuses={statuses} effectiveMaxYears={effectiveFilters.maxYears ?? null} />
+      <FilterBar hasAiScores={jobStats.scoredCount > 0} statuses={statuses} effectiveMaxYears={effectiveFilters.maxYears ?? null} />
       <JobsTable jobs={jobs} statuses={statuses} />
       {hasMore && (
         <Button asChild variant="outline" size="sm">

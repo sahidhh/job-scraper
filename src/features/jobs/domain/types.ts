@@ -97,3 +97,13 @@ export interface JobsPage {
   jobs: JobWithScore[];
   hasMore: boolean;
 }
+
+// Dataset-level scoring statistics for the dashboard stat line.
+// Computed from job_scores directly, not from the paged findForDashboard result.
+export interface JobStats {
+  scoredCount: number;
+  awaitingReviewCount: number;
+  notEligibleCount: number;
+  pendingCount: number; // awaitingReviewCount + notEligibleCount
+  total: number;
+}

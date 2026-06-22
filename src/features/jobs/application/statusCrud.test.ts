@@ -19,11 +19,13 @@ function makeRepository(): JobRepository {
     findUnscored: vi.fn(),
     findForDashboard: vi.fn(),
     countMatchingExpandedRoles: vi.fn(),
+    countJobStats: vi.fn(),
     listStatuses: vi.fn(),
     setJobStatus: vi.fn(),
     createStatus: vi.fn().mockResolvedValue(mockStatus),
     updateStatus: vi.fn().mockResolvedValue(mockStatus),
     deleteStatus: vi.fn().mockResolvedValue(undefined),
+    markExpiredJobs: vi.fn(),
   };
 }
 

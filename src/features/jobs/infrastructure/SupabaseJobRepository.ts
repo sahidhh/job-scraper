@@ -4,6 +4,7 @@ import type {
   Job,
   JobFilters,
   JobsPage,
+  JobStats,
   JobStatus,
   JobWithScore,
   NormalizedJob,
@@ -239,6 +240,34 @@ export class SupabaseJobRepository implements JobRepository {
       .or(roleFilter);
     if (error) throw toAppError(error);
     return count ?? 0;
+  }
+
+  async countJobStats(roleSelectionId: string, resumeVersion: number, total: number): Promise<JobStats> {
+    const [scoredResult, awaitingResult] = await Promise.all([
+      this.client
+        .from("job_scores")
+        .select("job_id", { count: "exact", head: true })
+        .eq("role_selection_id", roleSelectionId)
+        .eq("resume_version", resumeVersion)
+        .not("ai_score", "is", null),
+      this.client
+        .from("job_scores")
+        .select("job_id", { count: "exact", head: true })
+        .eq("role_selection_id", roleSelectionId)
+        .eq("resume_version", resumeVersion)
+        .not("keyword_score", "is", null)
+        .is("ai_score", null),
+    ]);
+
+    if (scoredResult.error) throw toAppError(scoredResult.error);
+    if (awaitingResult.error) throw toAppError(awaitingResult.error);
+
+    const scoredCount = scoredResult.count ?? 0;
+    const awaitingReviewCount = awaitingResult.count ?? 0;
+    const notEligibleCount = Math.max(0, total - scoredCount - awaitingReviewCount);
+    const pendingCount = awaitingReviewCount + notEligibleCount;
+
+    return { scoredCount, awaitingReviewCount, notEligibleCount, pendingCount, total };
   }
 
   async findForDashboard(roleSelectionId: string, filters: JobFilters, limit: number, resumeVersion: number): Promise<JobsPage> {
