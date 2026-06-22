@@ -5,8 +5,12 @@
 ### 1.1 Job Source Coverage
 Only six sources are integrated (Greenhouse, Lever, Ashby, Wellfound, RemoteOK, MyCareersFuture). Major platforms like LinkedIn, Indeed, Glassdoor, and Naukri are not supported because they either have no public API, require authentication, or prohibit scraping in their ToS.
 
+Of the 38 ATS company boards currently configured, **13 are confirmed healthy** and **25 are broken** as of the June 2026 validation run (run ID 27865212149). Three DB migrations (`20260620000001–3`) are code-complete and will raise the healthy count to ≥ 20 once applied. See `reports/source-validation-2026-06-22.md` for the full breakdown and `docs/research/source-strategy-review.md` for the expansion plan.
+
+RemoteOK and Wellfound are disabled (zero effective yield). MyCareersFuture is healthy (Singapore-specific, small volume).
+
 ### 1.2 Wellfound Dependency
-The Wellfound adapter requires a custom feed URL (`WELLFOUND_FEED_URL`) because Wellfound has no documented public API. If the URL is not configured, the adapter logs `[wellfound] invalid configuration` and returns zero results. Set `WELLFOUND_DISABLED=true` to opt out explicitly (suppresses the warning). Users without a Wellfound feed receive no Wellfound data. See `docs/sources/wellfound.md` for setup instructions.
+The Wellfound adapter requires a custom feed URL (`WELLFOUND_FEED_URL`) because Wellfound has no documented public API. If the URL is not configured, the adapter auto-disables and returns zero results. `WELLFOUND_DISABLED=true` is set explicitly in `scrape.yml` to suppress any residual log noise. Users without a Wellfound feed receive no Wellfound data. See `docs/sources/wellfound.md` for setup instructions.
 
 ### 1.3 Scrape Cadence
 Jobs are fetched every 2 hours. New postings may be up to 2 hours old before appearing in the dashboard. There is no webhook or push mechanism from any ATS source.
@@ -123,3 +127,5 @@ Skill gap and skill demand insights are meaningful only when both an active resu
 | Sequential AI scoring (no batching) | Slow for large job backlogs | P2 |
 | In-memory analytics aggregation | Slow for large datasets | P3 |
 | Manual wellfound feed URL configuration | Non-obvious setup step | P3 |
+| June DB migrations not yet applied | 25 broken sources, 10 should be disabled; 13 should be repaired | P0 |
+| 7 broken sources without repair/disable plan | Revolut, Grab, BrowserStack, Rippling, Deel, Freshworks, Wise — all returning 404, not in June migration scope | P1 |
