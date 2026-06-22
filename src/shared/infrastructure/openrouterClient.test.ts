@@ -1,11 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { OpenRouterError, callOpenRouterJson } from "./openrouterClient";
 
-function chatResponse(content: unknown, status = 200): Response {
-  return new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify(content) } }] }), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
+function chatResponse(
+  content: unknown,
+  status = 200,
+  usage?: { prompt_tokens?: number; completion_tokens?: number },
+): Response {
+  return new Response(
+    JSON.stringify({ choices: [{ message: { content: JSON.stringify(content) } }], usage }),
+    { status, headers: { "Content-Type": "application/json" } },
+  );
 }
 
 describe("callOpenRouterJson", () => {
@@ -25,13 +29,13 @@ describe("callOpenRouterJson", () => {
     const fetchMock = vi.fn().mockResolvedValue(chatResponse({ relatedRoles: ["a", "b"] }));
     vi.stubGlobal("fetch", fetchMock);
 
-    const result = await callOpenRouterJson({
+    const { payload } = await callOpenRouterJson({
       messages: [{ role: "user", content: "hello" }],
       schemaName: "role_expansion",
       schema: { type: "object" },
     });
 
-    expect(result).toEqual({ relatedRoles: ["a", "b"] });
+    expect(payload).toEqual({ relatedRoles: ["a", "b"] });
 
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toBe("https://openrouter.ai/api/v1/chat/completions");
@@ -51,7 +55,8 @@ describe("callOpenRouterJson", () => {
     const fetchMock = vi.fn().mockResolvedValue(chatResponse({ score: 0.8, reasoning: "ok" }));
     vi.stubGlobal("fetch", fetchMock);
 
-    await callOpenRouterJson({ messages: [], schemaName: "x", schema: {} });
+    const { payload } = await callOpenRouterJson({ messages: [], schemaName: "x", schema: {} });
+    expect(payload).toBeDefined();
 
     const body = JSON.parse((fetchMock.mock.calls[0]![1] as RequestInit).body as string);
     expect(body.max_tokens).toBe(300);
@@ -62,7 +67,8 @@ describe("callOpenRouterJson", () => {
     const fetchMock = vi.fn().mockResolvedValue(chatResponse({ score: 0.5, reasoning: "ok" }));
     vi.stubGlobal("fetch", fetchMock);
 
-    await callOpenRouterJson({ messages: [], schemaName: "x", schema: {} });
+    const { payload } = await callOpenRouterJson({ messages: [], schemaName: "x", schema: {} });
+    expect(payload).toBeDefined();
 
     const body = JSON.parse((fetchMock.mock.calls[0]![1] as RequestInit).body as string);
     expect(body.max_tokens).toBe(150);
@@ -127,9 +133,31 @@ describe("callOpenRouterJson", () => {
       .mockResolvedValueOnce(chatResponse({ score: 0.5, reasoning: "ok" }));
     vi.stubGlobal("fetch", fetchMock);
 
-    const result = await callOpenRouterJson({ messages: [], schemaName: "x", schema: {} });
+    const { payload } = await callOpenRouterJson({ messages: [], schemaName: "x", schema: {} });
 
-    expect(result).toEqual({ score: 0.5, reasoning: "ok" });
+    expect(payload).toEqual({ score: 0.5, reasoning: "ok" });
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("returns token usage when the response includes usage", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(chatResponse({ score: 0.7, reasoning: "good" }, 200, { prompt_tokens: 1200, completion_tokens: 80 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { usage } = await callOpenRouterJson({ messages: [], schemaName: "x", schema: {} });
+
+    expect(usage.promptTokens).toBe(1200);
+    expect(usage.completionTokens).toBe(80);
+  });
+
+  it("returns null token usage when the response omits usage", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(chatResponse({ score: 0.5, reasoning: "ok" }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { usage } = await callOpenRouterJson({ messages: [], schemaName: "x", schema: {} });
+
+    expect(usage.promptTokens).toBeNull();
+    expect(usage.completionTokens).toBeNull();
   });
 });

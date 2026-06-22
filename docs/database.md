@@ -119,6 +119,9 @@ create table job_scores (
   ai_score            numeric(5,4) check (ai_score >= 0 and ai_score <= 1),
   ai_reasoning        text,
   scored_at           timestamptz not null default now(),
+  tokens_input        integer,             -- prompt tokens from OpenRouter usage; null if no AI call
+  tokens_output       integer,             -- completion tokens from OpenRouter usage; null if no AI call
+  estimated_cost_usd  numeric(10,8),       -- (tokens_input + tokens_output) / 1000 * OPENROUTER_COST_PER_1K_TOKENS; null if env unset
 
   unique (job_id, role_selection_id)
 );

@@ -41,8 +41,22 @@ export interface OpenRouterJsonRequest {
   schema: Record<string, unknown>;
 }
 
+export interface TokenUsage {
+  promptTokens: number | null;
+  completionTokens: number | null;
+}
+
+export interface OpenRouterJsonResult {
+  payload: unknown;
+  usage: TokenUsage;
+}
+
 interface OpenRouterChatResponse {
   choices?: { message?: { content?: string } }[];
+  usage?: {
+    prompt_tokens?: number;
+    completion_tokens?: number;
+  };
 }
 
 function classifyStatus(status: number): AiFailureReason {
@@ -53,11 +67,11 @@ function classifyStatus(status: number): AiFailureReason {
 }
 
 // Issues a single OpenRouter chat completion request constrained to a JSON
-// schema and returns the parsed JSON payload. Throws OpenRouterError on
-// timeout/non-2xx (after fetchWithRetry's one retry on 5xx/429) or a
-// malformed response — callers decide how to handle failure (scoring.md §3
-// vs role expansion fallback).
-export async function callOpenRouterJson(request: OpenRouterJsonRequest): Promise<unknown> {
+// schema. Returns the parsed JSON payload and token usage from the response.
+// Throws OpenRouterError on timeout/non-2xx (after fetchWithRetry's one retry
+// on 5xx/429) or a malformed response — callers decide how to handle failure
+// (scoring.md §3 vs role expansion fallback).
+export async function callOpenRouterJson(request: OpenRouterJsonRequest): Promise<OpenRouterJsonResult> {
   const apiKey = requireEnv("OPENROUTER_API_KEY");
   const model = requireEnv("OPENROUTER_MODEL");
   const maxTokens = Number(optionalEnv("OPENROUTER_MAX_TOKENS", String(DEFAULT_MAX_TOKENS)));
@@ -101,7 +115,12 @@ export async function callOpenRouterJson(request: OpenRouterJsonRequest): Promis
       throw new OpenRouterError("OpenRouter response missing message content", "malformed_response");
     }
 
-    return JSON.parse(content) as unknown;
+    const usage: TokenUsage = {
+      promptTokens: body.usage?.prompt_tokens ?? null,
+      completionTokens: body.usage?.completion_tokens ?? null,
+    };
+
+    return { payload: JSON.parse(content) as unknown, usage };
   } catch (err) {
     if (err instanceof OpenRouterError) throw err;
     const reason: AiFailureReason = err instanceof Error && err.name === "AbortError" ? "timeout" : "unknown";

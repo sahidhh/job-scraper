@@ -5,6 +5,8 @@ export interface AiScoreResult {
   score: number; // [0,1]
   reasoning: string;
   model: string; // OPENROUTER_MODEL value used for this call
+  tokensInput: number | null;
+  tokensOutput: number | null;
 }
 
 // Port for stage-2 AI scoring (scoring.md §3, decisions.md AD-07).

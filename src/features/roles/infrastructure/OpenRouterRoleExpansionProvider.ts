@@ -22,7 +22,7 @@ interface RoleExpansionResponse {
 // the caller surfaces the error to the user.
 export class OpenRouterRoleExpansionProvider implements RoleExpansionProvider {
   async expand(primaryRole: string): Promise<string[]> {
-    const result = (await callOpenRouterJson({
+    const { payload } = await callOpenRouterJson({
       messages: [
         {
           role: "system",
@@ -38,7 +38,8 @@ export class OpenRouterRoleExpansionProvider implements RoleExpansionProvider {
       ],
       schemaName: "role_expansion",
       schema: SCHEMA,
-    })) as RoleExpansionResponse;
+    });
+    const result = payload as RoleExpansionResponse;
 
     if (!Array.isArray(result.relatedRoles)) {
       throw new Error("OpenRouter role expansion response missing relatedRoles array");

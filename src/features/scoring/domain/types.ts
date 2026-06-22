@@ -6,6 +6,10 @@ export interface JobScore {
   keywordScore: number; // [0,1] -- stage 1, always set (scoring.md §2)
   aiScore: number | null; // [0,1] -- stage 2, set only if keywordScore >= KEYWORD_THRESHOLD
   aiReasoning: string | null;
+  model: string | null;
+  tokensInput: number | null;
+  tokensOutput: number | null;
+  estimatedCostUsd: number | null;
   scoredAt: string; // ISO 8601
 }
 
@@ -17,4 +21,7 @@ export interface NewJobScore {
   aiScore?: number | null;
   aiReasoning?: string | null;
   model?: string | null;
+  tokensInput?: number | null;
+  tokensOutput?: number | null;
+  estimatedCostUsd?: number | null;
 }

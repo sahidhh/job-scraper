@@ -99,6 +99,7 @@ export type Database = {
         Row: {
           ai_reasoning: string | null
           ai_score: number | null
+          estimated_cost_usd: number | null
           id: string
           job_id: string
           keyword_score: number
@@ -106,10 +107,13 @@ export type Database = {
           resume_version: number
           role_selection_id: string
           scored_at: string
+          tokens_input: number | null
+          tokens_output: number | null
         }
         Insert: {
           ai_reasoning?: string | null
           ai_score?: number | null
+          estimated_cost_usd?: number | null
           id?: string
           job_id: string
           keyword_score: number
@@ -117,10 +121,13 @@ export type Database = {
           resume_version: number
           role_selection_id: string
           scored_at?: string
+          tokens_input?: number | null
+          tokens_output?: number | null
         }
         Update: {
           ai_reasoning?: string | null
           ai_score?: number | null
+          estimated_cost_usd?: number | null
           id?: string
           job_id?: string
           keyword_score?: number
@@ -128,6 +135,8 @@ export type Database = {
           resume_version?: number
           role_selection_id?: string
           scored_at?: string
+          tokens_input?: number | null
+          tokens_output?: number | null
         }
         Relationships: [
           {

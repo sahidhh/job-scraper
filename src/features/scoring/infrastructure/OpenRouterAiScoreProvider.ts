@@ -23,6 +23,8 @@ export interface AiCallStats {
   successful: number;
   failed: number;
   failuresByReason: Record<AiFailureReason, number>;
+  totalTokensInput: number;
+  totalTokensOutput: number;
 }
 
 const EMPTY_FAILURES: Record<AiFailureReason, number> = {
@@ -62,26 +64,31 @@ export class OpenRouterAiScoreProvider implements AiScoreProvider {
   private successful = 0;
   private failed = 0;
   private failuresByReason: Record<AiFailureReason, number> = { ...EMPTY_FAILURES };
+  private totalTokensInput = 0;
+  private totalTokensOutput = 0;
 
   getStats(): AiCallStats {
     return {
       successful: this.successful,
       failed: this.failed,
       failuresByReason: { ...this.failuresByReason },
+      totalTokensInput: this.totalTokensInput,
+      totalTokensOutput: this.totalTokensOutput,
     };
   }
 
   async score(input: { job: Job; resume: Resume }): Promise<AiScoreResult | null> {
     const model = requireEnv("OPENROUTER_MODEL");
     try {
-      const result = (await callOpenRouterJson({
+      const { payload, usage } = await callOpenRouterJson({
         messages: [
           { role: "system", content: buildSystemPrompt(input.resume) },
           { role: "user", content: buildJobPrompt(input.job) },
         ],
         schemaName: "job_match_score",
         schema: SCHEMA,
-      })) as JobMatchResponse;
+      });
+      const result = payload as JobMatchResponse;
 
       if (typeof result.score !== "number" || typeof result.reasoning !== "string") {
         this.failed += 1;
@@ -91,10 +98,15 @@ export class OpenRouterAiScoreProvider implements AiScoreProvider {
       }
 
       this.successful += 1;
+      this.totalTokensInput += usage.promptTokens ?? 0;
+      this.totalTokensOutput += usage.completionTokens ?? 0;
+
       return {
         score: Math.min(1, Math.max(0, result.score)),
         reasoning: result.reasoning,
         model,
+        tokensInput: usage.promptTokens,
+        tokensOutput: usage.completionTokens,
       };
     } catch (err) {
       const reason: AiFailureReason = err instanceof OpenRouterError ? err.reason : "unknown";
