@@ -6,10 +6,10 @@ import { toAppError } from "@/shared/infrastructure/supabaseError";
 export class SupabaseDigestSessionRepository implements DigestSessionRepository {
   constructor(private readonly client: TypedSupabaseClient) {}
 
-  async save(roleSelectionId: string, worthReviewingJobIds: string[]): Promise<{ id: string }> {
+  async save(roleSelectionId: string, worthReviewingJobIds: string[], resumeVersion: number): Promise<{ id: string }> {
     const { data, error } = await this.client
       .from("digest_sessions")
-      .insert({ role_selection_id: roleSelectionId, worth_reviewing_job_ids: worthReviewingJobIds })
+      .insert({ role_selection_id: roleSelectionId, worth_reviewing_job_ids: worthReviewingJobIds, resume_version: resumeVersion })
       .select("id")
       .single();
 
@@ -31,6 +31,7 @@ export class SupabaseDigestSessionRepository implements DigestSessionRepository 
     return {
       id: data.id,
       roleSelectionId: data.role_selection_id,
+      resumeVersion: data.resume_version,
       worthReviewingJobIds: data.worth_reviewing_job_ids,
       paginationMessageId: data.pagination_message_id,
       createdAt: data.created_at,

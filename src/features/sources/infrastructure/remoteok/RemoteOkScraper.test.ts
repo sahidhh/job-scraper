@@ -16,7 +16,7 @@ describe("remoteokScraper", () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
 
-    const result = await remoteokScraper.fetchJobs([]);
+    const result = await remoteokScraper.fetchJobs([], []);
 
     expect(result).toEqual([]);
     expect(fetchMock).not.toHaveBeenCalled();
@@ -27,7 +27,7 @@ describe("remoteokScraper", () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
 
-    const result = await remoteokScraper.fetchJobs([]);
+    const result = await remoteokScraper.fetchJobs([], []);
 
     expect(result).toEqual([]);
     expect(fetchMock).not.toHaveBeenCalled();

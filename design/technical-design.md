@@ -178,7 +178,21 @@ sequenceDiagram
 | Uncaught RSC error | Caught by `src/app/error.tsx` (route segment) or `src/app/global-error.tsx` (root fallback); user sees a readable message + "Try again" button |
 | Service-role in `app/` | Blocked by CI check (`npm run check:service-role-boundary`) |
 
-## 9. Configuration
+## 9. Worth Reviewing Correctness Notes
+
+### Webhook score versioning (F1 + F2)
+
+`digest_sessions` stores `resume_version` (added in migration `20260622000002`). The Telegram webhook (`POST /api/telegram/webhook`) scopes its `job_scores` fetch to `(role_selection_id, resume_version)` from the session row, ensuring the paginated display matches the score band used when the digest was originally sent. Without this, a post-upload re-score could expose stale scores via `job_scores[0]`.
+
+### Dashboard `minAiScore` filter join type (F3)
+
+`findForDashboard` in `SupabaseJobRepository` uses a conditional join type: `job_scores!inner` when `filters.minAiScore` is set, `job_scores!left` otherwise. PostgREST's `!left` join narrows the embedded array but does not exclude the parent row — meaning unfiltered jobs appear as `aiScore: null`. Switching to `!inner` when a score threshold is active ensures only qualifying jobs are returned, making the `/dashboard?minScore=0.80` deep-link from Telegram behave correctly.
+
+### Dashboard stats scope (F4)
+
+`countJobStats` queries `job_scores` directly with COUNT aggregates, not from the paged `findForDashboard` result. This decouples the stat line from `DEFAULT_JOBS_LIMIT = 50`, so `scoredCount` and `pendingCount` reflect the full dataset rather than the current page.
+
+## 10. Configuration
 
 All runtime behaviour is controlled via environment variables. See [tech-stack.md](tech-stack.md) for the full list and defaults.
 

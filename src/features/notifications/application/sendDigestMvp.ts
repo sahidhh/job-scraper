@@ -73,6 +73,7 @@ export async function sendDigestMvp(
     await deps.digestSessionRepository.save(
       roleSelectionId,
       worthReviewing.map((j: JobMatch) => j.jobId),
+      deps.resumeVersion,
     );
   }
 
