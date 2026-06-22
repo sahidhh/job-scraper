@@ -251,9 +251,16 @@ export class SupabaseJobRepository implements JobRepository {
       return { jobs: [], hasMore: false };
     }
 
+    // When minAiScore is set, use !inner join so jobs without a qualifying
+    // score row are excluded by PostgREST (not just returned with an empty
+    // job_scores array). When minAiScore is absent, keep !left so unscored
+    // jobs remain visible in the dashboard.
+    const joinType = filters.minAiScore !== undefined ? "inner" : "left";
+    const selectStr = DASHBOARD_SELECT.replace("job_scores!left(", `job_scores!${joinType}(`);
+
     let query = this.client
       .from("jobs")
-      .select(DASHBOARD_SELECT)
+      .select(selectStr)
       .eq("is_active", true)
       .eq("job_scores.role_selection_id", roleSelectionId)
       .eq("job_scores.resume_version", resumeVersion);
