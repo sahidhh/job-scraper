@@ -118,6 +118,7 @@ describe("SupabaseJobRepository", () => {
           updatedAt: "2025-12-01T00:00:00Z",
           isActive: true,
           inactiveReason: null,
+          minYears: null,
         },
       ]);
 

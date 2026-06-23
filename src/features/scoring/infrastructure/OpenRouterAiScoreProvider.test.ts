@@ -30,6 +30,7 @@ const job: Job = {
   updatedAt: "2026-01-01T00:00:00Z",
   isActive: true,
   inactiveReason: null,
+  minYears: null,
 };
 
 const resume: Resume = {
@@ -183,5 +184,66 @@ describe("OpenRouterAiScoreProvider", () => {
 
     expect(result?.tokensInput).toBe(1500);
     expect(result?.tokensOutput).toBe(70);
+  });
+
+  it("includes structured location tags in the job prompt", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(chatResponse({ score: 0.8, reasoning: "ok" }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const jobWithTags: Job = { ...job, locationRaw: "Singapore (Hybrid)", locationTags: ["singapore"] };
+    const provider = new OpenRouterAiScoreProvider();
+    await provider.score({ job: jobWithTags, resume });
+
+    const body = JSON.parse((fetchMock.mock.calls[0]![1] as RequestInit).body as string);
+    expect(body.messages[1].content).toContain("Singapore (Hybrid)");
+    expect(body.messages[1].content).toContain("tags: singapore");
+  });
+
+  it("omits the tags clause when locationTags is empty", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(chatResponse({ score: 0.8, reasoning: "ok" }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const jobNoTags: Job = { ...job, locationRaw: "Unknown", locationTags: [] };
+    const provider = new OpenRouterAiScoreProvider();
+    await provider.score({ job: jobNoTags, resume });
+
+    const body = JSON.parse((fetchMock.mock.calls[0]![1] as RequestInit).body as string);
+    expect(body.messages[1].content).toContain("Location: Unknown");
+    expect(body.messages[1].content).not.toContain("tags:");
+  });
+
+  it("includes experience requirement in the job prompt when minYears is set", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(chatResponse({ score: 0.8, reasoning: "ok" }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const seniorJob: Job = { ...job, minYears: 5 };
+    const provider = new OpenRouterAiScoreProvider();
+    await provider.score({ job: seniorJob, resume });
+
+    const body = JSON.parse((fetchMock.mock.calls[0]![1] as RequestInit).body as string);
+    expect(body.messages[1].content).toContain("Experience required: 5+ years");
+  });
+
+  it("omits the experience line when minYears is null", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(chatResponse({ score: 0.8, reasoning: "ok" }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const provider = new OpenRouterAiScoreProvider();
+    await provider.score({ job, resume }); // job.minYears = null
+
+    const body = JSON.parse((fetchMock.mock.calls[0]![1] as RequestInit).body as string);
+    expect(body.messages[1].content).not.toContain("Experience required");
+  });
+
+  it("does not include a standalone skills list in the system prompt", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(chatResponse({ score: 0.8, reasoning: "ok" }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const provider = new OpenRouterAiScoreProvider();
+    await provider.score({ job, resume });
+
+    const body = JSON.parse((fetchMock.mock.calls[0]![1] as RequestInit).body as string);
+    expect(body.messages[0].content).not.toContain("Candidate skills:");
+    expect(body.messages[0].content).toContain(resume.parsedText);
   });
 });

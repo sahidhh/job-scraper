@@ -57,6 +57,7 @@ function toJob(row: JobRow): Job {
     updatedAt: row.updated_at,
     isActive: row.is_active,
     inactiveReason: row.inactive_reason,
+    minYears: row.min_years ?? null,
   };
 }
 

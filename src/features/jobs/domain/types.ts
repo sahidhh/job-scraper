@@ -18,6 +18,7 @@ export interface Job {
   updatedAt: string;
   isActive: boolean;
   inactiveReason: string | null;
+  minYears: number | null;
 }
 
 // Input to JobRepository.upsertMany() -- a TaggedRawJob ready to persist.

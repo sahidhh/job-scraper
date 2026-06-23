@@ -51,4 +51,22 @@ describe("tagLocations", () => {
 
     expect(tagged).toEqual({ ...job, locationTags: ["remote"] });
   });
+
+  it("does not tag Indiana, USA as india", () => {
+    const [result] = tagLocations([makeRawJob({ locationRaw: "Indiana, USA" })]);
+
+    expect(result?.locationTags).toEqual([]);
+  });
+
+  it("still tags a standalone India location correctly", () => {
+    const [result] = tagLocations([makeRawJob({ locationRaw: "India" })]);
+
+    expect(result?.locationTags).toEqual(["india"]);
+  });
+
+  it("tags a compound India location correctly", () => {
+    const [result] = tagLocations([makeRawJob({ locationRaw: "Mumbai, India" })]);
+
+    expect(result?.locationTags).toEqual(["india"]);
+  });
 });

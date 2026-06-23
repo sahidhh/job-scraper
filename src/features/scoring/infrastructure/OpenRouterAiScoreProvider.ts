@@ -39,7 +39,6 @@ const EMPTY_FAILURES: Record<AiFailureReason, number> = {
 function buildSystemPrompt(resume: Resume): string {
   return [
     "You are an assistant that scores how well a job posting matches a candidate's resume.",
-    `Candidate skills: ${resume.skills.join(", ")}`,
     "Candidate resume:",
     resume.parsedText,
     "Respond with score (a number from 0 to 1) and reasoning (1-3 sentences explaining the score).",
@@ -47,13 +46,23 @@ function buildSystemPrompt(resume: Resume): string {
 }
 
 function buildJobPrompt(job: Job): string {
-  return [
+  const locationLine =
+    job.locationTags.length > 0
+      ? `Location: ${job.locationRaw} (tags: ${job.locationTags.join(", ")})`
+      : `Location: ${job.locationRaw}`;
+
+  const lines = [
     `Title: ${job.title}`,
     `Company: ${job.companyName ?? "Unknown"}`,
-    `Location: ${job.locationRaw}`,
-    "Description:",
-    job.description,
-  ].join("\n");
+    locationLine,
+  ];
+
+  if (job.minYears !== null) {
+    lines.push(`Experience required: ${job.minYears}+ years`);
+  }
+
+  lines.push("Description:", job.description);
+  return lines.join("\n");
 }
 
 // Stage-2 AI scoring (scoring.md §3, decisions.md AD-07). Never throws --

@@ -38,8 +38,8 @@ This is pure set arithmetic over two string arrays — no external calls, runs f
 Triggered only when `keyword_score >= KEYWORD_THRESHOLD` (config default `0.25`, env-overridable).
 
 1. Build a single OpenRouter chat completion request:
-   - **System/context:** resume `parsed_text` (or `skills` list, whichever fits token budget — prefer `skills` + a short summary excerpt to keep prompts small).
-   - **User content:** job `title`, `company_name`, `location_raw`, `description`.
+   - **System/context:** resume `parsed_text` (full PDF-extracted text; the skills list is not sent separately — it is already embedded in `parsed_text`).
+   - **User content:** job `title`, `company_name`, `location_raw` + `location_tags` (structured geography, e.g. `tags: singapore, remote`), `min_years` when non-null (e.g. `Experience required: 5+ years`), `description`.
    - **Requested output:** structured JSON — `{ "score": number (0-1), "reasoning": string (1-3 sentences) }`, enforced via OpenRouter's JSON response-format / schema feature.
 2. Model is configurable via `OPENROUTER_MODEL` env var (pick a low-cost model suitable for short classification+reasoning tasks — exact model left as a deploy-time choice, not hardcoded).
 3. Request has a timeout and **one retry** on timeout/5xx. On repeated failure: `ai_score`/`ai_reasoning` stay `null`, `keyword_score` row already upserted — job still visible in dashboard, just unscored at stage 2.
@@ -50,8 +50,8 @@ Triggered only when `keyword_score >= KEYWORD_THRESHOLD` (config default `0.25`,
 
 | Component | Typical range |
 |---|---|
-| System prompt (resume text + skills list) | 1 000 – 3 500 tokens |
-| User prompt (job title + description) | 500 – 2 000 tokens |
+| System prompt (resume text only — skills list removed) | 1 000 – 3 500 tokens |
+| User prompt (title + location tags + min_years + description) | 500 – 2 000 tokens |
 | Output (score + reasoning JSON) | 50 – 120 tokens |
 | `max_tokens` ceiling | 300 tokens |
 
