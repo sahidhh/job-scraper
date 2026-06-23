@@ -43,6 +43,9 @@ export interface JobFilters {
   locationTags?: LocationTag[];
   sources?: JobSource[];
   minAiScore?: number;
+  // Keep jobs requiring at most this many years (soft). Jobs with
+  // min_years NULL ("unknown") always pass and are never excluded.
+  maxYears?: number;
 }
 
 // Job joined with its score for the active role_selection.
@@ -50,4 +53,5 @@ export interface JobWithScore extends Job {
   keywordScore: number | null;
   aiScore: number | null;
   aiReasoning: string | null;
+  minYears: number | null;
 }

@@ -37,7 +37,14 @@ export function JobRow({ job }: { job: JobWithScore }) {
         <TableCell>
           <Badge variant="secondary">{job.source}</Badge>
         </TableCell>
-        <TableCell>{formatScore(job.aiScore ?? job.keywordScore)}</TableCell>
+        <TableCell>
+          <div className="flex flex-col gap-0.5">
+            <span>{formatScore(job.aiScore ?? job.keywordScore)}</span>
+            {job.minYears !== null && (
+              <span className="text-xs text-muted-foreground">{job.minYears}+ yrs</span>
+            )}
+          </div>
+        </TableCell>
         <TableCell>
           <a href={job.url} target="_blank" rel="noreferrer" className="text-primary hover:underline">
             View

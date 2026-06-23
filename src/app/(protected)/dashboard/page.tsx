@@ -12,10 +12,10 @@ import { JOB_SOURCES, LOCATION_TAGS } from "@/shared/domain/enums";
 import { createSupabaseServerClient } from "@/shared/infrastructure/supabase/server";
 
 interface DashboardPageProps {
-  searchParams: Promise<{ location?: string; source?: string; minScore?: string }>;
+  searchParams: Promise<{ location?: string; source?: string; minScore?: string; maxYears?: string }>;
 }
 
-function parseFilters(params: { location?: string; source?: string; minScore?: string }): JobFilters {
+function parseFilters(params: { location?: string; source?: string; minScore?: string; maxYears?: string }): JobFilters {
   const filters: JobFilters = {};
 
   if (params.location && (LOCATION_TAGS as readonly string[]).includes(params.location)) {
@@ -28,6 +28,12 @@ function parseFilters(params: { location?: string; source?: string; minScore?: s
     const value = Number(params.minScore);
     if (!Number.isNaN(value)) {
       filters.minAiScore = value;
+    }
+  }
+  if (params.maxYears) {
+    const value = Number(params.maxYears);
+    if (Number.isInteger(value) && value >= 0 && value <= 50) {
+      filters.maxYears = value;
     }
   }
 

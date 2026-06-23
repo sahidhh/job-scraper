@@ -8,6 +8,7 @@ type JobRow = Database["public"]["Tables"]["jobs"]["Row"];
 type JobInsertRow = Database["public"]["Tables"]["jobs"]["Insert"];
 
 interface JobWithScoreRow extends JobRow {
+  min_years: number | null;
   job_scores: { keyword_score: number; ai_score: number | null; ai_reasoning: string | null }[];
 }
 
@@ -38,6 +39,7 @@ function toJobWithScore(row: JobWithScoreRow): JobWithScore {
     keywordScore: score?.keyword_score ?? null,
     aiScore: score?.ai_score ?? null,
     aiReasoning: score?.ai_reasoning ?? null,
+    minYears: row.min_years ?? null,
   };
 }
 
@@ -159,7 +161,7 @@ export class SupabaseJobRepository implements JobRepository {
   async findForDashboard(roleSelectionId: string, filters: JobFilters): Promise<JobWithScore[]> {
     let query = this.client
       .from("jobs")
-      .select("*, job_scores!left(keyword_score, ai_score, ai_reasoning, role_selection_id)")
+      .select("id, source, source_job_id, company_id, company_name, title, location_raw, location_tags, url, min_years, posted_at, first_seen_at, updated_at, is_active, inactive_reason, description, job_scores!left(keyword_score, ai_score, ai_reasoning, role_selection_id)")
       .eq("job_scores.role_selection_id", roleSelectionId);
 
     if (filters.locationTags && filters.locationTags.length > 0) {
