@@ -1,4 +1,5 @@
 import type { JobMatch } from "@/features/notifications/domain/types";
+import { capitalizeFirst, escapeHtml } from "@/shared/infrastructure/text";
 
 // Scores at or above this are listed under "High Match"; lower go to "Medium Match".
 export const HIGH_MATCH_THRESHOLD = 0.85;
@@ -75,17 +76,10 @@ export function splitDigestChunks(text: string): string[] {
 
 function formatEntry(match: JobMatch): string {
   const percent = Math.round(match.aiScore * 100);
-  const location = match.locationTags.map(capitalize).join(", ");
+  const location = match.locationTags.map(capitalizeFirst).join(", ");
   return [
     `🎯 ${percent}% — ${escapeHtml(match.title)} @ ${escapeHtml(match.companyName)}`,
     `📍 ${location} · ${escapeHtml(match.url)}`,
   ].join("\n");
 }
 
-function capitalize(tag: string): string {
-  return tag.length === 0 ? tag : tag[0]!.toUpperCase() + tag.slice(1);
-}
-
-function escapeHtml(text: string): string {
-  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}

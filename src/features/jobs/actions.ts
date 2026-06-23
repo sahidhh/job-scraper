@@ -1,10 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createStatus } from "@/features/jobs/application/createStatus";
-import { deleteStatus } from "@/features/jobs/application/deleteStatus";
+import { createStatus, deleteStatus, updateStatus } from "@/features/jobs/application/statusCrud";
 import { setJobStatus } from "@/features/jobs/application/setJobStatus";
-import { updateStatus } from "@/features/jobs/application/updateStatus";
 import { SupabaseJobRepository } from "@/features/jobs/infrastructure/SupabaseJobRepository";
 import type { CreateStatusInput, JobStatus, UpdateStatusInput } from "@/features/jobs/domain/types";
 import type { ActionResult } from "@/shared/actionResult";

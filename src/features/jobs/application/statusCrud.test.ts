@@ -2,9 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { JobRepository } from "@/features/jobs/domain/JobRepository";
 import type { JobStatus } from "@/features/jobs/domain/types";
 import { DomainValidationError } from "@/shared/domain/errors";
-import { createStatus } from "./createStatus";
-import { deleteStatus } from "./deleteStatus";
-import { updateStatus } from "./updateStatus";
+import { createStatus, deleteStatus, updateStatus } from "./statusCrud";
 
 const mockStatus: JobStatus = {
   id: "status-1",

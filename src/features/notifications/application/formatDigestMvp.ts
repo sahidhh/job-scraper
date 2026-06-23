@@ -1,5 +1,6 @@
 import type { JobMatch } from "@/features/notifications/domain/types";
 import { DIGEST_DISPLAY_LIMIT } from "@/features/notifications/domain/types";
+import { capitalizeFirst, escapeHtml } from "@/shared/infrastructure/text";
 
 // Formats the primary digest message shown with inline Apply buttons.
 // Displays the counts for both bands, then lists top-N strong matches.
@@ -21,7 +22,7 @@ export function formatDigestMvp(
     lines.push(`Showing Top ${top.length} Strong Match${top.length === 1 ? "" : "es"}`);
 
     top.forEach((match, i) => {
-      const location = match.locationTags.map(capitalizeTag).join(", ");
+      const location = match.locationTags.map(capitalizeFirst).join(", ");
       const expStr = match.minYears !== null ? `${match.minYears}+ yrs` : null;
       const meta = [escapeHtml(match.companyName), location, expStr].filter(Boolean).join(" · ");
       lines.push("");
@@ -45,7 +46,7 @@ export function formatWorthReviewingMessage(worthReviewing: JobMatch[]): string 
 
   worthReviewing.forEach((match, i) => {
     const percent = Math.round(match.aiScore * 100);
-    const location = match.locationTags.map(capitalizeTag).join(", ");
+    const location = match.locationTags.map(capitalizeFirst).join(", ");
     const expStr = match.minYears !== null ? `${match.minYears}+ yrs` : null;
     const meta = [escapeHtml(match.companyName), location, expStr, `${percent}%`]
       .filter(Boolean)
@@ -58,10 +59,3 @@ export function formatWorthReviewingMessage(worthReviewing: JobMatch[]): string 
   return lines.join("\n").trimEnd();
 }
 
-function capitalizeTag(tag: string): string {
-  return tag.length === 0 ? tag : tag[0]!.toUpperCase() + tag.slice(1);
-}
-
-function escapeHtml(text: string): string {
-  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}

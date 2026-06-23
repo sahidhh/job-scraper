@@ -32,3 +32,11 @@ export function stripHtml(html: string): string {
 export function normalizeWhitespace(value: string): string {
   return value.trim().replace(/\s+/g, " ");
 }
+
+export function escapeHtml(text: string): string {
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+export function capitalizeFirst(tag: string): string {
+  return tag.length === 0 ? tag : tag[0]!.toUpperCase() + tag.slice(1);
+}

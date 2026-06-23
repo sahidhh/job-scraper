@@ -532,11 +532,13 @@ fetchWithRetry(
   init?: RequestInit,
   options?: {
     retries?: number      // default: 1
-    retryDelay?: number   // default: 2000 ms
-    retryOn429?: boolean  // default: true
+    retryDelayMs?: number // default: 2000 ms
   }
 ): Promise<Response>
+
+delay(ms: number): Promise<void>
 ```
 
-Retries on: network errors, HTTP 5xx, HTTP 429 (unless `retryOn429: false`).  
-Used by all scrapers and external API clients.
+`fetchWithRetry` retries on: network errors, HTTP 5xx, HTTP 429. Used by all scrapers and external API clients.
+
+`delay` is the canonical sleep helper — re-exported by `rateLimit.ts` (scrapers) and used directly by `TelegramBotSender`.

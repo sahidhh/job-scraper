@@ -1,6 +1,6 @@
 import type { InlineKeyboardButton, TelegramSender } from "@/features/notifications/domain/TelegramSender";
 import { requireEnv } from "@/shared/infrastructure/env";
-import { fetchWithRetry } from "@/shared/infrastructure/http";
+import { delay, fetchWithRetry } from "@/shared/infrastructure/http";
 
 interface TelegramSendMessageResponse {
   ok: boolean;
@@ -56,6 +56,3 @@ export class TelegramBotSender implements TelegramSender {
   }
 }
 
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
