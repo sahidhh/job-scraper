@@ -198,11 +198,13 @@ There is no first-party Wellfound API or scraper that produces this shape — op
 
 ## 6. RemoteOK configuration (`REMOTEOK_DISABLED`)
 
-RemoteOK is a global job feed with no geographic filter. It consistently produces 0 usable jobs for India/Singapore/UAE/Remote markets because location strings ("Worldwide", "USA", etc.) do not match the location allowlist. The API also rate-limits aggressively. See `docs/remoteok-evaluation.md` for the full evaluation.
+RemoteOK is a global job feed with no geographic filter. See `docs/remoteok-evaluation.md` for the full evaluation.
 
-**Disabling (recommended):** set `REMOTEOK_DISABLED=true` or `REMOTEOK_DISABLED=1` to skip this source entirely. The adapter returns `[]` immediately with no network call.
+**Location defaulting (Phase 3B):** When a RemoteOK entry omits the `location` field, `locationRaw` now defaults to `"remote"` rather than empty string. RemoteOK is exclusively a remote-work platform, so this is semantically correct and prevents the 0% keep rate that occurred when all entries were dropped by `tagLocations`.
+
+**Disabling:** set `REMOTEOK_DISABLED=true` or `REMOTEOK_DISABLED=1` to skip this source entirely. The adapter returns `[]` immediately with no network call.
 
 | State | Condition | Log output | Behaviour |
 |---|---|---|---|
 | **Disabled** | `REMOTEOK_DISABLED=true` or `1` | `[remoteok] disabled via REMOTEOK_DISABLED env var` | Returns `[]`, no network call |
-| **Active** | env var unset or any other value | Normal run log | Fetches feed, maps and returns `RawJob[]` |
+| **Active** | env var unset or any other value | Normal run log | Fetches feed; entries with no location default to `"remote"` |

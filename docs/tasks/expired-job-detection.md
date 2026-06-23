@@ -70,7 +70,7 @@ Existing rows receive `last_seen_at = now()` so no job is immediately expired af
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `JOB_EXPIRATION_DAYS` | `14` | Days without being seen before a job is marked inactive |
+| `JOB_EXPIRATION_DAYS` | `7` | Days without being seen before a job is marked inactive |
 
 ## Testing
 
@@ -85,7 +85,7 @@ All tests pass (`npx vitest run`). New test coverage:
 | Risk | Likelihood | Mitigation |
 |---|---|---|
 | Jobs re-listed after expiry won't reactivate | Low | Upsert always writes `is_active=true` + `last_seen_at=now()`, so a returning job will be reactivated on the next scrape |
-| Feed-based sources that partially fail temporarily expire valid jobs | Medium | Expiration threshold is 14 days by default — short-lived outages won't trigger expiry |
+| Feed-based sources that partially fail temporarily expire valid jobs | Medium | Expiration threshold is 7 days by default — sources that fail for more than 7 days may expire valid jobs; override with `JOB_EXPIRATION_DAYS=14` if needed |
 | Newly deployed migration immediately expires all jobs | None | Migration sets `last_seen_at = now()` for all existing rows |
 
 ## Rollback Plan

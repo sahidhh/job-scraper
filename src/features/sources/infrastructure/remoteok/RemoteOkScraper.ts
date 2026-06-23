@@ -33,7 +33,9 @@ function toRawJob(entry: RemoteOkEntry & { id: string | number; position: string
     companyId: null,
     companyName: normalizeWhitespace(entry.company ?? ""),
     title: normalizeWhitespace(entry.position),
-    locationRaw: normalizeWhitespace(entry.location ?? ""),
+    // RemoteOK is exclusively a remote-work platform; default to "remote" when
+    // the posting omits a location (prevents 0% keep rate in tagLocations).
+    locationRaw: normalizeWhitespace(entry.location || "remote"),
     description: stripHtml(entry.description ?? ""),
     url: entry.url,
     postedAt: toIsoOrNull(entry.date ?? null),
