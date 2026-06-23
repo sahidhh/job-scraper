@@ -72,6 +72,27 @@ describe("remoteokScraper", () => {
     ]);
   });
 
+  it("defaults locationRaw to 'remote' when the entry has no location", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse([
+        {
+          id: 42,
+          company: "Anywhere Inc",
+          position: "Backend Engineer",
+          // no location field
+          description: "<p>Work remotely.</p>",
+          url: "https://remoteok.com/remote-jobs/42",
+          date: "2026-06-10T08:00:00+00:00",
+        },
+      ]),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await remoteokScraper.fetchJobs([], []);
+
+    expect(result[0]?.locationRaw).toBe("remote");
+  });
+
   it("throws when the API responds with an error status", async () => {
     const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ error: "not found" }, 404));
     vi.stubGlobal("fetch", fetchMock);

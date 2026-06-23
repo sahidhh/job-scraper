@@ -9,7 +9,7 @@ import { SupabaseScrapeRunRepository } from "@/features/sources/infrastructure/S
 import { createSupabaseServiceClient } from "@/shared/infrastructure/supabaseClient";
 import { optionalEnv } from "@/shared/infrastructure/env";
 
-const DEFAULT_EXPIRATION_DAYS = 14;
+const DEFAULT_EXPIRATION_DAYS = 7;
 
 // Cron entry point (AD-04): scrapes every registered source, tags and
 // filters jobs by location (architecture.md §3.1 steps 4-5), and ingests

@@ -87,7 +87,12 @@ export function JobRow({
           <JobStatusSelect jobId={job.id} statusId={job.statusId} statuses={statuses} />
         </TableCell>
         <TableCell>
-          <ScoreBadge aiScore={job.aiScore} keywordScore={job.keywordScore} />
+          <div className="flex flex-col gap-0.5">
+            <ScoreBadge aiScore={job.aiScore} keywordScore={job.keywordScore} />
+            {job.minYears !== null && (
+              <span className="text-xs text-muted-foreground">{job.minYears}+ yrs</span>
+            )}
+          </div>
         </TableCell>
         <TableCell>
           <a href={job.url} target="_blank" rel="noreferrer" className="text-primary hover:underline">

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SupabaseDigestSessionRepository } from "@/features/notifications/infrastructure/SupabaseDigestSessionRepository";
+import { STRONG_MATCH_THRESHOLD } from "@/features/notifications/domain/types";
 import { createSupabaseServiceClient } from "@/shared/infrastructure/supabaseClient";
 
 // Telegram webhook endpoint — handles callback_query updates from inline keyboard buttons.
@@ -135,7 +136,7 @@ function buildButtons(
 
   const rows: { text: string; callback_data?: string; url?: string }[][] = [];
   if (navRow.length > 0) rows.push(navRow);
-  if (appUrl) rows.push([{ text: "📊 Dashboard", url: `${appUrl}/dashboard?minScore=0.80` }]);
+  if (appUrl) rows.push([{ text: "📊 Dashboard", url: `${appUrl}/dashboard?minScore=${STRONG_MATCH_THRESHOLD}` }]);
   return rows;
 }
 

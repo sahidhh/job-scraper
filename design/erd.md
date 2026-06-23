@@ -32,7 +32,7 @@ erDiagram
         timestamptz first_seen_at
         timestamptz last_seen_at "updated on every upsert"
         timestamptz updated_at
-        integer min_years "nullable"
+        integer min_years "nullable; CHECK 0-20; parsed at ingest + seniority-label fallback"
         boolean is_active "false when not seen for JOB_EXPIRATION_DAYS"
         text inactive_reason "nullable; 'expired' when set by sweep"
     }

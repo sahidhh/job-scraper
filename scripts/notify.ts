@@ -1,7 +1,7 @@
 import { sendDigest } from "@/features/notifications/application/sendDigest";
 import { sendDigestMvp } from "@/features/notifications/application/sendDigestMvp";
 import { sendNotification } from "@/features/notifications/application/sendNotification";
-import type { NotifyMode } from "@/features/notifications/domain/types";
+import { STRONG_MATCH_THRESHOLD, type NotifyMode } from "@/features/notifications/domain/types";
 import { SupabaseDigestSessionRepository } from "@/features/notifications/infrastructure/SupabaseDigestSessionRepository";
 import { SupabaseNotificationPreferencesRepository } from "@/features/notifications/infrastructure/SupabaseNotificationPreferencesRepository";
 import { SupabaseNotificationRepository } from "@/features/notifications/infrastructure/SupabaseNotificationRepository";
@@ -49,7 +49,7 @@ async function main(): Promise<void> {
 
   if (notifyMode === "digest") {
     const appUrl = optionalEnv("APP_URL", "").replace(/\/$/, "");
-    const dashboardUrl = appUrl ? `${appUrl}/dashboard?minScore=0.80` : undefined;
+    const dashboardUrl = appUrl ? `${appUrl}/dashboard?minScore=${STRONG_MATCH_THRESHOLD}` : undefined;
     const digestSessionRepository = new SupabaseDigestSessionRepository(client);
 
     const result = await sendDigestMvp(roleSelection.id, {

@@ -55,7 +55,7 @@ function parseFilters(params: DashboardSearchParams): JobFilters {
   }
   if (params.maxYears) {
     const value = Number(params.maxYears);
-    if (Number.isInteger(value) && value >= 0) {
+    if (Number.isInteger(value) && value >= 0 && value <= 50) {
       filters.maxYears = value;
     }
   }
