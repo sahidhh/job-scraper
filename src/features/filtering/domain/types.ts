@@ -12,5 +12,5 @@ export interface TaggedRawJob extends RawJob {
 // Concrete keyword lists live in shared/config (data, not domain).
 export interface LocationKeywordRule {
   tag: LocationTag;
-  keywords: readonly string[]; // case-insensitive substrings matched against locationRaw
+  keywords: readonly string[]; // case-insensitive word-boundary matches against locationRaw
 }
