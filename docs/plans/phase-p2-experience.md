@@ -37,5 +37,12 @@ Original #1 wanted a hard filter at scrape time. ATS feeds have **no structured 
 2. Apply seed statuses + regenerate `database.types.ts`.
 3. Pre-existing flaky tests: `TelegramBotSender` 429-retry timeouts (unrelated, obs 87) — not caused by P0–P2.
 
-## Follow-up
-- Phase 3 (roadmap P3) = analytics graphs; needs `recharts` (approved) and benefits from P0 `job_state` data.
+## Phase 3A follow-up (applied 2026-06-23)
+
+The Phase 3 match-quality investigation (see `docs/research/phase3-match-quality-review.md`) identified three gaps in this pipeline. All three were addressed:
+
+1. **Seniority-label fallback** (`20260623`) — `parseMinYears` now maps level labels (junior/mid/senior/lead/staff/principal) to deterministic `min_years` values when no numeric year pattern is found. Title segment is checked before description body. Coverage estimate raised from ~20–30% to ~60%+. 47 tests pass.
+
+2. **DB constraint + backfill** (`20260623`) — Migration `20260623000001_min_years_constraint.sql` adds `CHECK (min_years IS NULL OR (min_years >= 0 AND min_years <= 20))`. `scripts/backfill-min-years.ts` populates `min_years` for all pre-P2 NULL rows (idempotent, batched 500 rows, skips rows that parse to null).
+
+3. **Dashboard visibility** (`20260623`) — `min_years` added to `DASHBOARD_SELECT` and `JobWithScore`. Dashboard's score cell now shows `{N}+ yrs` badge beneath the AI score when `min_years IS NOT NULL`. `?maxYears` URL param capped at 50 to match settings validation.
