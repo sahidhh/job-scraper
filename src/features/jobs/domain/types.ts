@@ -84,6 +84,7 @@ export interface JobWithScore extends Omit<Job, "description"> {
   keywordScore: number | null;
   aiScore: number | null;
   aiReasoning: string | null;
+  minYears: number | null;
   // Current status (job_state join, P0). Null => unset, rendered as the
   // first seeded status (New) by the UI.
   statusId: string | null;

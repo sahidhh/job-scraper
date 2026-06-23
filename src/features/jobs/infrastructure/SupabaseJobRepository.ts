@@ -35,7 +35,7 @@ interface DashboardJobRow extends Omit<JobRow, "description"> {
 // Columns selected in findForDashboard; mirrors DashboardJobRow but without
 // the embedded foreign-table columns (those are added by PostgREST).
 const DASHBOARD_SELECT =
-  "id, source, source_job_id, company_id, company_name, title, location_raw, location_tags, url, posted_at, first_seen_at, last_seen_at, updated_at, is_active, inactive_reason, job_scores!left(keyword_score, ai_score, ai_reasoning, role_selection_id), job_state!left(status_id, job_statuses(id, label, color))";
+  "id, source, source_job_id, company_id, company_name, title, location_raw, location_tags, url, min_years, posted_at, first_seen_at, last_seen_at, updated_at, is_active, inactive_reason, job_scores!left(keyword_score, ai_score, ai_reasoning, role_selection_id), job_state!left(status_id, job_statuses(id, label, color))";
 
 const UPSERT_BATCH_SIZE = 500;
 
@@ -82,6 +82,7 @@ function toDashboardJob(row: DashboardJobRow): JobWithScore {
     keywordScore: score?.keyword_score ?? null,
     aiScore: score?.ai_score ?? null,
     aiReasoning: score?.ai_reasoning ?? null,
+    minYears: row.min_years ?? null,
     statusId: status?.id ?? null,
     statusLabel: status?.label ?? null,
     statusColor: status?.color ?? null,
