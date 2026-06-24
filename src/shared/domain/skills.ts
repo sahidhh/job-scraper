@@ -30,6 +30,7 @@ export function extractSkills(
 
 function containsToken(text: string, token: string): boolean {
   const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const pattern = new RegExp(`(?<![a-z0-9])${escaped}(?![a-z0-9])`, "i");
+  // [a-z0-9+#] excludes +/# so "c" won't match inside "c++" or "c#"
+  const pattern = new RegExp(`(?<![a-z0-9+#])${escaped}(?![a-z0-9+#])`, "i");
   return pattern.test(text);
 }
