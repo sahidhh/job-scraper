@@ -69,6 +69,27 @@ export const SKILLS_DICTIONARY: readonly SkillDictionaryEntry[] = [
   { canonical: "Git", aliases: ["git"] },
   { canonical: "Nginx", aliases: ["nginx"] },
 
+  // Message queues / event streaming
+  { canonical: "Kafka", aliases: ["kafka", "apache kafka"] },
+  { canonical: "RabbitMQ", aliases: ["rabbitmq", "rabbit mq"] },
+  { canonical: "Celery", aliases: ["celery"] },
+
+  // Data engineering
+  { canonical: "Spark", aliases: ["spark", "apache spark", "pyspark"] },
+  { canonical: "Airflow", aliases: ["airflow", "apache airflow"] },
+  { canonical: "dbt", aliases: ["dbt", "data build tool"] },
+  { canonical: "Snowflake", aliases: ["snowflake"] },
+
+  // Observability / IaC
+  { canonical: "Prometheus", aliases: ["prometheus"] },
+  { canonical: "Grafana", aliases: ["grafana"] },
+  { canonical: "Ansible", aliases: ["ansible"] },
+
+  // Modern frontend
+  { canonical: "SvelteKit", aliases: ["sveltekit", "svelte kit"] },
+  { canonical: "Remix", aliases: ["remix", "remix.run"] },
+  { canonical: "tRPC", aliases: ["trpc", "t3"] },
+
   // Testing
   { canonical: "Jest", aliases: ["jest"] },
   { canonical: "Vitest", aliases: ["vitest"] },
