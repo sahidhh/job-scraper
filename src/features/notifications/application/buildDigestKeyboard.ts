@@ -1,7 +1,6 @@
 import type { InlineKeyboardButton } from "@/features/notifications/domain/TelegramSender";
 import type { JobMatch } from "@/features/notifications/domain/types";
 import { DIGEST_DISPLAY_LIMIT } from "@/features/notifications/domain/types";
-import { extractRecruiterEmail } from "@/shared/infrastructure/text";
 
 export interface DigestKeyboardOptions {
   /** Show the "Worth Reviewing" callback button. Omit or false to hide. */
@@ -29,11 +28,10 @@ export function buildDigestKeyboard(
   const top = strongMatches.slice(0, displayLimit);
   const rows: InlineKeyboardButton[][] = [];
 
-  // One row per match: [Apply #N] or [Apply #N | 📧 Contact] when email found in description.
+  // One row per match: [Apply #N] only.
+  // mailto: URLs are rejected by Telegram Bot API (BUTTON_URL_INVALID) — Contact button removed.
   for (let i = 0; i < top.length; i++) {
     const row: InlineKeyboardButton[] = [{ text: `Apply #${i + 1}`, url: top[i]!.url }];
-    const email = extractRecruiterEmail(top[i]!.description);
-    if (email) row.push({ text: "📧 Contact", url: `mailto:${email}` });
     rows.push(row);
   }
 

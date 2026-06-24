@@ -46,6 +46,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
 
   const cq = update.callback_query;
+  console.log("[webhook] callback_query received", {
+    id: cq?.id,
+    data: cq?.data,
+    messageId: cq?.message?.message_id,
+    chatId: cq?.message?.chat?.id,
+  });
+
   if (!cq || !cq.data?.startsWith("wr:")) {
     // Non-pagination update — ack and ignore
     if (cq) await answerCallbackQuery(cq.id);
@@ -53,16 +60,27 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
 
   const page = Math.max(0, parseInt(cq.data.split(":")[1] ?? "0", 10));
+  console.log("[webhook] handling worth-reviewing page", page);
 
   // Answer immediately — Telegram shows loading spinner until this is called (10s timeout).
   // DB queries happen after so cold starts don't cause spinner to stick.
   await answerCallbackQuery(cq.id);
+  console.log("[webhook] answerCallbackQuery sent");
 
   const client = createSupabaseServiceClient();
   const sessionRepo = new SupabaseDigestSessionRepository(client);
   const session = await sessionRepo.getLatest();
+  console.log("[webhook] session lookup", {
+    found: !!session,
+    sessionId: session?.id,
+    roleSelectionId: session?.roleSelectionId,
+    resumeVersion: session?.resumeVersion,
+    jobIdCount: session?.worthReviewingJobIds?.length ?? 0,
+    paginationMessageId: session?.paginationMessageId ?? null,
+  });
 
   if (!session || session.worthReviewingJobIds.length === 0) {
+    console.log("[webhook] no session or empty job list — skipping");
     return new NextResponse("OK", { status: 200 });
   }
 
@@ -75,7 +93,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     .eq("job_scores.resume_version", session.resumeVersion)
     .returns<JobRow[]>();
 
+  console.log("[webhook] job query result", {
+    rowCount: jobRows?.length ?? 0,
+    error: error?.message ?? null,
+    resumeVersionFilter: session.resumeVersion,
+    roleSelectionIdFilter: session.roleSelectionId,
+  });
+
   if (error || !jobRows) {
+    console.error("[webhook] job query failed", error);
     return new NextResponse("OK", { status: 200 });
   }
 
@@ -101,10 +127,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const chatId = process.env.TELEGRAM_CHAT_ID!;
 
   if (!session.paginationMessageId) {
+    console.log("[webhook] sending new pagination message");
     const msgId = await sendMessage(botToken, chatId, text, buttons);
+    console.log("[webhook] sendMessage result", { msgId });
     if (msgId) await sessionRepo.updatePaginationMessageId(session.id, msgId);
   } else {
-    await editMessage(botToken, chatId, session.paginationMessageId, text, buttons);
+    console.log("[webhook] editing existing pagination message", session.paginationMessageId);
+    const editOk = await editMessage(botToken, chatId, session.paginationMessageId, text, buttons);
+    console.log("[webhook] editMessage result", { ok: editOk });
   }
 
   return new NextResponse("OK", { status: 200 });
@@ -171,7 +201,11 @@ async function sendMessage(
       ...(buttons.length > 0 ? { reply_markup: { inline_keyboard: buttons } } : {}),
     }),
   });
-  if (!res.ok) return null;
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    console.error("[webhook] sendMessage failed", { status: res.status, body });
+    return null;
+  }
   const body = (await res.json()) as { ok: boolean; result?: { message_id: number } };
   return body.result?.message_id ?? null;
 }
@@ -182,8 +216,8 @@ async function editMessage(
   messageId: number,
   text: string,
   buttons: unknown[][],
-): Promise<void> {
-  await fetch(`https://api.telegram.org/bot${token}/editMessageText`, {
+): Promise<boolean> {
+  const res = await fetch(`https://api.telegram.org/bot${token}/editMessageText`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -195,4 +229,10 @@ async function editMessage(
       ...(buttons.length > 0 ? { reply_markup: { inline_keyboard: buttons } } : {}),
     }),
   });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    console.error("[webhook] editMessageText failed", { status: res.status, body });
+    return false;
+  }
+  return true;
 }
