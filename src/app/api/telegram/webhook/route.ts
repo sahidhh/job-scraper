@@ -168,7 +168,7 @@ async function sendMessage(
       text,
       parse_mode: "HTML",
       disable_web_page_preview: true,
-      reply_markup: { inline_keyboard: buttons },
+      ...(buttons.length > 0 ? { reply_markup: { inline_keyboard: buttons } } : {}),
     }),
   });
   if (!res.ok) return null;
@@ -192,7 +192,7 @@ async function editMessage(
       text,
       parse_mode: "HTML",
       disable_web_page_preview: true,
-      reply_markup: { inline_keyboard: buttons },
+      ...(buttons.length > 0 ? { reply_markup: { inline_keyboard: buttons } } : {}),
     }),
   });
 }
