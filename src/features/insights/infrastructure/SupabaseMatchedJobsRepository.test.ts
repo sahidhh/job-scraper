@@ -63,6 +63,42 @@ describe("SupabaseMatchedJobsRepository", () => {
     expect(builder.not).toHaveBeenCalledWith("ai_score", "is", null);
   });
 
+  it("getTokenUsageStats aggregates tokens and cost, counting AI-scored rows", async () => {
+    const { client } = mockSupabaseClient({
+      data: [
+        { tokens_input: 100, tokens_output: 50, estimated_cost_usd: "0.0010", ai_score: 0.8 },
+        { tokens_input: 200, tokens_output: 80, estimated_cost_usd: "0.0020", ai_score: null },
+        { tokens_input: null, tokens_output: null, estimated_cost_usd: null, ai_score: null },
+      ],
+      error: null,
+    });
+    const repo = new SupabaseMatchedJobsRepository(client);
+    const result = await repo.getTokenUsageStats();
+    expect(result.totalTokensInput).toBe(300);
+    expect(result.totalTokensOutput).toBe(130);
+    expect(result.totalCostUsd).toBeCloseTo(0.003);
+    expect(result.jobsScoredByAi).toBe(1);
+  });
+
+  it("getScoredJobsBySource groups scored jobs by source, sorted by count desc", async () => {
+    const { client, builder } = mockSupabaseClient({
+      data: [
+        { jobs: { source: "greenhouse" } },
+        { jobs: { source: "lever" } },
+        { jobs: { source: "greenhouse" } },
+      ],
+      error: null,
+    });
+    const repo = new SupabaseMatchedJobsRepository(client);
+    const result = await repo.getScoredJobsBySource("role-1");
+    expect(result).toEqual([
+      { source: "greenhouse", count: 2 },
+      { source: "lever", count: 1 },
+    ]);
+    expect(builder.eq).toHaveBeenCalledWith("role_selection_id", "role-1");
+    expect(builder.not).toHaveBeenCalledWith("ai_score", "is", null);
+  });
+
   it("getStatusBreakdown counts statuses and adds New for unassigned jobs", async () => {
     const { client } = queuedSupabaseClient([
       {

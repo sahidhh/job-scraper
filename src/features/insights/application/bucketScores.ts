@@ -17,7 +17,7 @@ export function bucketScores(scores: readonly number[]): ScoreHistogramBucket[] 
   const counts = new Array<number>(10).fill(0);
 
   for (const score of scores) {
-    const index = Math.min(Math.floor(score * 10), 9);
+    const index = Math.min(Math.floor(score / 10), 9);
     counts[index] = (counts[index] ?? 0) + 1;
   }
 

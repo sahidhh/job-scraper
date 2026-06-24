@@ -1,6 +1,8 @@
 import type {
+  JobsBySourceEntry,
   ScrapeRunDataPoint,
   StatusBreakdownEntry,
+  TokenUsageStats,
 } from "@/features/insights/domain/types";
 
 export interface ExperienceRow {
@@ -48,4 +50,10 @@ export interface MatchedJobsRepository {
 
   /** location_tags arrays for all jobs. Used for location distribution chart. */
   getJobsLocationData(): Promise<LocationRow[]>;
+
+  /** Aggregate token and cost totals across all job_scores rows. */
+  getTokenUsageStats(): Promise<TokenUsageStats>;
+
+  /** Count of distinct AI-scored jobs per source for the given role selection. */
+  getScoredJobsBySource(roleSelectionId: string): Promise<JobsBySourceEntry[]>;
 }
