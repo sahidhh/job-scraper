@@ -219,43 +219,78 @@ async function JobsSection({
     }));
 
   const lastRun = scrapeRuns[0];
+  const isHighMatchFilter = params.minScore !== undefined && Number(params.minScore) >= 0.75;
+
+  function formatRelative(iso: string): string {
+    const diff = Date.now() - new Date(iso).getTime();
+    const h = Math.floor(diff / 3_600_000);
+    if (h < 1) return "< 1h ago";
+    if (h < 24) return `${h}h ago`;
+    return `${Math.floor(h / 24)}d ago`;
+  }
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">
-        {lastRun ? `Last scraped ${new Date(lastRun.runAt).toLocaleString()} — ` : ""}
-        {jobs.length} job{jobs.length === 1 ? "" : "s"} shown. {jobStats.scoredCount} scored by AI, {jobStats.pendingCount} pending (across all active jobs).{" "}
-        {matchingRoleCount !== null && (
-          <>
-            Across all active jobs: {matchingRoleCount} match "{primaryRole}".
-          </>
+      {/* Compact stats row */}
+      <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+        <span className="text-sm">
+          <span className="font-semibold tabular-nums">{jobs.length}</span>
+          <span className="ml-1 text-muted-foreground">jobs</span>
+        </span>
+        <span className="text-sm">
+          <span className="font-semibold tabular-nums">{jobStats.scoredCount}</span>
+          <span className="ml-1 text-muted-foreground">scored</span>
+        </span>
+        {jobStats.pendingCount > 0 && (
+          <span className="text-sm">
+            <span className="font-semibold tabular-nums">{jobStats.pendingCount}</span>
+            <span className="ml-1 text-muted-foreground">pending</span>
+          </span>
         )}
-      </p>
+        {lastRun && (
+          <span className="text-xs text-muted-foreground md:ml-auto">
+            Updated {formatRelative(lastRun.runAt)}
+          </span>
+        )}
+      </div>
+
+      {/* Worth Reviewing entry point banner */}
+      {isHighMatchFilter && (
+        <div className="flex items-center justify-between rounded-xl border border-border bg-muted/40 px-4 py-2.5 text-sm">
+          <span className="font-medium">Showing high-match jobs (≥{Math.round(Number(params.minScore) * 100)}%)</span>
+          <Link href="/dashboard" className="text-xs text-muted-foreground underline-offset-2 hover:underline">
+            Clear
+          </Link>
+        </div>
+      )}
+
       {jobs.length === 0 ? (
-        <div className="rounded-md border border-border bg-muted/50 p-3 text-sm text-muted-foreground">
+        <div className="rounded-xl border border-border bg-muted/50 p-4 text-sm text-muted-foreground">
           {scrapeRuns.length === 0
             ? "No jobs scraped yet. The scrape pipeline runs via GitHub Actions — see Settings for details."
             : "No matching jobs yet for this role selection. Jobs are added by the next scheduled scrape run."}
         </div>
       ) : jobStats.pendingCount > 0 ? (
-        <div className="space-y-1">
+        <div className="space-y-1.5">
           {jobStats.awaitingReviewCount > 0 && (
-            <div className="rounded-md border border-border bg-muted/50 p-3 text-sm text-muted-foreground">
-              {jobStats.awaitingReviewCount} job{jobStats.awaitingReviewCount === 1 ? "" : "s"} awaiting AI review across all active jobs — keyword match score shown; some may stay below the AI scoring threshold and never receive an AI score.
+            <div className="rounded-xl border border-border bg-muted/50 px-4 py-2.5 text-sm text-muted-foreground">
+              {jobStats.awaitingReviewCount} job{jobStats.awaitingReviewCount === 1 ? "" : "s"} awaiting AI review — keyword score shown for now.
             </div>
           )}
           {jobStats.notEligibleCount > 0 && (
-            <div className="rounded-md border border-border bg-muted/50 p-3 text-sm text-muted-foreground">
-              {jobStats.notEligibleCount} job{jobStats.notEligibleCount === 1 ? "" : "s"} don&apos;t match &ldquo;{primaryRole}&rdquo; under the current role selection and won&apos;t be scored — across all active jobs.
+            <div className="rounded-xl border border-border bg-muted/50 px-4 py-2.5 text-sm text-muted-foreground">
+              {jobStats.notEligibleCount} job{jobStats.notEligibleCount === 1 ? "" : "s"} outside the current role selection — not scored.
             </div>
           )}
         </div>
       ) : null}
+
       <FilterBar hasAiScores={jobStats.scoredCount > 0} statuses={statuses} effectiveMaxYears={effectiveFilters.maxYears ?? null} />
       <JobsTable jobs={jobs} statuses={statuses} />
+
       {hasMore && (
         <Button asChild variant="outline" size="sm">
-          <Link href={loadMoreHref(params, limit)}>Load more</Link>
+          <Link href={loadMoreHref(params, limit)} scroll={false}>Load more</Link>
         </Button>
       )}
     </div>
