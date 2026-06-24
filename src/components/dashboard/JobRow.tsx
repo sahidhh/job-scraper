@@ -72,7 +72,9 @@ export function JobRow({
             <span className="truncate">{job.title}</span>
           </button>
         </TableCell>
-        <TableCell>{job.companyName}</TableCell>
+        <TableCell className="max-w-[10rem]">
+          <span className="block truncate">{job.companyName}</span>
+        </TableCell>
         <TableCell className="hidden space-x-1 md:table-cell">
           {job.locationTags.map((tag) => (
             <Badge key={tag} variant="outline">
