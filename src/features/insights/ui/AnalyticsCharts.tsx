@@ -18,6 +18,7 @@ import type {
   JobsOverTimePoint,
   ScoreHistogramBucket,
   StatusBreakdownEntry,
+  TokenUsageStats,
 } from "@/features/insights/domain/types";
 
 export function JobsOverTimeChart({ data }: { data: JobsOverTimePoint[] }) {
@@ -127,5 +128,42 @@ export function JobsByLocationChart({ data }: { data: JobsByLocationPoint[] }) {
         <Line type="monotone" dataKey="count" stroke="#f59e0b" dot={false} />
       </LineChart>
     </ResponsiveContainer>
+  );
+}
+
+export function ScoredBySourceChart({ data }: { data: JobsBySourceEntry[] }) {
+  if (data.length === 0) {
+    return <p className="text-sm text-muted-foreground">No AI-scored jobs yet.</p>;
+  }
+  return (
+    <ResponsiveContainer width="100%" height={220}>
+      <BarChart data={data}>
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis dataKey="source" />
+        <YAxis allowDecimals={false} />
+        <Tooltip />
+        <Bar dataKey="count" fill="#8b5cf6" />
+      </BarChart>
+    </ResponsiveContainer>
+  );
+}
+
+export function TokenStatsCards({ stats }: { stats: TokenUsageStats }) {
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <StatCard label="Input tokens" value={stats.totalTokensInput.toLocaleString()} />
+      <StatCard label="Output tokens" value={stats.totalTokensOutput.toLocaleString()} />
+      <StatCard label="Est. cost" value={`$${stats.totalCostUsd.toFixed(4)}`} />
+      <StatCard label="Jobs AI-scored" value={stats.jobsScoredByAi.toLocaleString()} />
+    </div>
+  );
+}
+
+function StatCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-border bg-card p-4">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="mt-1 text-2xl font-semibold tabular-nums">{value}</p>
+    </div>
   );
 }

@@ -1,5 +1,5 @@
 import type { ExperienceRow, LocationRow, MatchedJob, MatchedJobsRepository } from "@/features/insights/domain/MatchedJobsRepository";
-import type { ScrapeRunDataPoint, StatusBreakdownEntry } from "@/features/insights/domain/types";
+import type { JobsBySourceEntry, ScrapeRunDataPoint, StatusBreakdownEntry, TokenUsageStats } from "@/features/insights/domain/types";
 import { buildRoleFilter } from "@/shared/infrastructure/roleFilter";
 import type { TypedSupabaseClient } from "@/shared/infrastructure/supabaseClient";
 import { toAppError } from "@/shared/infrastructure/supabaseError";
@@ -135,5 +135,40 @@ export class SupabaseMatchedJobsRepository implements MatchedJobsRepository {
     if (error) throw toAppError(error);
 
     return (data ?? []).map((row) => ({ locationTags: row.location_tags ?? [] }));
+  }
+
+  async getTokenUsageStats(): Promise<TokenUsageStats> {
+    const { data, error } = await this.client
+      .from("job_scores")
+      .select("tokens_input, tokens_output, estimated_cost_usd, ai_score");
+    if (error) throw toAppError(error);
+
+    const rows = data ?? [];
+    return {
+      totalTokensInput: rows.reduce((s, r) => s + (r.tokens_input ?? 0), 0),
+      totalTokensOutput: rows.reduce((s, r) => s + (r.tokens_output ?? 0), 0),
+      totalCostUsd: rows.reduce((s, r) => s + Number(r.estimated_cost_usd ?? 0), 0),
+      jobsScoredByAi: rows.filter((r) => r.ai_score !== null).length,
+    };
+  }
+
+  async getScoredJobsBySource(roleSelectionId: string): Promise<JobsBySourceEntry[]> {
+    interface ScoredJobRow { jobs: { source: string } }
+    const { data, error } = await this.client
+      .from("job_scores")
+      .select("jobs!inner(source)")
+      .eq("role_selection_id", roleSelectionId)
+      .not("ai_score", "is", null)
+      .returns<ScoredJobRow[]>();
+    if (error) throw toAppError(error);
+
+    const counts = new Map<string, number>();
+    for (const row of data ?? []) {
+      const src = row.jobs.source;
+      counts.set(src, (counts.get(src) ?? 0) + 1);
+    }
+    return Array.from(counts.entries())
+      .map(([source, count]) => ({ source, count }))
+      .sort((a, b) => b.count - a.count);
   }
 }

@@ -24,7 +24,6 @@ function makeRepository(): JobRepository {
     createStatus: vi.fn().mockResolvedValue(mockStatus),
     updateStatus: vi.fn().mockResolvedValue(mockStatus),
     deleteStatus: vi.fn().mockResolvedValue(undefined),
-    markExpiredJobs: vi.fn(),
   };
 }
 

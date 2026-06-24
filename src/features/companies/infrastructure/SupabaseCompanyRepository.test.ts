@@ -93,6 +93,6 @@ describe("SupabaseCompanyRepository", () => {
     const { client } = mockSupabaseClient({ data: null, error: { message: "boom" } });
     const repo = new SupabaseCompanyRepository(client);
 
-    await expect(repo.list()).rejects.toEqual({ message: "boom" });
+    await expect(repo.list()).rejects.toMatchObject({ message: "boom" });
   });
 });

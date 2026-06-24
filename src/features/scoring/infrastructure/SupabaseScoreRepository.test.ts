@@ -26,6 +26,9 @@ describe("SupabaseScoreRepository", () => {
         ai_score: 0.85,
         ai_reasoning: "Strong match",
         model: "openai/gpt-4o-mini",
+        tokens_input: null,
+        tokens_output: null,
+        estimated_cost_usd: null,
       },
       { onConflict: "job_id,role_selection_id,resume_version", ignoreDuplicates: false },
     );

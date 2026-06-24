@@ -49,3 +49,12 @@ export interface JobsByLocationPoint {
   location: string;
   count: number;
 }
+
+// P5A analytics types
+
+export interface TokenUsageStats {
+  totalTokensInput: number;
+  totalTokensOutput: number;
+  totalCostUsd: number;
+  jobsScoredByAi: number;
+}
