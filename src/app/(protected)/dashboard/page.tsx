@@ -241,12 +241,12 @@ async function JobsSection({
         <div className="space-y-1">
           {jobStats.awaitingReviewCount > 0 && (
             <div className="rounded-md border border-border bg-muted/50 p-3 text-sm text-muted-foreground">
-              {jobStats.awaitingReviewCount} of {jobs.length} job{jobs.length === 1 ? "" : "s"} awaiting AI review — keyword match score shown; some may stay below the AI scoring threshold and never receive an AI score.
+              {jobStats.awaitingReviewCount} job{jobStats.awaitingReviewCount === 1 ? "" : "s"} awaiting AI review across all active jobs — keyword match score shown; some may stay below the AI scoring threshold and never receive an AI score.
             </div>
           )}
           {jobStats.notEligibleCount > 0 && (
             <div className="rounded-md border border-border bg-muted/50 p-3 text-sm text-muted-foreground">
-              {jobStats.notEligibleCount} of {jobs.length} job{jobs.length === 1 ? "" : "s"} don&apos;t match &ldquo;{primaryRole}&rdquo; under the current role selection and won&apos;t be scored.
+              {jobStats.notEligibleCount} job{jobStats.notEligibleCount === 1 ? "" : "s"} don&apos;t match &ldquo;{primaryRole}&rdquo; under the current role selection and won&apos;t be scored — across all active jobs.
             </div>
           )}
         </div>
