@@ -26,18 +26,50 @@ describe("buildDigestKeyboard", () => {
     expect(rows).toEqual([]);
   });
 
-  it("generates one Apply button per match, two per row", () => {
+  it("generates one row per match with Apply button", () => {
     const matches = [
       makeMatch({ jobId: "a", url: "https://a.com" }),
       makeMatch({ jobId: "b", url: "https://b.com" }),
       makeMatch({ jobId: "c", url: "https://c.com" }),
     ];
     const rows = buildDigestKeyboard(matches, 0, {});
+    expect(rows).toHaveLength(3);
+    expect(rows[0]![0]).toEqual({ text: "Apply #1", url: "https://a.com" });
+    expect(rows[1]![0]).toEqual({ text: "Apply #2", url: "https://b.com" });
+    expect(rows[2]![0]).toEqual({ text: "Apply #3", url: "https://c.com" });
+  });
+
+  it("adds 📧 Contact button when description contains a recruiter email", () => {
+    const matches = [
+      makeMatch({ url: "https://a.com", description: "Contact jane@startup.io for details." }),
+    ];
+    const rows = buildDigestKeyboard(matches, 0, {});
     expect(rows[0]).toHaveLength(2);
     expect(rows[0]![0]).toEqual({ text: "Apply #1", url: "https://a.com" });
-    expect(rows[0]![1]).toEqual({ text: "Apply #2", url: "https://b.com" });
-    expect(rows[1]).toHaveLength(1);
-    expect(rows[1]![0]).toEqual({ text: "Apply #3", url: "https://c.com" });
+    expect(rows[0]![1]).toEqual({ text: "📧 Contact", url: "mailto:jane@startup.io" });
+  });
+
+  it("omits 📧 Contact button when description has no email", () => {
+    const matches = [makeMatch({ description: "Apply via our ATS." })];
+    const rows = buildDigestKeyboard(matches, 0, {});
+    expect(rows[0]).toHaveLength(1);
+    expect(rows[0]![0]).toMatchObject({ text: "Apply #1" });
+  });
+
+  it("omits 📧 Contact button when description has only excluded email prefixes", () => {
+    const matches = [makeMatch({ description: "Sent by noreply@ats.com" })];
+    const rows = buildDigestKeyboard(matches, 0, {});
+    expect(rows[0]).toHaveLength(1);
+  });
+
+  it("mixes rows — contact button only on matches with recruiter email", () => {
+    const matches = [
+      makeMatch({ jobId: "a", url: "https://a.com", description: "reach alice@corp.com" }),
+      makeMatch({ jobId: "b", url: "https://b.com", description: "" }),
+    ];
+    const rows = buildDigestKeyboard(matches, 0, {});
+    expect(rows[0]).toHaveLength(2); // has email
+    expect(rows[1]).toHaveLength(1); // no email
   });
 
   it("respects displayLimit — does not generate Apply buttons beyond it", () => {
@@ -97,13 +129,12 @@ describe("buildDigestKeyboard", () => {
       dashboardUrl: DASHBOARD_URL,
       displayLimit: 5,
     });
-    // Rows: [#1,#2], [#3,#4], [#5], [Worth Reviewing], [Dashboard]
-    expect(rows).toHaveLength(5);
-    expect(rows[0]).toHaveLength(2);
-    expect(rows[1]).toHaveLength(2);
-    expect(rows[2]).toHaveLength(1);
-    expect((rows[3]![0] as { text: string }).text).toContain("Worth Reviewing");
-    expect((rows[3]![0] as { callback_data: string }).callback_data).toBe("wr:0");
-    expect((rows[4]![0] as { text: string }).text).toBe("📊 Dashboard");
+    // Rows: [Apply#1], [Apply#2], [Apply#3], [Apply#4], [Apply#5], [Worth Reviewing], [Dashboard]
+    expect(rows).toHaveLength(7);
+    expect(rows[0]![0]).toMatchObject({ text: "Apply #1" });
+    expect(rows[4]![0]).toMatchObject({ text: "Apply #5" });
+    expect((rows[5]![0] as { text: string }).text).toContain("Worth Reviewing");
+    expect((rows[5]![0] as { callback_data: string }).callback_data).toBe("wr:0");
+    expect((rows[6]![0] as { text: string }).text).toBe("📊 Dashboard");
   });
 });
