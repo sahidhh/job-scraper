@@ -53,50 +53,67 @@ export default async function AnalyticsPage() {
         <p className="text-sm text-muted-foreground">Scrape activity, AI cost, and job score distribution.</p>
       </div>
 
-      <div className="space-y-2">
-        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">AI cost &amp; usage</h2>
-        <TokenStatsCards stats={tokenStats} />
-      </div>
+      {/* Key stats — always visible at top */}
+      <TokenStatsCards stats={tokenStats} />
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader><CardTitle>Jobs found over time</CardTitle></CardHeader>
-          <CardContent><JobsOverTimeChart data={jobsOverTime} /></CardContent>
-        </Card>
-        <Card>
-          <CardHeader><CardTitle>Jobs found by source</CardTitle></CardHeader>
-          <CardContent><JobsBySourceChart data={bySource} /></CardContent>
-        </Card>
-        <Card>
-          <CardHeader><CardTitle>AI-scored jobs by source</CardTitle></CardHeader>
-          <CardContent><ScoredBySourceChart data={scoredBySource} /></CardContent>
-        </Card>
-        <Card>
-          <CardHeader><CardTitle>AI score distribution</CardTitle></CardHeader>
-          <CardContent><ScoreHistogramChart data={histogram} /></CardContent>
-        </Card>
-        <Card>
-          <CardHeader><CardTitle>Job status breakdown</CardTitle></CardHeader>
-          <CardContent><StatusBreakdownChart data={statusBreakdown} /></CardContent>
-        </Card>
-        <Card>
-          <CardHeader><CardTitle>Jobs by experience</CardTitle></CardHeader>
-          <CardContent><JobsByExperienceChart data={byExperience} /></CardContent>
-        </Card>
-        <Card>
-          <CardHeader><CardTitle>Jobs by location</CardTitle></CardHeader>
-          <CardContent><JobsByLocationChart data={byLocation} /></CardContent>
-        </Card>
-      </div>
+      {/* Scraping activity */}
+      <section className="space-y-3">
+        <h2 className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Scraping activity</h2>
+        <div className="grid gap-4 md:grid-cols-2">
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-base">Jobs over time</CardTitle></CardHeader>
+            <CardContent><JobsOverTimeChart data={jobsOverTime} /></CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-base">Jobs by source</CardTitle></CardHeader>
+            <CardContent><JobsBySourceChart data={bySource} /></CardContent>
+          </Card>
+        </div>
+      </section>
 
-      <div className="space-y-2">
-        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Source health</h2>
+      {/* Scoring quality */}
+      <section className="space-y-3">
+        <h2 className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Scoring quality</h2>
+        <div className="grid gap-4 md:grid-cols-2">
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-base">AI-scored by source</CardTitle></CardHeader>
+            <CardContent><ScoredBySourceChart data={scoredBySource} /></CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-base">Score distribution</CardTitle></CardHeader>
+            <CardContent><ScoreHistogramChart data={histogram} /></CardContent>
+          </Card>
+        </div>
+      </section>
+
+      {/* Job breakdown */}
+      <section className="space-y-3">
+        <h2 className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Job breakdown</h2>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-base">Status</CardTitle></CardHeader>
+            <CardContent><StatusBreakdownChart data={statusBreakdown} /></CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-base">Experience required</CardTitle></CardHeader>
+            <CardContent><JobsByExperienceChart data={byExperience} /></CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2"><CardTitle className="text-base">Location</CardTitle></CardHeader>
+            <CardContent><JobsByLocationChart data={byLocation} /></CardContent>
+          </Card>
+        </div>
+      </section>
+
+      {/* Source health */}
+      <section className="space-y-3">
+        <h2 className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Source health</h2>
         <Card>
           <CardContent className="pt-4">
             <SourceHealthTable companies={companies} />
           </CardContent>
         </Card>
-      </div>
+      </section>
     </div>
   );
 }
