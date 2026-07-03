@@ -63,10 +63,11 @@ export async function sendDigestMvp(
 
   await deps.telegramSender.sendMessageWithButtons(text, buttons);
 
-  // Mark ALL matches (both bands) as notified to prevent re-delivery on the next cron run.
-  for (const match of matches) {
-    await deps.notificationRepository.markNotified(match.jobId);
-  }
+  // Mark ALL matches (both bands) as notified in one batch write -- a single
+  // Telegram message already covers every match, so a per-item write loop
+  // here would risk half-marking the batch if a later write failed
+  // (Phase 1 Task 4).
+  await deps.notificationRepository.markManyNotified(matches.map((match) => match.jobId));
 
   // Persist worth-reviewing IDs so the webhook can paginate them on demand.
   if (deps.digestSessionRepository && worthReviewing.length > 0) {

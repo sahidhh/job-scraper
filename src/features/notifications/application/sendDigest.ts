@@ -37,9 +37,10 @@ export async function sendDigest(roleSelectionId: string, deps: SendDigestDeps):
     await deps.telegramSender.sendMessage(chunk);
   }
 
-  for (const match of matches) {
-    await deps.notificationRepository.markNotified(match.jobId);
-  }
+  // Batched write (Phase 1 Task 4): the digest is one message covering every
+  // match, so marking notified must not leave the batch half-committed if a
+  // per-item write loop failed partway through.
+  await deps.notificationRepository.markManyNotified(matches.map((match) => match.jobId));
 
   return matches.length;
 }

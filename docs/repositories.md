@@ -160,8 +160,9 @@ interface ScoreRepository {
 
 ```ts
 interface NotificationRepository {
-  findUnnotifiedMatches(roleSelectionId: string, threshold: number): Promise<JobMatch[]>;
+  findUnnotifiedMatches(roleSelectionId: string, threshold: number, resumeVersion: number): Promise<JobMatch[]>;
   markNotified(jobId: string): Promise<void>;
+  markManyNotified(jobIds: string[]): Promise<void>;
   listRecent(limit: number): Promise<NotificationLogItem[]>;
 }
 ```
@@ -169,20 +170,23 @@ interface NotificationRepository {
 **Responsibilities:** finds jobs that crossed the AI-score notification threshold and haven't been sent yet; records the send; lists recent sends for `/settings`.
 
 **Query patterns:**
-- `findUnnotifiedMatches(roleSelectionId, threshold)` →
+- `findUnnotifiedMatches(roleSelectionId, threshold, resumeVersion)` →
   ```sql
   select j.*, s.ai_score, s.ai_reasoning
   from job_scores s
   join jobs j on j.id = s.job_id
   left join notifications_log n on n.job_id = j.id
   where s.role_selection_id = $roleSelectionId
+    and s.resume_version = $resumeVersion
     and s.ai_score >= $threshold
     and n.id is null
   ```
-- `markNotified(jobId)` → `insert into notifications_log (job_id) values ($jobId) on conflict (job_id) do nothing`.
+  `resumeVersion` scopes the join to the active resume's score rows so a job scored under a stale resume version never produces a duplicate result (AD-08).
+- `markNotified(jobId)` → `insert into notifications_log (job_id) values ($jobId) on conflict (job_id) do nothing`. Used by `sendNotification` (one Telegram message per job -- each match's send+mark is independent).
+- `markManyNotified(jobIds)` → same upsert, one call for all ids: `insert into notifications_log (job_id) values ($jobId1), ($jobId2), ... on conflict (job_id) do nothing`. Used by `sendDigest`/`sendDigestMvp` (one Telegram message covers every match, so marking must not leave the batch half-committed if a per-item write loop failed partway -- Phase 1 Task 4 verification, `decisions.md` AD-16 follow-up). No-op for an empty array.
 - `listRecent(limit)` → `select n.id, n.job_id, n.sent_at, j.title, j.company_name, j.source from notifications_log n join jobs j on j.id = n.job_id order by n.sent_at desc limit $limit` (same shape as `ScrapeRunRepository.listRecent`, §7 below). Backs the read-only `NotificationsLogList` on `/settings`.
 
-**Transaction boundaries:** `notify.ts` processes matches one at a time: send Telegram message, then `markNotified`. If the process crashes between send and mark, the next run could re-send that one job — acceptable for a personal tool (rare, and `on conflict do nothing` keeps `markNotified` itself idempotent). No DB transaction needed since each row's mark is independent and the external Telegram call can't be part of a DB transaction anyway.
+**Transaction boundaries:** `sendNotification` processes matches one at a time: send Telegram message, then `markNotified`. If the process crashes between send and mark, the next run could re-send that one job — acceptable for a personal tool (rare, and `on conflict do nothing` keeps `markNotified` itself idempotent). `sendDigest`/`sendDigestMvp` send one message covering many jobs, then call `markManyNotified` once for the whole batch, so the same crash-between-send-and-mark window applies to the entire digest atomically rather than job-by-job. No DB transaction needed in either case since the external Telegram call can't be part of a DB transaction anyway — idempotent `notifications_log` writes are what make at-least-once delivery safe to retry.
 
 ## 7. ScrapeRunRepository (`features/sources` infrastructure, or shared)
 

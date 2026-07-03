@@ -70,7 +70,7 @@ Existing `job_scores` rows are not deleted when a new resume is activated. The n
 ## 4. Notifications
 
 ### 4.1 One-Time Guarantee Only
-The `notifications_log` table prevents duplicate sends for jobs already notified. However, if a Telegram send fails permanently (bot blocked, chat deleted), the job is never retried — it must be manually cleared from `notifications_log`.
+The `notifications_log` table prevents duplicate sends for jobs already notified (verified Phase 1 Task 4, `docs/decisions.md` AD-17: `markNotified`/`markManyNotified` only run after a successful Telegram send, so a failed send is retried on the next cron run rather than silently dropped). However, if the failure is permanent (bot blocked, chat deleted), every retry keeps failing the same way forever — there is no backoff or dead-letter handling, just an indefinitely-retried, indefinitely-failing job. There is also a narrow at-least-once (not exactly-once) window: if the Telegram send succeeds but the immediately-following `notifications_log` write itself throws, the job is re-sent on the next run.
 
 ### 4.2 Telegram Rate Limits
 The Telegram Bot API enforces rate limits (approximately 30 messages/second globally, 20 messages/minute per chat). Large batches of high-scoring jobs may experience queuing delays. The platform respects `retry_after` headers (capped at 30s).

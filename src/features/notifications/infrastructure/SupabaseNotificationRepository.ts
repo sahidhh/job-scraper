@@ -75,6 +75,19 @@ export class SupabaseNotificationRepository implements NotificationRepository {
     if (error) throw toAppError(error);
   }
 
+  async markManyNotified(jobIds: string[]): Promise<void> {
+    if (jobIds.length === 0) return;
+
+    const { error } = await this.client
+      .from("notifications_log")
+      .upsert(
+        jobIds.map((jobId) => ({ job_id: jobId })),
+        { onConflict: "job_id", ignoreDuplicates: true },
+      );
+
+    if (error) throw toAppError(error);
+  }
+
   async listRecent(limit: number): Promise<NotificationLogItem[]> {
     const { data, error } = await this.client
       .from("notifications_log")

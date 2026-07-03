@@ -26,6 +26,7 @@ function makeRepo(matches: JobMatch[] = []): NotificationRepository {
   return {
     findUnnotifiedMatches: vi.fn().mockResolvedValue(matches),
     markNotified: vi.fn().mockResolvedValue(undefined),
+    markManyNotified: vi.fn().mockResolvedValue(undefined),
     listRecent: vi.fn().mockResolvedValue([]),
   };
 }
@@ -57,7 +58,7 @@ describe("sendDigestMvp", () => {
     });
     expect(result).toEqual({ strongCount: 0, worthReviewingCount: 0 });
     expect(sender.sendMessageWithButtons).not.toHaveBeenCalled();
-    expect(repo.markNotified).not.toHaveBeenCalled();
+    expect(repo.markManyNotified).not.toHaveBeenCalled();
   });
 
   it("sends exactly one message with buttons and marks all matches as notified", async () => {
@@ -75,9 +76,7 @@ describe("sendDigestMvp", () => {
     });
     expect(result).toEqual({ strongCount: 1, worthReviewingCount: 1 });
     expect(sender.sendMessageWithButtons).toHaveBeenCalledTimes(1);
-    expect(repo.markNotified).toHaveBeenCalledWith("a");
-    expect(repo.markNotified).toHaveBeenCalledWith("b");
-    expect(repo.markNotified).toHaveBeenCalledTimes(2);
+    expect(repo.markManyNotified).toHaveBeenCalledWith(["a", "b"]);
   });
 
   it("correctly bands strong vs worth-reviewing using STRONG_MATCH_THRESHOLD", async () => {
@@ -125,7 +124,7 @@ describe("sendDigestMvp", () => {
         resumeVersion: 1,
       }),
     ).rejects.toThrow("Telegram error");
-    expect(repo.markNotified).not.toHaveBeenCalled();
+    expect(repo.markManyNotified).not.toHaveBeenCalled();
   });
 
   it("applies preferences filter before banding and sending", async () => {
@@ -143,8 +142,7 @@ describe("sendDigestMvp", () => {
       preferences: { roles: ["backend engineer"] },
     });
     expect(result.strongCount).toBe(1);
-    expect(repo.markNotified).toHaveBeenCalledWith("back");
-    expect(repo.markNotified).not.toHaveBeenCalledWith("front");
+    expect(repo.markManyNotified).toHaveBeenCalledWith(["back"]);
   });
 
   it("saves worth-reviewing job IDs to digestSessionRepository when provided", async () => {
