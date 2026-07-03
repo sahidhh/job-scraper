@@ -139,6 +139,7 @@ erDiagram
         integer inserted_count "nullable; net-new rows"
         integer updated_count "nullable; refreshed rows"
         integer duplicate_count "nullable; cross-source fingerprint duplicates skipped (job_duplicates)"
+        text failure_category "nullable; classifyScrapeFailure.ts taxonomy, or 'empty_feed' on a successful zero-job run"
         integer failed_count "sub-run errors; 0 when source failed entirely"
         timestamptz started_at "nullable"
         timestamptz completed_at "nullable"

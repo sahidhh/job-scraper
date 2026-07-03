@@ -15,6 +15,7 @@ const row: ScrapeRunRow = {
   updated_count: 5,
   duplicate_count: 1,
   failed_count: 0,
+  failure_category: null,
   started_at: "2026-01-01T00:00:00Z",
   completed_at: "2026-01-01T00:00:01Z",
   duration_ms: 1000,
@@ -37,6 +38,7 @@ describe("SupabaseScrapeRunRepository", () => {
       updatedCount: 5,
       duplicateCount: 1,
       failedCount: 0,
+      failureCategory: "empty_feed",
       startedAt: "2026-01-01T00:00:00Z",
       completedAt: "2026-01-01T00:00:01Z",
       durationMs: 1000,
@@ -51,6 +53,7 @@ describe("SupabaseScrapeRunRepository", () => {
       updated_count: 5,
       duplicate_count: 1,
       failed_count: 0,
+      failure_category: "empty_feed",
       started_at: "2026-01-01T00:00:00Z",
       completed_at: "2026-01-01T00:00:01Z",
       duration_ms: 1000,
@@ -74,6 +77,7 @@ describe("SupabaseScrapeRunRepository", () => {
       updated_count: null,
       duplicate_count: null,
       failed_count: 0,
+      failure_category: null,
       started_at: null,
       completed_at: null,
       duration_ms: null,
@@ -99,6 +103,7 @@ describe("SupabaseScrapeRunRepository", () => {
         updatedCount: 5,
         duplicateCount: 1,
         failedCount: 0,
+        failureCategory: null,
         startedAt: "2026-01-01T00:00:00Z",
         completedAt: "2026-01-01T00:00:01Z",
         durationMs: 1000,
@@ -109,5 +114,17 @@ describe("SupabaseScrapeRunRepository", () => {
     ]);
     expect(builder.order).toHaveBeenCalledWith("run_at", { ascending: false });
     expect(builder.limit).toHaveBeenCalledWith(10);
+  });
+
+  it("listRecentBySource filters by source, orders by run_at desc, and maps rows", async () => {
+    const { client, builder } = mockSupabaseClient({ data: [row], error: null });
+    const repo = new SupabaseScrapeRunRepository(client);
+
+    const result = await repo.listRecentBySource("greenhouse", 20);
+
+    expect(result).toEqual([expect.objectContaining({ id: "run-1", source: "greenhouse" })]);
+    expect(builder.eq).toHaveBeenCalledWith("source", "greenhouse");
+    expect(builder.order).toHaveBeenCalledWith("run_at", { ascending: false });
+    expect(builder.limit).toHaveBeenCalledWith(20);
   });
 });

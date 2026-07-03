@@ -1,4 +1,5 @@
 import type { JobSource, ScrapeRunStatus } from "@/shared/domain/enums";
+import type { FailureCategory } from "./classifyScrapeFailure";
 
 // Normalized output of every source adapter, before location tagging
 // (filtering feature) and persistence (jobs feature). scrapers.md §3.
@@ -31,6 +32,13 @@ export interface ScrapeRun {
   duplicateCount: number | null;
   /** Processing errors within the run (0 when the whole source failed). */
   failedCount: number;
+  /**
+   * Deterministic failure classification (Phase 1 Task 5/7,
+   * classifyScrapeFailure.ts). Set when status='failed' (why the adapter
+   * threw), or 'empty_feed' on an otherwise-successful run that found zero
+   * jobs. Null when the run succeeded normally.
+   */
+  failureCategory: FailureCategory | null;
   startedAt: string | null; // ISO 8601
   completedAt: string | null; // ISO 8601
   durationMs: number | null;
@@ -48,6 +56,7 @@ export interface NewScrapeRun {
   updatedCount?: number | null;
   duplicateCount?: number | null;
   failedCount?: number;
+  failureCategory?: FailureCategory | null;
   startedAt?: string | null;
   completedAt?: string | null;
   durationMs?: number | null;

@@ -132,3 +132,5 @@ Skill gap and skill demand insights are meaningful only when both an active resu
 | Manual wellfound feed URL configuration | Non-obvious setup step | P3 |
 | June DB migrations not yet applied | 25 broken sources, 10 should be disabled; 13 should be repaired | P0 |
 | 7 broken sources without repair/disable plan | Revolut, Grab, BrowserStack, Rippling, Deel, Freshworks, Wise — all returning 404, not in June migration scope | P1 |
+| Source-level health summary (`getSourceHealthReport`, Phase 1 Task 5/7) has no UI | Backend-only; not yet wired to a dashboard or actual scraper auto-disable decisions, so it doesn't yet change runtime behavior, only offers a computable summary for future use | P2 |
+| Two independent, unreconciled source-health signals | `companies.health_status` (probe-driven, board-token sources only, drives auto-disable via `listActiveHealthy`) and the `scrape_runs`-derived summary (covers all sources, informational only) can disagree — e.g. a source can show `recommendation: "Healthy."` from recent scrape_runs while still `disabled` in `companies` if it hasn't been re-probed yet | P3 |

@@ -4,6 +4,7 @@ import { ingestJobs } from "@/features/jobs/application/ingestJobs";
 import { SupabaseJobRepository } from "@/features/jobs/infrastructure/SupabaseJobRepository";
 import { SupabaseCompanyRepository } from "@/features/companies/infrastructure/SupabaseCompanyRepository";
 import { SupabaseRoleRepository } from "@/features/roles/infrastructure/SupabaseRoleRepository";
+import { classifyScrapeFailure } from "@/features/sources/domain/classifyScrapeFailure";
 import { sourceScrapers } from "@/features/sources/infrastructure/registry";
 import { SupabaseScrapeRunRepository } from "@/features/sources/infrastructure/SupabaseScrapeRunRepository";
 import { createSupabaseServiceClient } from "@/shared/infrastructure/supabaseClient";
@@ -57,6 +58,10 @@ async function main(): Promise<void> {
       const completedAt = new Date();
       const durationMs = completedAt.getTime() - startedAt.getTime();
 
+      // Task 5/7: a source returning literally zero jobs (not just zero
+      // after location filtering) is a signal worth surfacing even though
+      // the run technically "succeeded" -- likely a broken board/feed
+      // rather than a genuinely quiet posting cycle.
       await scrapeRunRepository.recordRun({
         source: scraper.source,
         status: "success",
@@ -66,6 +71,7 @@ async function main(): Promise<void> {
         updatedCount: result.updated,
         duplicateCount: result.duplicates,
         failedCount: 0,
+        failureCategory: rawJobs.length === 0 ? "empty_feed" : null,
         startedAt: startedAt.toISOString(),
         completedAt: completedAt.toISOString(),
         durationMs,
@@ -89,6 +95,7 @@ async function main(): Promise<void> {
         insertedCount: 0,
         updatedCount: 0,
         failedCount: 0,
+        failureCategory: classifyScrapeFailure(err),
         startedAt: startedAt.toISOString(),
         completedAt: completedAt.toISOString(),
         durationMs,

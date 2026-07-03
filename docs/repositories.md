@@ -194,14 +194,16 @@ interface NotificationRepository {
 interface ScrapeRunRepository {
   recordRun(run: NewScrapeRun): Promise<void>;
   listRecent(limit: number): Promise<ScrapeRun[]>;
+  listRecentBySource(source: JobSource, limit: number): Promise<ScrapeRun[]>;
 }
 ```
 
-**Responsibilities:** observability log written by `scrape.ts`, read by `/settings`.
+**Responsibilities:** observability log written by `scrape.ts`, read by `/settings` and by `getSourceHealthReport` (Phase 1 Task 5/7).
 
 **Query patterns:**
-- `recordRun(run)` → single insert per source per cron run.
+- `recordRun(run)` → single insert per source per cron run. Now includes `failure_category` (Phase 1 Task 5/7, `classifyScrapeFailure.ts`): set when `status='failed'`, or `'empty_feed'` when a successful run's adapter returned zero raw jobs.
 - `listRecent(limit)` → `select * from scrape_runs order by run_at desc limit $limit`.
+- `listRecentBySource(source, limit)` → same, plus `.eq('source', source)`. Feeds `computeSourceHealthSummary`/`getSourceHealthReport`, which work for every source including the feed-based ones (wellfound/remoteok/mycareersfuture) that have no `companies` row and so are invisible to `companies.health_status`.
 
 **Transaction boundaries:** none.
 

@@ -485,6 +485,7 @@ export type Database = {
           duration_ms: number | null
           error: string | null
           failed_count: number
+          failure_category: string | null
           found_count: number
           id: string
           inserted_count: number | null
@@ -502,6 +503,7 @@ export type Database = {
           duration_ms?: number | null
           error?: string | null
           failed_count?: number
+          failure_category?: string | null
           found_count?: number
           id?: string
           inserted_count?: number | null
@@ -519,6 +521,7 @@ export type Database = {
           duration_ms?: number | null
           error?: string | null
           failed_count?: number
+          failure_category?: string | null
           found_count?: number
           id?: string
           inserted_count?: number | null

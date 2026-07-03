@@ -158,6 +158,31 @@ The three health states:
 | `unhealthy` | Consecutive failures below threshold | Included in scrape runs |
 | `disabled` | Failures ≥ SOURCE_DISABLE_THRESHOLD | Excluded from scrape runs |
 
+### 5.1 Source-Level Health Summary (Phase 1 Task 5/7)
+
+The probe-based tracking above only covers board-token sources (greenhouse/lever/ashby) via their
+`companies` rows, and only reacts to the separate `validate-sources.ts` cron -- a company whose
+*actual scrape* fails is invisible to it until the next probe run (AD-13/AD-16 follow-up). A second,
+independent signal now covers every source uniformly, including the feed-based ones with no
+`companies` row (wellfound/remoteok/mycareersfuture):
+
+```
+scrape.ts catch/success path
+  → classifyScrapeFailure(error) or 'empty_feed' (found_count === 0 on success)
+  → scrape_runs.failure_category
+  → computeSourceHealthSummary(source, recent scrape_runs)
+  → { successRate, avgLatencyMs, consecutiveFailures, lastSuccessAt/lastFailureAt,
+      recoveryDetected, topFailureCategory, recommendation }
+  → getSourceHealthReport(): one summary per registered source
+```
+
+Failure categories (`classifyScrapeFailure.ts`, deterministic keyword/status heuristics, no AI):
+`timeout | parsing | selector | captcha | blocked | authentication | rate_limited | not_found |
+empty_feed | unknown`. `selector`/`captcha` are extension points -- no current adapter does
+HTML/DOM scraping or hits a CAPTCHA wall. This layer is backend-only as of Phase 1 (no UI wired
+yet, per the domain/application/infrastructure-before-UI rule); Phase 4 analytics is the intended
+consumer.
+
 ---
 
 ## 6. Scoring Pipeline
