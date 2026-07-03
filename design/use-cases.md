@@ -171,8 +171,9 @@
 4. Apply role keyword filter (expanded_roles of active role_selection, if any)
 5. `tagLocations()` infers location_tags from location_raw
 6. Drop jobs with empty location_tags
-7. Upsert all to `jobs` (dedup on source + source_job_id)
-8. Log each source's result to `scrape_runs`
+7. For each job not already known by (source, source_job_id): compute its fingerprint and check it against existing jobs from any source; a match is recorded to `job_duplicates` and skipped instead of inserted (AD-16)
+8. Upsert the rest to `jobs` (dedup on source + source_job_id)
+9. Log each source's result, including duplicates skipped, to `scrape_runs`
 
 ---
 

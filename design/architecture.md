@@ -116,12 +116,24 @@ flowchart LR
         F["Role Filter\n(expanded_roles)"]
         T["tagLocations()\n→ location_tags"]
         D["Drop\n(empty tags)"]
+        FP{"Fingerprint match?\n(cross-source dedup)"}
+        SKIP["Skip insert\n→ job_duplicates (provenance)"]
         U["Upsert jobs\n(source + source_job_id)"]
-        L["Log scrape_run\n(timing + counts)"]
+        L["Log scrape_run\n(timing + counts + duplicates)"]
     end
 
-    sources --> N --> F --> T --> D --> U --> L
+    sources --> N --> F --> T --> D --> FP
+    FP -- "yes, different source" --> SKIP --> L
+    FP -- "no" --> U --> L
 ```
+
+Cross-source duplicate detection (Phase 1 Task 1-3, `computeFingerprint.ts`): before a job with a
+new `(source, source_job_id)` is inserted, its fingerprint (normalized title + canonical company +
+sorted location tags) is checked against every existing job regardless of source. A match means the
+same logical posting was already ingested elsewhere -- it is recorded in `job_duplicates` for
+provenance instead of becoming a second `jobs` row, so scoring and notifications run once per
+logical job. Jobs already known by `(source, source_job_id)` always go through the normal
+update path, unaffected by the fingerprint check.
 
 ---
 

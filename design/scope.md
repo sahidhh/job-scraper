@@ -44,6 +44,13 @@ A single technical professional (software engineer, data scientist, or similar) 
 |---|---|
 | Notification preferences | Configurable include filters: role, skill, location, experience, source — applied before Telegram delivery |
 
+### P1.6 — Pipeline Reliability (shipped)
+
+| Feature | Description |
+|---|---|
+| Cross-source duplicate detection | Deterministic fingerprint (normalized title + canonical company + location) prevents the same logical job scraped from two sources from becoming two rows, two scoring runs, or two notifications; provenance preserved in `job_duplicates` |
+| Company name normalization | `jobs.canonical_company_name` strips legal-entity suffixes (LLC/Inc/Corp) and regional qualifiers (India/Singapore/...) from `company_name` for grouping, without discarding the original |
+
 ### P2 — Medium Priority
 
 | Feature | Description |

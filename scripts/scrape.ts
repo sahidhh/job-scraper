@@ -64,6 +64,7 @@ async function main(): Promise<void> {
         keptCount: filtered.length,
         insertedCount: result.inserted,
         updatedCount: result.updated,
+        duplicateCount: result.duplicates,
         failedCount: 0,
         startedAt: startedAt.toISOString(),
         completedAt: completedAt.toISOString(),
@@ -73,7 +74,7 @@ async function main(): Promise<void> {
 
       console.log(
         `[scrape] ${scraper.source}: found ${rawJobs.length}, kept ${filtered.length}, ` +
-          `inserted ${result.inserted}, updated ${result.updated} (${durationMs}ms)`,
+          `inserted ${result.inserted}, updated ${result.updated}, duplicates ${result.duplicates} (${durationMs}ms)`,
       );
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);

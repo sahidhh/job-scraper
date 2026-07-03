@@ -31,6 +31,8 @@ const job: Job = {
   isActive: true,
   inactiveReason: null,
   minYears: null,
+  canonicalCompanyName: "Acme",
+  fingerprint: "test-fingerprint",
 };
 
 const resume: Resume = {

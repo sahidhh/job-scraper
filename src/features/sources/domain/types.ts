@@ -27,6 +27,8 @@ export interface ScrapeRun {
   insertedCount: number | null;
   /** Jobs updated via upsert (null for runs before migration). */
   updatedCount: number | null;
+  /** Jobs skipped as cross-source fingerprint duplicates (null for runs before migration). */
+  duplicateCount: number | null;
   /** Processing errors within the run (0 when the whole source failed). */
   failedCount: number;
   startedAt: string | null; // ISO 8601
@@ -44,6 +46,7 @@ export interface NewScrapeRun {
   keptCount?: number | null;
   insertedCount?: number | null;
   updatedCount?: number | null;
+  duplicateCount?: number | null;
   failedCount?: number;
   startedAt?: string | null;
   completedAt?: string | null;

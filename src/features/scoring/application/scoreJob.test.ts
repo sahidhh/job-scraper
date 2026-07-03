@@ -31,6 +31,8 @@ function makeJob(overrides: Partial<Job> = {}): Job {
     isActive: true,
     inactiveReason: null,
     minYears: null,
+    canonicalCompanyName: "Acme",
+    fingerprint: "test-fingerprint",
     ...overrides,
   };
 }

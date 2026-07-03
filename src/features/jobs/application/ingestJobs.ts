@@ -27,7 +27,7 @@ export async function ingestJobs(
   }
 
   if (deduped.length === 0) {
-    return { inserted: 0, updated: 0 };
+    return { inserted: 0, updated: 0, duplicates: 0 };
   }
 
   // Derive the soft experience signal at ingest (P2): parsed best-effort

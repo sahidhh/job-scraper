@@ -22,7 +22,7 @@ function makeJob(overrides: Partial<NormalizedJob> = {}): NormalizedJob {
 
 function makeRepository(): JobRepository {
   return {
-    upsertMany: vi.fn().mockResolvedValue({ inserted: 0, updated: 0 }),
+    upsertMany: vi.fn().mockResolvedValue({ inserted: 0, updated: 0, duplicates: 0 }),
     findUnscored: vi.fn(),
     findForDashboard: vi.fn(),
     countMatchingExpandedRoles: vi.fn(),
@@ -55,11 +55,11 @@ describe("ingestJobs", () => {
 
   it("returns the repository's upsert result", async () => {
     const jobRepository = makeRepository();
-    vi.mocked(jobRepository.upsertMany).mockResolvedValue({ inserted: 2, updated: 0 });
+    vi.mocked(jobRepository.upsertMany).mockResolvedValue({ inserted: 2, updated: 0, duplicates: 1 });
 
     const result = await ingestJobs([makeJob()], { jobRepository });
 
-    expect(result).toEqual({ inserted: 2, updated: 0 });
+    expect(result).toEqual({ inserted: 2, updated: 0, duplicates: 1 });
   });
 
   it("short-circuits without calling the repository when there are no jobs", async () => {
@@ -67,7 +67,7 @@ describe("ingestJobs", () => {
 
     const result = await ingestJobs([], { jobRepository });
 
-    expect(result).toEqual({ inserted: 0, updated: 0 });
+    expect(result).toEqual({ inserted: 0, updated: 0, duplicates: 0 });
     expect(jobRepository.upsertMany).not.toHaveBeenCalled();
   });
 

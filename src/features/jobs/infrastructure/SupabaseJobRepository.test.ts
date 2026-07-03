@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { mockSupabaseClient, queuedSupabaseClient } from "@/shared/infrastructure/testing/supabaseQueryMock";
 import type { NormalizedJob } from "@/features/jobs/domain/types";
+import { computeFingerprint } from "@/features/jobs/application/computeFingerprint";
 import type { Database } from "../../../../supabase/database.types";
 import { SupabaseJobRepository } from "./SupabaseJobRepository";
 
@@ -40,6 +41,8 @@ const jobRow: JobRow = {
   min_years: null,
   is_active: true,
   inactive_reason: null,
+  canonical_company_name: "Acme",
+  fingerprint: "test-fingerprint",
 };
 
 describe("SupabaseJobRepository", () => {
@@ -47,6 +50,7 @@ describe("SupabaseJobRepository", () => {
     it("counts existing keys as updated and the rest as inserted, omitting first_seen_at from the payload", async () => {
       const { client, builders } = queuedSupabaseClient([
         { data: [{ source_job_id: "1" }], error: null }, // existing-key lookup
+        { data: [], error: null }, // fingerprint lookup for job "2" (no match)
         { data: null, error: null }, // upsert
       ]);
       const repo = new SupabaseJobRepository(client);
@@ -54,15 +58,17 @@ describe("SupabaseJobRepository", () => {
       const jobs = [makeJob({ sourceJobId: "1" }), makeJob({ sourceJobId: "2" })];
       const result = await repo.upsertMany(jobs);
 
-      expect(result).toEqual({ inserted: 1, updated: 1 });
+      expect(result).toEqual({ inserted: 1, updated: 1, duplicates: 0 });
 
-      expect(builders).toHaveLength(2);
-      const [lookupBuilder, upsertBuilder] = builders as [
+      expect(builders).toHaveLength(3);
+      const [lookupBuilder, fingerprintBuilder, upsertBuilder] = builders as [
+        Record<string, ReturnType<typeof vi.fn>>,
         Record<string, ReturnType<typeof vi.fn>>,
         Record<string, ReturnType<typeof vi.fn>>,
       ];
       expect(lookupBuilder.eq).toHaveBeenCalledWith("source", "greenhouse");
       expect(lookupBuilder.in).toHaveBeenCalledWith("source_job_id", ["1", "2"]);
+      expect(fingerprintBuilder.in).toHaveBeenCalledWith("fingerprint", [computeFingerprint(makeJob({ sourceJobId: "2" }))]);
 
       const upsertCall = upsertBuilder.upsert!.mock.calls[0] as unknown[];
       const rows = upsertCall[0] as Record<string, unknown>[];
@@ -72,6 +78,8 @@ describe("SupabaseJobRepository", () => {
         expect(row).toHaveProperty("updated_at");
         expect(row).toHaveProperty("last_seen_at");
         expect(row).toHaveProperty("is_active", true);
+        expect(row).toHaveProperty("fingerprint");
+        expect(row).toHaveProperty("canonical_company_name", "Acme");
       }
       expect(upsertCall[1]).toEqual({ onConflict: "source,source_job_id" });
     });
@@ -82,8 +90,46 @@ describe("SupabaseJobRepository", () => {
 
       const result = await repo.upsertMany([]);
 
-      expect(result).toEqual({ inserted: 0, updated: 0 });
+      expect(result).toEqual({ inserted: 0, updated: 0, duplicates: 0 });
       expect(builders).toHaveLength(0);
+    });
+
+    it("skips inserting a job whose fingerprint matches an already-persisted job from a different source", async () => {
+      const duplicateJob = makeJob({ source: "wellfound", sourceJobId: "99", url: "https://wellfound.com/jobs/99" });
+      const { client, builders } = queuedSupabaseClient([
+        { data: [], error: null }, // existing-key lookup: no (source, sourceJobId) match
+        { data: [{ id: "job-1", fingerprint: computeFingerprint(duplicateJob) }], error: null }, // fingerprint match
+        { data: null, error: null }, // job_duplicates upsert
+        { data: null, error: null }, // canonical job last_seen_at touch
+      ]);
+      const repo = new SupabaseJobRepository(client);
+
+      const result = await repo.upsertMany([duplicateJob]);
+
+      expect(result).toEqual({ inserted: 0, updated: 0, duplicates: 1 });
+      expect(builders).toHaveLength(4);
+
+      const [, , duplicatesBuilder, touchBuilder] = builders as [
+        Record<string, ReturnType<typeof vi.fn>>,
+        Record<string, ReturnType<typeof vi.fn>>,
+        Record<string, ReturnType<typeof vi.fn>>,
+        Record<string, ReturnType<typeof vi.fn>>,
+      ];
+
+      const duplicateUpsertCall = duplicatesBuilder.upsert!.mock.calls[0] as unknown[];
+      const duplicateRows = duplicateUpsertCall[0] as Record<string, unknown>[];
+      expect(duplicateRows).toEqual([
+        expect.objectContaining({
+          canonical_job_id: "job-1",
+          source: "wellfound",
+          source_job_id: "99",
+          url: "https://wellfound.com/jobs/99",
+        }),
+      ]);
+      expect(duplicateUpsertCall[1]).toEqual({ onConflict: "source,source_job_id" });
+
+      expect(touchBuilder.update).toHaveBeenCalledWith({ last_seen_at: expect.any(String) });
+      expect(touchBuilder.in).toHaveBeenCalledWith("id", ["job-1"]);
     });
   });
 
@@ -119,6 +165,8 @@ describe("SupabaseJobRepository", () => {
           isActive: true,
           inactiveReason: null,
           minYears: null,
+          canonicalCompanyName: "Acme",
+          fingerprint: "test-fingerprint",
         },
       ]);
 

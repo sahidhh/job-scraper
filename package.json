@@ -14,6 +14,7 @@
     "notify": "tsx scripts/notify.ts",
     "check:service-role-boundary": "tsx scripts/checkServiceRoleBoundary.ts",
     "validate-sources": "tsx scripts/validate-sources.ts",
+    "backfill:fingerprints": "tsx scripts/backfill-fingerprints.ts",
     "setup:webhook": "tsx scripts/setup-webhook.ts"
   },
   "dependencies": {

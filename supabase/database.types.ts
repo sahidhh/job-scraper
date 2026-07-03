@@ -217,9 +217,11 @@ export type Database = {
       }
       jobs: {
         Row: {
+          canonical_company_name: string
           company_id: string | null
           company_name: string
           description: string
+          fingerprint: string
           first_seen_at: string
           id: string
           inactive_reason: string | null
@@ -236,9 +238,11 @@ export type Database = {
           url: string
         }
         Insert: {
+          canonical_company_name?: string
           company_id?: string | null
           company_name: string
           description?: string
+          fingerprint?: string
           first_seen_at?: string
           id?: string
           inactive_reason?: string | null
@@ -255,9 +259,11 @@ export type Database = {
           url: string
         }
         Update: {
+          canonical_company_name?: string
           company_id?: string | null
           company_name?: string
           description?: string
+          fingerprint?: string
           first_seen_at?: string
           id?: string
           inactive_reason?: string | null
@@ -279,6 +285,44 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      job_duplicates: {
+        Row: {
+          canonical_job_id: string
+          first_seen_at: string
+          id: string
+          last_seen_at: string
+          source: Database["public"]["Enums"]["job_source"]
+          source_job_id: string
+          url: string
+        }
+        Insert: {
+          canonical_job_id: string
+          first_seen_at?: string
+          id?: string
+          last_seen_at?: string
+          source: Database["public"]["Enums"]["job_source"]
+          source_job_id: string
+          url: string
+        }
+        Update: {
+          canonical_job_id?: string
+          first_seen_at?: string
+          id?: string
+          last_seen_at?: string
+          source?: Database["public"]["Enums"]["job_source"]
+          source_job_id?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_duplicates_canonical_job_id_fkey"
+            columns: ["canonical_job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
             referencedColumns: ["id"]
           },
         ]
@@ -437,6 +481,7 @@ export type Database = {
       scrape_runs: {
         Row: {
           completed_at: string | null
+          duplicate_count: number | null
           duration_ms: number | null
           error: string | null
           failed_count: number
@@ -453,6 +498,7 @@ export type Database = {
         }
         Insert: {
           completed_at?: string | null
+          duplicate_count?: number | null
           duration_ms?: number | null
           error?: string | null
           failed_count?: number
@@ -469,6 +515,7 @@ export type Database = {
         }
         Update: {
           completed_at?: string | null
+          duplicate_count?: number | null
           duration_ms?: number | null
           error?: string | null
           failed_count?: number

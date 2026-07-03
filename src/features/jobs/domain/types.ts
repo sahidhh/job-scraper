@@ -7,6 +7,10 @@ export interface Job {
   sourceJobId: string;
   companyId: string | null;
   companyName: string;
+  // Deterministic normalization of companyName (legal suffix/regional
+  // qualifier stripped, e.g. "Google LLC" -> "Google"). Computed at write
+  // time by the repository -- see normalizeCompanyName.ts.
+  canonicalCompanyName: string;
   title: string;
   locationRaw: string;
   locationTags: LocationTag[];
@@ -19,6 +23,10 @@ export interface Job {
   isActive: boolean;
   inactiveReason: string | null;
   minYears: number | null;
+  // Cross-source duplicate key (Phase 1 Task 1): sha256 of normalized
+  // title + canonical company + sorted location tags. Computed at write
+  // time -- see computeFingerprint.ts.
+  fingerprint: string;
 }
 
 // Input to JobRepository.upsertMany() -- a TaggedRawJob ready to persist.
@@ -43,6 +51,22 @@ export interface NormalizedJob {
 export interface UpsertResult {
   inserted: number;
   updated: number;
+  // Jobs skipped because their fingerprint matched an already-persisted job
+  // from a different source -- recorded in job_duplicates instead of
+  // inserted as a new row (Phase 1 Task 1).
+  duplicates: number;
+}
+
+// A source rediscovery of an already-ingested logical job (job_duplicates
+// table): the `jobs` row is never duplicated, this just preserves
+// provenance for the other source(s) that also carry the same posting.
+export interface JobDuplicate {
+  canonicalJobId: string;
+  source: JobSource;
+  sourceJobId: string;
+  url: string;
+  firstSeenAt: string;
+  lastSeenAt: string;
 }
 
 // A user-assignable status (job_statuses table, P0). Seeded with mild
@@ -81,7 +105,7 @@ export interface JobFilters {
 // Job joined with its score for the active role_selection. Omits
 // `description` -- the dashboard query doesn't select it (P1 #4, never
 // rendered by JobRow).
-export interface JobWithScore extends Omit<Job, "description"> {
+export interface JobWithScore extends Omit<Job, "description" | "fingerprint" | "canonicalCompanyName"> {
   keywordScore: number | null;
   aiScore: number | null;
   aiReasoning: string | null;

@@ -40,6 +40,7 @@ WITH CHECK (true);
 | notifications_log | authenticated full access | authenticated |
 | scrape_runs | authenticated full access | authenticated |
 | app_settings | authenticated full access | authenticated |
+| job_duplicates | authenticated read-only (writes are service-role only, via scripts/scrape.ts) | authenticated |
 
 Anonymous or unauthenticated requests receive zero rows / permission denied.
 

@@ -23,6 +23,7 @@ erDiagram
         text source_job_id
         uuid company_id FK "nullable"
         text company_name
+        text canonical_company_name "normalizeCompanyName(company_name); legal/regional suffixes stripped"
         text title
         text location_raw
         text[] location_tags "india | singapore | uae | remote"
@@ -35,6 +36,17 @@ erDiagram
         integer min_years "nullable; CHECK 0-20; parsed at ingest + seniority-label fallback"
         boolean is_active "false when not seen for JOB_EXPIRATION_DAYS"
         text inactive_reason "nullable; 'expired' when set by sweep"
+        text fingerprint "sha256(normalized title + canonical company + location tags); cross-source dedup key"
+    }
+
+    JOB_DUPLICATES {
+        uuid id PK
+        uuid canonical_job_id FK "-> JOBS; the one row kept for this logical job"
+        text source "the OTHER source that also carries this posting"
+        text source_job_id
+        text url
+        timestamptz first_seen_at
+        timestamptz last_seen_at "refreshed each time this source re-scrapes the duplicate"
     }
 
     JOB_SCORES {
@@ -126,6 +138,7 @@ erDiagram
         integer kept_count "nullable; after location filter"
         integer inserted_count "nullable; net-new rows"
         integer updated_count "nullable; refreshed rows"
+        integer duplicate_count "nullable; cross-source fingerprint duplicates skipped (job_duplicates)"
         integer failed_count "sub-run errors; 0 when source failed entirely"
         timestamptz started_at "nullable"
         timestamptz completed_at "nullable"
@@ -149,6 +162,7 @@ erDiagram
     JOB_STATUSES ||--o{ JOB_STATE : "assigned to"
     JOBS ||--o| NOTIFICATIONS_LOG : "notified once"
     ROLE_SELECTIONS ||--o{ DIGEST_SESSIONS : "scopes"
+    JOBS ||--o{ JOB_DUPLICATES : "rediscovered as"
 ```
 
 ---
@@ -159,6 +173,8 @@ erDiagram
 |---|---|---|
 | `jobs` | `UNIQUE (source, source_job_id)` | Dedup on every ingest run |
 | `jobs` | `GIN INDEX (location_tags)` | Fast array containment queries |
+| `jobs` | `INDEX (fingerprint)` | Cross-source duplicate lookup on insert (not unique -- app-level check-then-skip, see `SupabaseJobRepository.upsertMany`) |
+| `job_duplicates` | `UNIQUE (source, source_job_id)` | One provenance row per (other-source, id) rediscovery |
 | `job_scores` | `UNIQUE (job_id, role_selection_id, resume_version)` | One score per job+role+resume-version triple; prior-version rows preserved |
 | `job_scores` | `INDEX (ai_score DESC NULLS LAST)` | Dashboard sorted by relevance |
 | `resumes` | `UNIQUE (is_active) WHERE is_active = true` | Enforce single active resume |

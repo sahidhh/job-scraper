@@ -24,6 +24,9 @@ Only jobs seen after the platform was set up are stored. There is no backfill of
 ### 1.6 Job Expiration
 Jobs not seen in recent scrapes are soft-deactivated after `JOB_EXPIRATION_DAYS` (default 14). Inactive jobs are excluded from the dashboard, scoring, and notifications but are never deleted. Jobs may reactivate automatically if they reappear on the source board (upsert sets `is_active = true` and refreshes `last_seen_at`).
 
+### 1.7 Cross-Source Duplicate Detection Scope
+Fingerprint-based dedup (`docs/decisions.md` AD-16) only checks a new job against rows already persisted in the DB — it does not dedupe two postings that collide on fingerprint within the *same* scrape batch (same source, same run). This is rare in practice (would require one source listing the same title/company/location twice in one run) and is left unhandled rather than adding logic to resolve IDs for rows not yet inserted. Existing jobs ingested before the fingerprint migration have `fingerprint = ''` until `npm run backfill:fingerprints` is run once; until then they are not matched against by the cross-source check (fails safe — no false merges, just temporarily un-deduped). Title normalization also deliberately strips seniority modifiers (senior/sr/junior/jr/lead/staff/principal), so a Senior and non-senior posting for the same title/company/location are treated as the same logical job — acceptable for the stated use case, but worth knowing if it ever needs to change.
+
 ---
 
 ## 2. Resume & Skill Extraction
