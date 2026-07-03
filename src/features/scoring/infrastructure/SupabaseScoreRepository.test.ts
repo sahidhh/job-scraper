@@ -1,10 +1,10 @@
-import { describe, expect, it } from "vitest";
-import { mockSupabaseClient } from "@/shared/infrastructure/testing/supabaseQueryMock";
+import { describe, expect, it, vi } from "vitest";
+import { mockSupabaseClient, queuedSupabaseClient } from "@/shared/infrastructure/testing/supabaseQueryMock";
 import { SupabaseScoreRepository } from "./SupabaseScoreRepository";
 
 describe("SupabaseScoreRepository", () => {
-  it("insertScore upserts on (job_id, role_selection_id, resume_version) and updates on conflict (retryable null ai_score)", async () => {
-    const { client, builder } = mockSupabaseClient({ data: null, error: null });
+  it("insertScore calls the upsert_job_score RPC with all fields", async () => {
+    const { client } = mockSupabaseClient({ data: null, error: null });
     const repo = new SupabaseScoreRepository(client);
 
     await repo.insertScore({
@@ -17,32 +17,29 @@ describe("SupabaseScoreRepository", () => {
       model: "openai/gpt-4o-mini",
     });
 
-    expect(builder.upsert).toHaveBeenCalledWith(
-      {
-        job_id: "job-1",
-        role_selection_id: "role-selection-1",
-        resume_version: 1,
-        keyword_score: 1,
-        ai_score: 0.85,
-        ai_reasoning: "Strong match",
-        model: "openai/gpt-4o-mini",
-        tokens_input: null,
-        tokens_output: null,
-        estimated_cost_usd: null,
-      },
-      { onConflict: "job_id,role_selection_id,resume_version", ignoreDuplicates: false },
-    );
+    expect(vi.mocked(client.rpc)).toHaveBeenCalledWith("upsert_job_score", {
+      p_job_id: "job-1",
+      p_role_selection_id: "role-selection-1",
+      p_resume_version: 1,
+      p_keyword_score: 1,
+      p_ai_score: 0.85,
+      p_ai_reasoning: "Strong match",
+      p_model: "openai/gpt-4o-mini",
+      p_tokens_input: null,
+      p_tokens_output: null,
+      p_estimated_cost_usd: null,
+    });
   });
 
   it("insertScore defaults missing ai fields and model to null", async () => {
-    const { client, builder } = mockSupabaseClient({ data: null, error: null });
+    const { client } = mockSupabaseClient({ data: null, error: null });
     const repo = new SupabaseScoreRepository(client);
 
     await repo.insertScore({ jobId: "job-1", roleSelectionId: "role-selection-1", resumeVersion: 1, keywordScore: 0 });
 
-    expect(builder.upsert).toHaveBeenCalledWith(
-      expect.objectContaining({ ai_score: null, ai_reasoning: null, model: null }),
-      expect.anything(),
+    expect(vi.mocked(client.rpc)).toHaveBeenCalledWith(
+      "upsert_job_score",
+      expect.objectContaining({ p_ai_score: null, p_ai_reasoning: null, p_model: null }),
     );
   });
 
@@ -65,5 +62,31 @@ describe("SupabaseScoreRepository", () => {
     const result = await repo.hasScore("job-1", "role-selection-1", 1);
 
     expect(result).toBe(false);
+  });
+
+  describe("findAwaitingAi", () => {
+    it("filters by role/version/keyword gate, excludes scored jobs, and orders oldest first", async () => {
+      const { client, builder } = mockSupabaseClient({
+        data: [{ job_id: "job-1", scored_at: "2026-01-01T00:00:00Z", retry_count: 3 }],
+        error: null,
+      });
+      const repo = new SupabaseScoreRepository(client);
+
+      const result = await repo.findAwaitingAi("role-selection-1", 1, 0.25);
+
+      expect(result).toEqual([{ jobId: "job-1", scoredAt: "2026-01-01T00:00:00Z", retryCount: 3 }]);
+      expect(builder.eq).toHaveBeenCalledWith("role_selection_id", "role-selection-1");
+      expect(builder.eq).toHaveBeenCalledWith("resume_version", 1);
+      expect(builder.gte).toHaveBeenCalledWith("keyword_score", 0.25);
+      expect(builder.is).toHaveBeenCalledWith("ai_score", null);
+      expect(builder.order).toHaveBeenCalledWith("scored_at", { ascending: true });
+    });
+
+    it("returns an empty array when nothing is awaiting AI", async () => {
+      const { client } = queuedSupabaseClient([{ data: [], error: null }]);
+      const repo = new SupabaseScoreRepository(client);
+
+      expect(await repo.findAwaitingAi("role-selection-1", 1, 0.25)).toEqual([]);
+    });
   });
 });

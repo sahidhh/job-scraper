@@ -108,6 +108,7 @@ export type Database = {
           keyword_score: number
           model: string | null
           resume_version: number
+          retry_count: number
           role_selection_id: string
           scored_at: string
           tokens_input: number | null
@@ -122,6 +123,7 @@ export type Database = {
           keyword_score: number
           model?: string | null
           resume_version: number
+          retry_count?: number
           role_selection_id: string
           scored_at?: string
           tokens_input?: number | null
@@ -136,6 +138,7 @@ export type Database = {
           keyword_score?: number
           model?: string | null
           resume_version?: number
+          retry_count?: number
           role_selection_id?: string
           scored_at?: string
           tokens_input?: number | null
@@ -573,6 +576,21 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      upsert_job_score: {
+        Args: {
+          p_ai_reasoning: string | null
+          p_ai_score: number | null
+          p_estimated_cost_usd: number | null
+          p_job_id: string
+          p_keyword_score: number
+          p_model: string | null
+          p_resume_version: number
+          p_role_selection_id: string
+          p_tokens_input: number | null
+          p_tokens_output: number | null
+        }
+        Returns: undefined
       }
     }
     Enums: {

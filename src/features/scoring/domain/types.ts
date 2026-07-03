@@ -11,6 +11,23 @@ export interface JobScore {
   tokensOutput: number | null;
   estimatedCostUsd: number | null;
   scoredAt: string; // ISO 8601
+  /**
+   * Number of times this row was (re-)written while ai_score stayed null
+   * (Phase 1 Task 6). Incremented atomically by the upsert_job_score RPC --
+   * never reset, so it reflects total failed-AI-attempt history even after
+   * the job eventually scores successfully.
+   */
+  retryCount: number;
+}
+
+/**
+ * A job_scores row that passed the keyword gate but has no ai_score yet --
+ * the AI-retry queue (Phase 1 Task 6, ScoreRepository.findAwaitingAi).
+ */
+export interface AwaitingScoreJob {
+  jobId: string;
+  scoredAt: string;
+  retryCount: number;
 }
 
 export interface NewJobScore {

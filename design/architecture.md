@@ -204,6 +204,15 @@ flowchart TD
     NEXT["Next job"] --> EACH
 ```
 
+Every save goes through the `upsert_job_score` RPC (erd.md), which atomically increments `retry_count`
+whenever the write leaves `ai_score` null. After each `score.ts` run, `getScoringQueueReport()` (Phase 1
+Task 6) queries `ScoreRepository.findAwaitingAi` (keyword gate passed, `ai_score IS NULL`, ordered
+oldest `scored_at` first) and computes `{ awaitingAiCount, oldestPendingAgeHours, stuckJobs,
+maxRetryCount, avgRetryCount }` via the pure `computeScoringQueueSummary`. "Stuck" jobs (waiting past
+`SCORING_STUCK_THRESHOLD_HOURS`, default 48h) are logged as a warning -- AD-14 already retries
+indefinitely, so this is visibility, not a new retry mechanism. Backend-only for this phase; no
+dashboard UI yet.
+
 ---
 
 ## 7. Notification Pipeline

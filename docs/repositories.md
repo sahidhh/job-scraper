@@ -144,17 +144,19 @@ interface RoleRepository {
 ```ts
 interface ScoreRepository {
   insertScore(score: NewJobScore): Promise<void>;
-  hasScore(jobId: string, roleSelectionId: string): Promise<boolean>;
+  hasScore(jobId: string, roleSelectionId: string, resumeVersion: number): Promise<boolean>;
+  findAwaitingAi(roleSelectionId: string, resumeVersion: number, keywordThreshold: number): Promise<AwaitingScoreJob[]>;
 }
 ```
 
-**Responsibilities:** persist `job_scores` rows; idempotency check for `score.ts`.
+**Responsibilities:** persist `job_scores` rows; idempotency check for `score.ts`; surface the AI-retry queue for monitoring (Phase 1 Task 6).
 
 **Query patterns:**
-- `insertScore(score)` → `insert into job_scores (...) values (...) on conflict (job_id, role_selection_id) do update set keyword_score = excluded.keyword_score, ai_score = excluded.ai_score, ai_reasoning = excluded.ai_reasoning` (decisions.md AD-14). The update-on-conflict is what makes a retried row's `ai_score` actually get persisted when `JobRepository.findUnscored()` re-selects it.
-- `hasScore(jobId, roleSelectionId)` → used only if a caller needs a point check outside the bulk `findUnscored` flow (e.g. future manual "re-score this job" action).
+- `insertScore(score)` → calls the `upsert_job_score` RPC (Phase 1 Task 6, `decisions.md` AD-19; supersedes the plain client-side `.upsert()` described in earlier revisions of this doc): `insert into job_scores (...) values (...) on conflict (job_id, role_selection_id, resume_version) do update set keyword_score/ai_score/ai_reasoning/model/tokens_*/estimated_cost_usd = excluded.*, retry_count = job_scores.retry_count + (1 if excluded.ai_score is null else 0)` (decisions.md AD-14 for the retryable-on-conflict behavior; AD-19 for the atomic `retry_count` increment). The update-on-conflict is what makes a retried row's `ai_score` actually get persisted when `JobRepository.findUnscored()` re-selects it; the RPC (rather than a plain upsert) is what lets `retry_count` increment in the same round trip without a read-modify-write per job.
+- `hasScore(jobId, roleSelectionId, resumeVersion)` → used only if a caller needs a point check outside the bulk `findUnscored` flow (e.g. future manual "re-score this job" action).
+- `findAwaitingAi(roleSelectionId, resumeVersion, keywordThreshold)` → `select job_id, scored_at, retry_count from job_scores where role_selection_id = $1 and resume_version = $2 and keyword_score >= $3 and ai_score is null order by scored_at asc`. Feeds `computeScoringQueueSummary`/`getScoringQueueReport` (Phase 1 Task 6).
 
-**Transaction boundaries:** none — single-row insert per job, independently idempotent.
+**Transaction boundaries:** none — single-row RPC call per job, independently idempotent.
 
 ## 6. NotificationRepository (`features/notifications`)
 

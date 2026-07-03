@@ -54,6 +54,7 @@ function makeScoreRepository(): ScoreRepository {
   return {
     insertScore: vi.fn().mockResolvedValue(undefined),
     hasScore: vi.fn().mockResolvedValue(false) as ScoreRepository["hasScore"],
+    findAwaitingAi: vi.fn().mockResolvedValue([]),
   };
 }
 

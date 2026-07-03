@@ -62,6 +62,7 @@ erDiagram
         integer tokens_output "completion tokens from OpenRouter usage; null if no AI call"
         numeric estimated_cost_usd "cost estimate (tokens/1k * OPENROUTER_COST_PER_1K_TOKENS); null if env unset"
         timestamptz scored_at
+        integer retry_count "incremented by upsert_job_score() whenever a write leaves ai_score null; never reset"
     }
 
     JOB_STATUSES {
@@ -208,6 +209,16 @@ erDiagram
 ```
 
 Both functions run in a single transaction, ensuring exactly one active record at all times.
+
+### `upsert_job_score(p_job_id, p_role_selection_id, p_resume_version, p_keyword_score, p_ai_score, p_ai_reasoning, p_model, p_tokens_input, p_tokens_output, p_estimated_cost_usd)`
+
+```
+1. INSERT INTO job_scores (…) ON CONFLICT (job_id, role_selection_id, resume_version)
+   DO UPDATE SET keyword_score/ai_score/ai_reasoning/model/tokens_*/estimated_cost_usd = excluded.*,
+                 retry_count = job_scores.retry_count + (1 if excluded.ai_score IS NULL else 0)
+```
+
+Atomic single-round-trip write + conditional counter increment (Phase 1 Task 6) -- a plain client-side `.upsert()` can't express "increment only when this write leaves ai_score null" without a read-modify-write per job.
 
 ---
 

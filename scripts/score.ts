@@ -1,6 +1,7 @@
 import { SupabaseJobRepository } from "@/features/jobs/infrastructure/SupabaseJobRepository";
 import { SupabaseResumeRepository } from "@/features/resume/infrastructure/SupabaseResumeRepository";
 import { SupabaseRoleRepository } from "@/features/roles/infrastructure/SupabaseRoleRepository";
+import { getScoringQueueReport } from "@/features/scoring/application/getScoringQueueReport";
 import { scoreJob } from "@/features/scoring/application/scoreJob";
 import { OpenRouterAiScoreProvider } from "@/features/scoring/infrastructure/OpenRouterAiScoreProvider";
 import { SupabaseScoreRepository } from "@/features/scoring/infrastructure/SupabaseScoreRepository";
@@ -104,6 +105,23 @@ async function main(): Promise<void> {
     console.log(
       `[score] token usage: input=${aiStats.totalTokensInput} output=${aiStats.totalTokensOutput} total=${totalTokens}${costLine}`,
     );
+  }
+
+  // Pending-scoring visibility (Phase 1 Task 6): surfaces queue depth and
+  // stuck jobs even though this run's own retries already ran above.
+  const queue = await getScoringQueueReport({
+    scoreRepository,
+    roleSelectionId: roleSelection.id,
+    resumeVersion: resume.version,
+    keywordThreshold,
+  });
+  console.log(
+    `[score] AI-retry queue: ${queue.awaitingAiCount} awaiting, oldest ${
+      queue.oldestPendingAgeHours != null ? queue.oldestPendingAgeHours.toFixed(1) + "h" : "n/a"
+    }, ${queue.stuckJobs.length} stuck (max retries=${queue.maxRetryCount})`,
+  );
+  if (queue.stuckJobs.length > 0) {
+    console.warn(`[score] stuck job ids: ${queue.stuckJobs.map((j) => j.jobId).join(", ")}`);
   }
 }
 
