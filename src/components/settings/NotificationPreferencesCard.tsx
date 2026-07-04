@@ -32,9 +32,10 @@ function toNumberOrUndefined(value: string): number | undefined {
 // Settings card for Telegram notification filters (P1.5, shipped without a
 // UI until now -- the only way to configure these was a direct app_settings
 // write). Include filters (roles/skills/locations/sources/experience) are
-// ANDed; exclude filters (blockedCompanies/excludeEmploymentTypes) further
-// narrow the result. All fields are optional; leaving everything blank
-// clears preferences entirely (notify on every match, the original default).
+// ANDed; exclude filters (blockedCompanies/excludeEmploymentTypes/
+// excludeKeywords) further narrow the result. All fields are optional;
+// leaving everything blank clears preferences entirely (notify on every
+// match, the original default).
 export function NotificationPreferencesCard({ current }: { current: NotificationPreferences | null }) {
   const router = useRouter();
   const [roles, setRoles] = useState(toCsv(current?.roles));
@@ -45,6 +46,7 @@ export function NotificationPreferencesCard({ current }: { current: Notification
   const [maxExperience, setMaxExperience] = useState(current?.maxExperience?.toString() ?? "");
   const [blockedCompanies, setBlockedCompanies] = useState(toCsv(current?.blockedCompanies));
   const [excludeEmploymentTypes, setExcludeEmploymentTypes] = useState(toCsv(current?.excludeEmploymentTypes));
+  const [excludeKeywords, setExcludeKeywords] = useState(toCsv(current?.excludeKeywords));
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -76,6 +78,7 @@ export function NotificationPreferencesCard({ current }: { current: Notification
       maxExperience: toNumberOrUndefined(maxExperience),
       blockedCompanies: fromCsv(blockedCompanies),
       excludeEmploymentTypes: fromCsv(excludeEmploymentTypes) as NotificationPreferences["excludeEmploymentTypes"],
+      excludeKeywords: fromCsv(excludeKeywords),
     };
 
     // Every field empty/undefined -> clear preferences (matches
@@ -92,13 +95,35 @@ export function NotificationPreferencesCard({ current }: { current: Notification
     });
   }
 
+  function clear() {
+    setError(null);
+    startTransition(async () => {
+      const result = await setNotificationPreferencesAction(null);
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      setRoles("");
+      setSkills("");
+      setLocations("");
+      setSources("");
+      setMinExperience("");
+      setMaxExperience("");
+      setBlockedCompanies("");
+      setExcludeEmploymentTypes("");
+      setExcludeKeywords("");
+      router.refresh();
+    });
+  }
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Notification filters</CardTitle>
         <CardDescription>
           Narrow which matched jobs trigger a Telegram alert. Include filters are comma-separated lists; leaving a
-          field blank means &ldquo;no filter&rdquo;. Leave everything blank to notify on every match.
+          field blank means &ldquo;no filter&rdquo;. Exclude filters (blocked companies/employment types/keywords)
+          apply on top of the include filters above. Leave everything blank to notify on every match.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -145,11 +170,25 @@ export function NotificationPreferencesCard({ current }: { current: Notification
               placeholder="e.g. internship, contract"
             />
           </div>
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label htmlFor="np-exclude-keywords">Muted keywords (title contains any of)</Label>
+            <Input
+              id="np-exclude-keywords"
+              value={excludeKeywords}
+              onChange={(e) => setExcludeKeywords(e.target.value)}
+              placeholder="e.g. intern, staffing"
+            />
+          </div>
         </div>
         {error && <p className="text-sm text-destructive">{error}</p>}
-        <Button size="sm" onClick={save} disabled={isPending}>
-          Save
-        </Button>
+        <div className="flex gap-2">
+          <Button size="sm" onClick={save} disabled={isPending}>
+            Save
+          </Button>
+          <Button size="sm" variant="outline" onClick={clear} disabled={isPending}>
+            Clear all
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );

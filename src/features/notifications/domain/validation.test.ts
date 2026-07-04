@@ -28,6 +28,7 @@ describe("validateNotificationPreferences", () => {
         maxExperience: 5,
         blockedCompanies: ["Staffing Co"],
         excludeEmploymentTypes: ["internship", "contract"],
+        excludeKeywords: ["intern"],
       }),
     ).not.toThrow();
   });
@@ -48,6 +49,10 @@ describe("validateNotificationPreferences", () => {
 
   it("rejects a negative minExperience", () => {
     expect(() => validateNotificationPreferences({ minExperience: -1 })).toThrow(DomainValidationError);
+  });
+
+  it("rejects a negative maxExperience", () => {
+    expect(() => validateNotificationPreferences({ maxExperience: -1 })).toThrow(DomainValidationError);
   });
 
   it("rejects minExperience greater than maxExperience", () => {

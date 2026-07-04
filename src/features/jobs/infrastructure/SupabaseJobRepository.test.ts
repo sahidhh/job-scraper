@@ -440,6 +440,38 @@ describe("SupabaseJobRepository", () => {
       expect(builder.limit).toHaveBeenCalledWith(51);
     });
 
+    it("sorts by overall_score (not ai_score) and maps overallScore/overallScoreReasons", async () => {
+      const { client, builder } = mockSupabaseClient({
+        data: [
+          {
+            ...jobRow,
+            job_scores: [
+              {
+                keyword_score: 1,
+                ai_score: 0.85,
+                ai_reasoning: "Strong match",
+                overall_score: 0.9,
+                overall_score_reasons: ["preferred company"],
+              },
+            ],
+          },
+        ],
+        error: null,
+      });
+      const repo = new SupabaseJobRepository(client);
+
+      const result = await repo.findForDashboard("role-selection-1", {}, 50, 1);
+
+      expect(result.jobs).toEqual([
+        expect.objectContaining({ overallScore: 0.9, overallScoreReasons: ["preferred company"] }),
+      ]);
+      expect(builder.order).toHaveBeenCalledWith("overall_score", {
+        ascending: false,
+        nullsFirst: false,
+        foreignTable: "job_scores",
+      });
+    });
+
     it("returns a job with null score fields when it has no job_scores row", async () => {
       const { client } = mockSupabaseClient({
         data: [{ ...jobRow, job_scores: [] }],
@@ -481,6 +513,31 @@ describe("SupabaseJobRepository", () => {
 
       expect(result.hasMore).toBe(true);
       expect(result.jobs).toHaveLength(1);
+    });
+
+    it("pushes a sanitized search term into an ilike .or() filter on title/company_name", async () => {
+      const { client, builder } = mockSupabaseClient({
+        data: [{ ...jobRow, job_scores: [] }],
+        error: null,
+      });
+      const repo = new SupabaseJobRepository(client);
+
+      await repo.findForDashboard("role-selection-1", { search: "react, dev" }, 50, 1);
+
+      expect(builder.or).toHaveBeenCalledWith("title.ilike.%react dev%,company_name.ilike.%react dev%");
+    });
+
+    it("excludes jobs whose company matches any muted company via chained .not() ilike filters", async () => {
+      const { client, builder } = mockSupabaseClient({
+        data: [{ ...jobRow, job_scores: [] }],
+        error: null,
+      });
+      const repo = new SupabaseJobRepository(client);
+
+      await repo.findForDashboard("role-selection-1", { excludeCompanies: ["Acme", "Globex"] }, 50, 1);
+
+      expect(builder.not).toHaveBeenCalledWith("company_name", "ilike", "%Acme%");
+      expect(builder.not).toHaveBeenCalledWith("company_name", "ilike", "%Globex%");
     });
 
     it("maps the joined status and excludes Archived jobs by default", async () => {

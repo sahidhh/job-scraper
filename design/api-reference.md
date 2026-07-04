@@ -225,10 +225,43 @@ Actions **never throw** to the client. On success they call `revalidatePath()` t
 | `minExperience` | `number` (optional) | `min_years` must be ≥ this; null `min_years` always passes |
 | `maxExperience` | `number` (optional) | `min_years` must be ≤ this; null `min_years` always passes |
 | `sources` | `JobSource[]` (optional) | Source must be one of these |
-| `blockedCompanies` | `string[]` (optional, v1.2) | Company name must NOT contain any of these (case-insensitive substring) |
+| `blockedCompanies` | `string[]` (optional, v1.2) | Company name must NOT contain any of these (case-insensitive substring) -- also enforced on the dashboard job list, not just Telegram (shared via the same setting, see `JobFilters.excludeCompanies`) |
 | `excludeEmploymentTypes` | `EmploymentType[]` (optional, v1.2) | `employmentType` must NOT be one of these; null (unrecognized) always passes |
+| `excludeKeywords` | `string[]` (optional) | Title must NOT contain any of these (case-insensitive substring) |
 
 **Validation:** `validateNotificationPreferences` (throws `DomainValidationError`, surfaced as `ActionResult.error`) rejects unknown `locations`/`sources`/`excludeEmploymentTypes` values and an inverted min/max experience range.
+
+**Returns:** `ActionResult<undefined>`
+
+---
+
+### Ranking Preferences
+
+#### `getRankingPreferencesAction()`
+**File:** `src/features/scoring/actions.ts`
+**Description:** Returns the current composite-ranking-score preferences, or `null` if none are set (aiScore-only ranking).
+
+**Returns:** `ActionResult<RankingPreferences | null>`
+
+---
+
+#### `setRankingPreferencesAction(prefs)`
+**File:** `src/features/scoring/actions.ts`
+**Description:** Persists ranking preferences. Pass `null` to clear and revert to aiScore-only ranking. Bonuses are additive on top of `aiScore` and computed once per job at scoring time (`computeOverallScore.ts`), not recomputed at dashboard read time.
+
+| Param | Type | Description |
+|---|---|---|
+| prefs | `RankingPreferences \| null` | Preferences to save, or null to clear |
+
+`RankingPreferences`:
+
+| Field | Type | Description |
+|---|---|---|
+| `preferredCompanies` | `string[]` (optional) | Company name (case-insensitive substring against `canonicalCompanyName`) earns `companyBonus` |
+| `preferRemote` | `boolean` (optional) | When true, jobs tagged `remote` earn `remoteBonus` |
+| `companyBonus` | `number` (optional) | Default `0.05` |
+| `remoteBonus` | `number` (optional) | Default `0.03` |
+| `salaryBonus` | `number` (optional) | Applied when the job has a parsed salary (min or max). Default `0.02` |
 
 **Returns:** `ActionResult<undefined>`
 

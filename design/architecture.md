@@ -172,7 +172,7 @@ scrape.ts catch/success path
   → scrape_runs.failure_category
   → computeSourceHealthSummary(source, recent scrape_runs)
   → { successRate, avgLatencyMs, consecutiveFailures, lastSuccessAt/lastFailureAt,
-      recoveryDetected, topFailureCategory, recommendation }
+      recoveryDetected, topFailureCategory, hoursSinceLastRun, isStale, recommendation }
   → getSourceHealthReport(): one summary per registered source
 ```
 
@@ -181,6 +181,14 @@ Failure categories (`classifyScrapeFailure.ts`, deterministic keyword/status heu
 empty_feed | unknown`. `selector`/`captcha` are extension points -- no current adapter does
 HTML/DOM scraping or hits a CAPTCHA wall. `getSourceHealthReport()` is surfaced on `/analytics`
 (Phase 4 Task 13).
+
+**Stale detection** (`SOURCE_HEALTH_CONFIG.staleAfterHours`, default 6h -- 3x the ~2h scrape
+cadence, env `SOURCE_STALE_HOURS`): a source with no run at all in that window is flagged
+`isStale`, a distinct condition from "running and failing" -- covers a source silently dropped
+from `JOB_SOURCES`/the workflow, or a crashed job that skipped it entirely, neither of which
+produces a `scrape_runs` row for `consecutiveFailures` to ever see. The stale recommendation
+takes priority over a failing-streak recommendation on the same source. Surfaced on `/analytics`
+via `ScrapeRunHealthTable`'s "stale" badge, sorted to the top.
 
 ---
 
@@ -195,7 +203,8 @@ flowchart TD
     GATE -- No --> SAVE_KW["Save keyword score only\n(ai_score = null)"]
     GATE -- Yes --> AI["OpenRouter AI call\n15s timeout, 1 retry"]
     AI --> AI_OK{Success?}
-    AI_OK -- Yes --> SAVE_AI["Save keyword + ai_score\n+ ai_reasoning"]
+    AI_OK -- Yes --> OVERALL["computeOverallScore()\nai_score + configurable bonuses"]
+    OVERALL --> SAVE_AI["Save keyword + ai_score\n+ ai_reasoning + overall_score"]
     AI_OK -- No --> SAVE_KW2["Save keyword score only\n(retried next cron run)"]
     SAVE_KW --> NEXT
     SAVE_AI --> NEXT
@@ -212,6 +221,15 @@ maxRetryCount, avgRetryCount }` via the pure `computeScoringQueueSummary`. "Stuc
 indefinitely, so this is visibility, not a new retry mechanism. `getScoringQueueReport()` is
 surfaced on `/analytics` (Phase 4 Task 13).
 
+**Composite ranking score** (`computeOverallScore.ts`, Theme 1 continuous-improvement pass):
+whenever `ai_score` is set, `overall_score = ai_score` plus small additive bonuses -- preferred
+company, remote (if `RankingPreferences.preferRemote`), and salary disclosed -- each configurable
+via `RankingPreferences` (`app_settings` key `ranking_preferences`, `/settings` → Ranking). Reasons
+applied are stored alongside as `overall_score_reasons` and shown next to the score on the
+dashboard. `overall_score` (not `ai_score`) is the dashboard's default sort key; `posted_at desc`
+remains the tiebreaker, which already covers freshness without double-weighting it into the bonus
+formula. Deliberately not ML/embeddings-based -- see `docs/decisions.md` AD-26.
+
 ---
 
 ## 7. Notification Pipeline
@@ -227,6 +245,12 @@ flowchart LR
     LOG --> NEXT["Next match"]
     SKIP --> NEXT
 ```
+
+`filterMatches()` applies `NotificationPreferences` before a match reaches formatting: role/skill/
+location/experience/source include-filters (P1.5, all ANDed), plus `excludeCompanies`/
+`excludeKeywords` mutes (continuous-improvement pass) -- muted companies are also enforced on the
+dashboard job list (`JobFilters.excludeCompanies`, shared setting), so a mute is a genuine "never
+show me this" rather than only suppressing the alert.
 
 ---
 

@@ -23,6 +23,8 @@ export class SupabaseScoreRepository implements ScoreRepository {
       p_tokens_input: score.tokensInput ?? null,
       p_tokens_output: score.tokensOutput ?? null,
       p_estimated_cost_usd: score.estimatedCostUsd ?? null,
+      p_overall_score: score.overallScore ?? null,
+      p_overall_score_reasons: score.overallScoreReasons ?? null,
     });
 
     if (error) throw toAppError(error);

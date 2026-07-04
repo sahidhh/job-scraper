@@ -34,6 +34,17 @@ export function FilterBar({
     router.push(`/dashboard?${params.toString()}`);
   }
 
+  function updateSearch(value: string) {
+    const params = new URLSearchParams(searchParams.toString());
+    const trimmed = value.trim();
+    if (trimmed.length === 0) {
+      params.delete("q");
+    } else {
+      params.set("q", trimmed);
+    }
+    router.push(`/dashboard?${params.toString()}`);
+  }
+
   function toggleArchived(checked: boolean) {
     const params = new URLSearchParams(searchParams.toString());
     if (checked) {
@@ -69,6 +80,7 @@ export function FilterBar({
     searchParams.get("status"),
     searchParams.get("minScore"),
     searchParams.get("maxYears"),
+    searchParams.get("q"),
     searchParams.get("archived") === "1" ? "1" : null,
   ].filter(Boolean).length;
 
@@ -78,6 +90,16 @@ export function FilterBar({
 
   const controls = (
     <div className="flex flex-col gap-4">
+      <FilterField label="Search">
+        <Input
+          key={`search-${searchParams.get("q") ?? ""}`}
+          type="text"
+          placeholder="Title or company"
+          defaultValue={searchParams.get("q") ?? ""}
+          onBlur={(e) => updateSearch(e.target.value)}
+        />
+      </FilterField>
+
       <FilterField label="Location">
         <Select
           value={searchParams.get("location") ?? "all"}
@@ -236,6 +258,15 @@ export function FilterBar({
 
       {/* Desktop: horizontal row */}
       <div className="hidden flex-wrap items-center gap-2 md:flex">
+        <Input
+          key={`search-${searchParams.get("q") ?? ""}`}
+          type="text"
+          placeholder="Search title or company"
+          defaultValue={searchParams.get("q") ?? ""}
+          onBlur={(e) => updateSearch(e.target.value)}
+          className="w-52"
+        />
+
         <Select
           value={searchParams.get("location") ?? "all"}
           onValueChange={(v) => updateParam("location", v)}

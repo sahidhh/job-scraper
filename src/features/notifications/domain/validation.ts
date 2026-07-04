@@ -11,7 +11,8 @@ export function validateNotifyThreshold(threshold: number): void {
 // Guards the /settings UI's write path (setNotificationPreferencesAction) --
 // enum-valued array fields must only contain real values, and the
 // experience range must be internally consistent. Free-text fields
-// (roles/skills/blockedCompanies) are intentionally unrestricted.
+// (roles/skills/blockedCompanies/excludeKeywords) are intentionally
+// unrestricted.
 export function validateNotificationPreferences(prefs: NotificationPreferences): void {
   if (prefs.locations) {
     for (const loc of prefs.locations) {

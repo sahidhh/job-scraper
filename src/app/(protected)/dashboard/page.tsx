@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { SupabaseCompanyRepository } from "@/features/companies/infrastructure/SupabaseCompanyRepository";
 import type { JobFilters, JobStats } from "@/features/jobs/domain/types";
 import { SupabaseJobRepository } from "@/features/jobs/infrastructure/SupabaseJobRepository";
+import { SupabaseNotificationPreferencesRepository } from "@/features/notifications/infrastructure/SupabaseNotificationPreferencesRepository";
 import { SupabaseResumeRepository } from "@/features/resume/infrastructure/SupabaseResumeRepository";
 import { SupabaseRoleRepository } from "@/features/roles/infrastructure/SupabaseRoleRepository";
 import { SupabaseSettingsRepository } from "@/features/settings/infrastructure/SupabaseSettingsRepository";
@@ -25,6 +26,7 @@ type DashboardSearchParams = {
   status?: string;
   archived?: string;
   maxYears?: string;
+  q?: string;
   limit?: string;
 };
 
@@ -59,6 +61,9 @@ function parseFilters(params: DashboardSearchParams): JobFilters {
       filters.maxYears = value;
     }
   }
+  if (params.q && params.q.trim().length > 0) {
+    filters.search = params.q.trim();
+  }
 
   return filters;
 }
@@ -77,6 +82,7 @@ function loadMoreHref(params: DashboardSearchParams, currentLimit: number): stri
   if (params.status) next.set("status", params.status);
   if (params.archived) next.set("archived", params.archived);
   if (params.maxYears) next.set("maxYears", params.maxYears);
+  if (params.q) next.set("q", params.q);
   next.set("limit", String(currentLimit + DEFAULT_JOBS_LIMIT));
   return `/dashboard?${next.toString()}`;
 }
@@ -191,13 +197,20 @@ async function JobsSection({
   const jobRepository = new SupabaseJobRepository(client);
   const resumeRepository = new SupabaseResumeRepository(client);
   const settingsRepository = new SupabaseSettingsRepository(client);
+  const notificationPreferencesRepository = new SupabaseNotificationPreferencesRepository(client);
   const limit = parseLimit(params);
 
-  const desiredExperience = await settingsRepository.getDesiredExperienceYears();
-  const effectiveFilters: JobFilters =
-    filters.maxYears === undefined && desiredExperience !== null
-      ? { ...filters, maxYears: desiredExperience }
-      : filters;
+  const [desiredExperience, notificationPreferences] = await Promise.all([
+    settingsRepository.getDesiredExperienceYears(),
+    notificationPreferencesRepository.getPreferences(),
+  ]);
+  const effectiveFilters: JobFilters = {
+    ...filters,
+    maxYears: filters.maxYears ?? desiredExperience ?? undefined,
+    // Muted companies (Settings → Notifications) hide jobs everywhere, not
+    // just Telegram alerts -- always enforced, no per-request override.
+    excludeCompanies: notificationPreferences?.blockedCompanies,
+  };
 
   const activeResume = await resumeRepository.getActive();
   const resumeVersion = activeResume?.version ?? 0;

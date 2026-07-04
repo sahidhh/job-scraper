@@ -77,8 +77,9 @@ export interface NotificationPreferences {
   minExperience?: number;    // min_years must be >= this (null min_years always passes)
   maxExperience?: number;    // min_years must be <= this (null min_years always passes)
   sources?: JobSource[];     // source must be in this list
-  // Exclude filters (Phase 3 personal-intelligence polish): both are ANDed
-  // with the include filters above. Absent/empty means "no exclusion".
+  // Exclude filters: all ANDed with the include filters above. Absent/empty
+  // means "no exclusion".
   blockedCompanies?: string[];        // companyName must NOT contain any of these (case-insensitive)
   excludeEmploymentTypes?: EmploymentType[]; // employmentType must NOT be one of these (null always passes -- unknown type is never excluded)
+  excludeKeywords?: string[];  // title must NOT contain any of these (case-insensitive)
 }

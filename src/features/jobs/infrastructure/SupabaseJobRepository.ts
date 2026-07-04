@@ -14,7 +14,7 @@ import type {
 import { computeFingerprint } from "@/features/jobs/application/computeFingerprint";
 import { normalizeCompanyName } from "@/features/companies/domain/normalizeCompanyName";
 import type { JobSource } from "@/shared/domain/enums";
-import { buildRoleFilter } from "@/shared/infrastructure/roleFilter";
+import { buildRoleFilter, sanitizeRoleForFilter } from "@/shared/infrastructure/roleFilter";
 import type { TypedSupabaseClient } from "@/shared/infrastructure/supabaseClient";
 import { toAppError } from "@/shared/infrastructure/supabaseError";
 import type { Database } from "../../../../supabase/database.types";
@@ -29,7 +29,13 @@ const ARCHIVED_STATUS_LABEL = "Archived";
 // findForDashboard doesn't select `description` (P1 #4) -- never rendered
 // by JobRow, and dropping it shrinks the dashboard's RSC payload.
 interface DashboardJobRow extends Omit<JobRow, "description"> {
-  job_scores: { keyword_score: number; ai_score: number | null; ai_reasoning: string | null }[];
+  job_scores: {
+    keyword_score: number;
+    ai_score: number | null;
+    ai_reasoning: string | null;
+    overall_score: number | null;
+    overall_score_reasons: string[] | null;
+  }[];
   // job_state.job_id is a PK referencing jobs, so PostgREST returns at most
   // one embedded row; treated as an array for parity with job_scores.
   job_state: { status_id: string | null; job_statuses: { id: string; label: string; color: string } | null }[];
@@ -38,7 +44,7 @@ interface DashboardJobRow extends Omit<JobRow, "description"> {
 // Columns selected in findForDashboard; mirrors DashboardJobRow but without
 // the embedded foreign-table columns (those are added by PostgREST).
 const DASHBOARD_SELECT =
-  "id, source, source_job_id, company_id, company_name, title, location_raw, location_tags, url, min_years, posted_at, first_seen_at, last_seen_at, updated_at, is_active, inactive_reason, job_scores!left(keyword_score, ai_score, ai_reasoning, role_selection_id), job_state!left(status_id, job_statuses(id, label, color))";
+  "id, source, source_job_id, company_id, company_name, title, location_raw, location_tags, url, min_years, posted_at, first_seen_at, last_seen_at, updated_at, is_active, inactive_reason, job_scores!left(keyword_score, ai_score, ai_reasoning, overall_score, overall_score_reasons, role_selection_id), job_state!left(status_id, job_statuses(id, label, color))";
 
 const UPSERT_BATCH_SIZE = 500;
 
@@ -103,6 +109,8 @@ function toDashboardJob(row: DashboardJobRow): JobWithScore {
     keywordScore: score?.keyword_score ?? null,
     aiScore: score?.ai_score ?? null,
     aiReasoning: score?.ai_reasoning ?? null,
+    overallScore: score?.overall_score ?? null,
+    overallScoreReasons: score?.overall_score_reasons ?? null,
     minYears: row.min_years ?? null,
     statusId: status?.id ?? null,
     statusLabel: status?.label ?? null,
@@ -454,6 +462,23 @@ export class SupabaseJobRepository implements JobRepository {
       // Soft: NULL min_years ("unknown") always passes, never excluded.
       query = query.or(`min_years.is.null,min_years.lte.${filters.maxYears}`);
     }
+    if (filters.search) {
+      const term = sanitizeRoleForFilter(filters.search);
+      if (term.length > 0) {
+        query = query.or(`title.ilike.%${term}%,company_name.ilike.%${term}%`);
+      }
+    }
+    if (filters.excludeCompanies && filters.excludeCompanies.length > 0) {
+      // Each .not() call ANDs together -- a job is kept only if its company
+      // name matches none of the muted terms (De Morgan's over the OR a
+      // human would phrase this as: "hide if it matches ANY muted company").
+      for (const company of filters.excludeCompanies) {
+        const term = sanitizeRoleForFilter(company);
+        if (term.length > 0) {
+          query = query.not("company_name", "ilike", `%${term}%`);
+        }
+      }
+    }
     if (statusScope.restrictToIds) {
       query = query.in("id", statusScope.restrictToIds);
     }
@@ -462,7 +487,13 @@ export class SupabaseJobRepository implements JobRepository {
     }
 
     query = query
-      .order("ai_score", { ascending: false, nullsFirst: false, foreignTable: "job_scores" })
+      // Composite ranking score (aiScore + configurable bonuses, Theme 1)
+      // drives the default sort; posted_at remains the tiebreaker, which
+      // already covers "freshness" without double-weighting it into the
+      // bonus formula itself. Rows written before this column existed are
+      // backfilled to overall_score = ai_score (migration 20260704000003),
+      // so this never silently demotes older scored jobs.
+      .order("overall_score", { ascending: false, nullsFirst: false, foreignTable: "job_scores" })
       .order("posted_at", { ascending: false })
       .limit(limit + 1);
 

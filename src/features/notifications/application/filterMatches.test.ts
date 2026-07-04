@@ -161,6 +161,18 @@ describe("filterMatches", () => {
     });
   });
 
+  describe("excluded keyword filter", () => {
+    it("blocks when title contains a muted keyword (case-insensitive)", () => {
+      const match = makeMatch({ title: "Senior Backend Engineer" });
+      expect(filterMatches([match], { excludeKeywords: ["senior"] })).toHaveLength(0);
+    });
+
+    it("passes when title matches no muted keyword", () => {
+      const match = makeMatch({ title: "Junior Backend Engineer" });
+      expect(filterMatches([match], { excludeKeywords: ["senior"] })).toHaveLength(1);
+    });
+  });
+
   describe("combined filters (AND logic)", () => {
     it("requires all specified filters to pass", () => {
       const matches = [

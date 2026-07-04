@@ -85,6 +85,9 @@ Existing `job_scores` rows are not deleted when a new resume is activated. The n
 ### 3.7 AI Prompt Truncation
 Resume text and job descriptions are capped (`OPENROUTER_MAX_RESUME_PROMPT_CHARS`/`OPENROUTER_MAX_DESCRIPTION_PROMPT_CHARS`, defaults 4000/2000 chars) before being sent to the AI stage (`docs/decisions.md` AD-23) to control token cost. A resume or posting whose single most relevant detail appears only after the cap will lose that signal to the AI score/reasoning — a real, deliberate tradeoff, not a bug. The free keyword-gate stage (`extractSkills`) always sees the full untruncated text, so this never affects which jobs reach the AI stage, only what the AI sees once there.
 
+### 3.8 Ranking Preferences Don't Retroactively Re-Rank (`docs/decisions.md` AD-26)
+`overall_score` is computed once, at scoring time, from whatever `RankingPreferences` are in effect then. Changing preferences (e.g. adding a new preferred company) does not recompute `overall_score` for jobs already scored — it only takes effect for jobs scored from that point on (new scrapes, or the AI-retry queue). This mirrors §3.5's existing "no retroactive rescoring" behavior rather than introducing a new kind of staleness.
+
 ---
 
 ## 4. Notifications

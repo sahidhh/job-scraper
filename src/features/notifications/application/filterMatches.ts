@@ -19,6 +19,7 @@ function passesAllFilters(match: JobMatch, prefs: NotificationPreferences): bool
   if (!passesSourceFilter(match, prefs)) return false;
   if (!passesBlockedCompanyFilter(match, prefs)) return false;
   if (!passesEmploymentTypeFilter(match, prefs)) return false;
+  if (!passesExcludedKeywordFilter(match, prefs)) return false;
   return true;
 }
 
@@ -83,4 +84,10 @@ function passesEmploymentTypeFilter(match: JobMatch, prefs: NotificationPreferen
   if (!prefs.excludeEmploymentTypes || prefs.excludeEmploymentTypes.length === 0) return true;
   if (match.employmentType === null) return true;
   return !prefs.excludeEmploymentTypes.includes(match.employmentType);
+}
+
+function passesExcludedKeywordFilter(match: JobMatch, prefs: NotificationPreferences): boolean {
+  if (!prefs.excludeKeywords || prefs.excludeKeywords.length === 0) return true;
+  const titleLower = match.title.toLowerCase();
+  return !prefs.excludeKeywords.some((keyword) => titleLower.includes(keyword.toLowerCase()));
 }

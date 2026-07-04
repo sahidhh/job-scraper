@@ -42,7 +42,25 @@ A single technical professional (software engineer, data scientist, or similar) 
 
 | Feature | Description |
 |---|---|
-| Notification preferences | Configurable include filters: role, skill, location, experience, source — applied before Telegram delivery |
+| Notification preferences | Configurable include filters: role, skill, location, experience, source — applied before Telegram delivery; editable via `/settings` → Notifications (continuous-improvement pass -- the backend action predated this UI) |
+| Company/keyword mute | `excludeCompanies`/`excludeKeywords` on `NotificationPreferences` mute Telegram alerts; `excludeCompanies` is also enforced on the dashboard job list (`JobFilters.excludeCompanies`), so a mute is a genuine "never show me this," not just a quieter alert |
+
+### P1.9 — Ranking & Search (continuous-improvement pass, shipped)
+
+| Feature | Description |
+|---|---|
+| Composite ranking score | `overall_score = ai_score + configurable bonuses` (preferred company, remote preference, salary disclosed), computed once per job at scoring time (`computeOverallScore.ts`); drives the dashboard's default sort (`posted_at desc` remains the tiebreaker, covering freshness). Deterministic, no ML/embeddings. Editable via `/settings` → Ranking |
+| Dashboard text search | Free-text filter over title/company name (`JobFilters.search`), sanitized the same way as the existing role-filter builder |
+
+### Skipped for this pass (Theme 3 — Job Metadata)
+
+Investigated and explicitly not implemented: benefits/bonus/equity/stock-option tags, certifications,
+travel requirement, shift work, languages, domain classification, company size, industry, and
+startup/public-private detection. None have any existing schema/extractor groundwork, and free-text
+heuristics for most of them (industry, company size, startup-vs-established, public/private) would
+be low-confidence guesses rather than deterministic parses -- a worse fit for this repo's "deterministic
+parsing, no AI" extraction standard than `extractSalary`/`extractContactEmail`. See
+`docs/reviews/2026-07-04/theme-3-job-metadata.md` for the full evaluation.
 
 ### P1.6 — Pipeline Reliability (shipped)
 
@@ -50,7 +68,7 @@ A single technical professional (software engineer, data scientist, or similar) 
 |---|---|
 | Cross-source duplicate detection | Deterministic fingerprint (normalized title + canonical company + location) prevents the same logical job scraped from two sources from becoming two rows, two scoring runs, or two notifications; provenance preserved in `job_duplicates` |
 | Company name normalization | `jobs.canonical_company_name` strips legal-entity suffixes (LLC/Inc/Corp) and regional qualifiers (India/Singapore/...) from `company_name` for grouping, without discarding the original |
-| Source-level health summary | `computeSourceHealthSummary`/`getSourceHealthReport` derive success rate, latency, consecutive failures, recovery detection, and a deterministic recommendation per source from `scrape_runs` -- covers feed-based sources (wellfound/remoteok/mycareersfuture) that `companies.health_status` can't see. Surfaced on `/analytics` (Phase 4) |
+| Source-level health summary | `computeSourceHealthSummary`/`getSourceHealthReport` derive success rate, latency, consecutive failures, recovery detection, staleness (no run at all in `SOURCE_STALE_HOURS`, default 6h -- distinct from actively failing), and a deterministic recommendation per source from `scrape_runs` -- covers feed-based sources (wellfound/remoteok/mycareersfuture) that `companies.health_status` can't see. Surfaced on `/analytics` (Phase 4) |
 | Scrape failure classification | `classifyScrapeFailure.ts` tags every failed/empty scrape_runs row with a deterministic category (timeout/parsing/selector/captcha/blocked/authentication/rate_limited/not_found/empty_feed) |
 | Pending-scoring queue monitoring | `getScoringQueueReport`/`computeScoringQueueSummary` surface AI-retry queue depth, oldest-pending age, stuck jobs, and retry counts (`job_scores.retry_count`, `upsert_job_score` RPC); logged by `score.ts` each run. Surfaced on `/analytics` (Phase 4) |
 
