@@ -1,4 +1,4 @@
-import type { CareerPage, NewCareerPage } from "./types";
+import type { NewCareerPage } from "./types";
 
 export interface CareerPageRepository {
   /**
@@ -8,6 +8,4 @@ export interface CareerPageRepository {
    * discover-career-pages.ts` only ever writes 'ats_board'/'high').
    */
   upsertMany(pages: NewCareerPage[]): Promise<void>;
-
-  list(): Promise<CareerPage[]>;
 }

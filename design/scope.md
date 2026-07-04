@@ -50,11 +50,11 @@ A single technical professional (software engineer, data scientist, or similar) 
 |---|---|
 | Cross-source duplicate detection | Deterministic fingerprint (normalized title + canonical company + location) prevents the same logical job scraped from two sources from becoming two rows, two scoring runs, or two notifications; provenance preserved in `job_duplicates` |
 | Company name normalization | `jobs.canonical_company_name` strips legal-entity suffixes (LLC/Inc/Corp) and regional qualifiers (India/Singapore/...) from `company_name` for grouping, without discarding the original |
-| Source-level health summary | `computeSourceHealthSummary`/`getSourceHealthReport` derive success rate, latency, consecutive failures, recovery detection, and a deterministic recommendation per source from `scrape_runs` -- covers feed-based sources (wellfound/remoteok/mycareersfuture) that `companies.health_status` can't see. Backend-only; no dashboard UI yet (Phase 4) |
+| Source-level health summary | `computeSourceHealthSummary`/`getSourceHealthReport` derive success rate, latency, consecutive failures, recovery detection, and a deterministic recommendation per source from `scrape_runs` -- covers feed-based sources (wellfound/remoteok/mycareersfuture) that `companies.health_status` can't see. Surfaced on `/analytics` (Phase 4) |
 | Scrape failure classification | `classifyScrapeFailure.ts` tags every failed/empty scrape_runs row with a deterministic category (timeout/parsing/selector/captcha/blocked/authentication/rate_limited/not_found/empty_feed) |
-| Pending-scoring queue monitoring | `getScoringQueueReport`/`computeScoringQueueSummary` surface AI-retry queue depth, oldest-pending age, stuck jobs, and retry counts (`job_scores.retry_count`, `upsert_job_score` RPC); logged by `score.ts` each run. Backend-only; no dashboard UI yet (Phase 4) |
+| Pending-scoring queue monitoring | `getScoringQueueReport`/`computeScoringQueueSummary` surface AI-retry queue depth, oldest-pending age, stuck jobs, and retry counts (`job_scores.retry_count`, `upsert_job_score` RPC); logged by `score.ts` each run. Surfaced on `/analytics` (Phase 4) |
 
-### P1.7 — Enrichment (in progress)
+### P1.7 — Enrichment (shipped)
 
 | Feature | Description |
 |---|---|

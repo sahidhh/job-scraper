@@ -13,12 +13,8 @@ import { truncateText } from "@/shared/infrastructure/text";
 // for a real, direct reduction in prompt tokens on every single AI call.
 // Read per-call (not module-level), matching OPENROUTER_MAX_TOKENS's
 // pattern in openrouterClient.ts, so an env change takes effect immediately.
-function maxResumePromptChars(): number {
-  return Number(optionalEnv("OPENROUTER_MAX_RESUME_PROMPT_CHARS", "4000"));
-}
-
-function maxDescriptionPromptChars(): number {
-  return Number(optionalEnv("OPENROUTER_MAX_DESCRIPTION_PROMPT_CHARS", "2000"));
+function maxPromptChars(envVar: string, defaultValue: string): number {
+  return Number(optionalEnv(envVar, defaultValue));
 }
 
 const SCHEMA = {
@@ -57,7 +53,7 @@ function buildSystemPrompt(resume: Resume): string {
   return [
     "You are an assistant that scores how well a job posting matches a candidate's resume.",
     "Candidate resume:",
-    truncateText(resume.parsedText, maxResumePromptChars()),
+    truncateText(resume.parsedText, maxPromptChars("OPENROUTER_MAX_RESUME_PROMPT_CHARS", "4000")),
     "Respond with score (a number from 0 to 1) and reasoning (1-3 sentences explaining the score).",
   ].join("\n");
 }
@@ -78,7 +74,7 @@ function buildJobPrompt(job: Job): string {
     lines.push(`Experience required: ${job.minYears}+ years`);
   }
 
-  lines.push("Description:", truncateText(job.description, maxDescriptionPromptChars()));
+  lines.push("Description:", truncateText(job.description, maxPromptChars("OPENROUTER_MAX_DESCRIPTION_PROMPT_CHARS", "2000")));
   return lines.join("\n");
 }
 

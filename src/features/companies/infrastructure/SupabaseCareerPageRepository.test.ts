@@ -37,38 +37,4 @@ describe("SupabaseCareerPageRepository", () => {
       expect(builders).toHaveLength(0);
     });
   });
-
-  describe("list", () => {
-    it("maps all rows", async () => {
-      const { client } = mockSupabaseClient({
-        data: [
-          {
-            id: "page-1",
-            canonical_company_name: "Acme",
-            career_page_url: "https://boards.greenhouse.io/acme",
-            website_url: null,
-            discovery_method: "ats_board",
-            confidence: "high",
-            discovered_at: "2026-01-01T00:00:00Z",
-          },
-        ],
-        error: null,
-      });
-      const repo = new SupabaseCareerPageRepository(client);
-
-      const result = await repo.list();
-
-      expect(result).toEqual([
-        {
-          id: "page-1",
-          canonicalCompanyName: "Acme",
-          careerPageUrl: "https://boards.greenhouse.io/acme",
-          websiteUrl: null,
-          discoveryMethod: "ats_board",
-          confidence: "high",
-          discoveredAt: "2026-01-01T00:00:00Z",
-        },
-      ]);
-    });
-  });
 });

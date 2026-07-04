@@ -179,9 +179,8 @@ scrape.ts catch/success path
 Failure categories (`classifyScrapeFailure.ts`, deterministic keyword/status heuristics, no AI):
 `timeout | parsing | selector | captcha | blocked | authentication | rate_limited | not_found |
 empty_feed | unknown`. `selector`/`captcha` are extension points -- no current adapter does
-HTML/DOM scraping or hits a CAPTCHA wall. This layer is backend-only as of Phase 1 (no UI wired
-yet, per the domain/application/infrastructure-before-UI rule); Phase 4 analytics is the intended
-consumer.
+HTML/DOM scraping or hits a CAPTCHA wall. `getSourceHealthReport()` is surfaced on `/analytics`
+(Phase 4 Task 13).
 
 ---
 
@@ -210,8 +209,8 @@ Task 6) queries `ScoreRepository.findAwaitingAi` (keyword gate passed, `ai_score
 oldest `scored_at` first) and computes `{ awaitingAiCount, oldestPendingAgeHours, stuckJobs,
 maxRetryCount, avgRetryCount }` via the pure `computeScoringQueueSummary`. "Stuck" jobs (waiting past
 `SCORING_STUCK_THRESHOLD_HOURS`, default 48h) are logged as a warning -- AD-14 already retries
-indefinitely, so this is visibility, not a new retry mechanism. Backend-only for this phase; no
-dashboard UI yet.
+indefinitely, so this is visibility, not a new retry mechanism. `getScoringQueueReport()` is
+surfaced on `/analytics` (Phase 4 Task 13).
 
 ---
 
