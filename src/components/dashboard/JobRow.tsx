@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, ExternalLink } from "lucide-react";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { TableCell, TableRow } from "@/components/ui/table";
@@ -97,8 +97,14 @@ export function JobRow({
           </div>
         </TableCell>
         <TableCell>
-          <a href={job.url} target="_blank" rel="noreferrer" className="text-primary hover:underline">
-            View
+          <a
+            href={job.url}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex size-8 items-center justify-center rounded-md text-primary transition-opacity hover:opacity-70"
+            aria-label={`View ${job.title}`}
+          >
+            <ExternalLink className="size-4" />
           </a>
         </TableCell>
       </TableRow>
