@@ -46,6 +46,13 @@ WITH CHECK (true);
 
 Anonymous or unauthenticated requests receive zero rows / permission denied.
 
+**Automated verification (v1.4):** `src/features/verification/infrastructure/checks/infrastructure/rlsCheck.ts`
+confirms this at run time — `createSupabaseAnonClient()` (`src/shared/infrastructure/supabaseClient.ts`, a
+session-less anon-key client, distinct from the app's always-authenticated `server.ts` client) attempts an
+unauthenticated read of `jobs`; a PostgREST error or zero rows is the healthy outcome, any row returned is a
+critical-severity failure. Run via `npm run verify:production` / `npm run diagnostics`
+(docs/operations/production-verification.md).
+
 ---
 
 ## 3. Service Role Boundary

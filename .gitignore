@@ -5,6 +5,7 @@ node_modules/
 !.env.example
 *.tsbuildinfo
 coverage/
+verification-reports/
 supabase/.temp
 supabase/.temp/*
 .claude/

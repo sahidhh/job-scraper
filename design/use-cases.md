@@ -277,6 +277,25 @@
 
 ---
 
+### UC-16 — Run Production Verification
+
+**Actor:** Operator (User or GitHub Actions `workflow_dispatch`)
+**Trigger:** Manual run of `npm run verify:production` / `npm run diagnostics`, or the `verify-production.yml` workflow
+**Precondition:** None — every check degrades to a `warning` rather than throwing when its required credentials/data are unavailable
+**Main Flow:**
+1. Script attempts to build a Supabase service client (falls back to `null` if `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY` are unset)
+2. Builds 24 checks across four categories (infrastructure, application, external services, data quality) — reusing `getSourceHealthReport`/`getScoringQueueReport` rather than re-deriving their logic
+3. `runChecks()` executes them sequentially, timing each and catching any thrown error as a `fail`
+4. `computeHealthScore()` aggregates results into a 0–100 score and a `ready`/`needs_attention`/`not_ready` verdict (any critical-severity failure forces `not_ready`)
+5. Console report is always printed; `--format=all` (the `verify:production` default) additionally writes `verification-reports/latest.md` and `latest.json`
+6. Process exits `1` only if the verdict is `not_ready`
+
+**Postcondition:** Operator sees a full Ready/Needs Attention/Not Ready assessment with per-check detail and actionable recommendations
+
+**Alternate Flow:** No live Supabase project configured (e.g. a fresh checkout) → every credential-dependent check reports `warning: Skipped — ...` instead of crashing; the run still completes and produces a report
+
+---
+
 
 ## 3. User Story Summary
 

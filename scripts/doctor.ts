@@ -1,66 +1,15 @@
 import { createSupabaseServiceClient } from "@/shared/infrastructure/supabaseClient";
+import { checkRequiredVar, checkOptionalVar, type EnvCheckResult } from "@/shared/infrastructure/envCheck";
+import { checkSupabaseConnectivity, checkTelegramToken } from "@/shared/infrastructure/connectivityCheck";
 
 // Environment/connectivity check (Phase 7 dev-experience polish) -- run
 // this before wiring up cron secrets or after rotating a key, to catch a
 // missing/misconfigured var locally instead of via a failed GitHub Actions
 // run. Read-only: makes one lightweight Supabase query and one Telegram
 // getMe call, never touches job data.
-type CheckStatus = "pass" | "warn" | "fail";
+const ICON: Record<EnvCheckResult["status"], string> = { pass: "✓", warn: "⚠", fail: "✗" };
 
-interface CheckResult {
-  status: CheckStatus;
-  label: string;
-  detail: string;
-}
-
-const ICON: Record<CheckStatus, string> = { pass: "✓", warn: "⚠", fail: "✗" };
-
-function checkRequiredVar(name: string): CheckResult {
-  const value = process.env[name];
-  if (value === undefined || value.trim().length === 0) {
-    return { status: "fail", label: name, detail: "missing (required)" };
-  }
-  return { status: "pass", label: name, detail: "set" };
-}
-
-function checkOptionalVar(name: string, fallbackDescription: string): CheckResult {
-  const value = process.env[name];
-  if (value === undefined || value.trim().length === 0) {
-    return { status: "warn", label: name, detail: `not set — ${fallbackDescription}` };
-  }
-  return { status: "pass", label: name, detail: "set" };
-}
-
-async function checkSupabaseConnectivity(): Promise<CheckResult> {
-  try {
-    const client = createSupabaseServiceClient();
-    const { error } = await client.from("app_settings").select("key", { count: "exact", head: true });
-    if (error) return { status: "fail", label: "Supabase connectivity", detail: error.message };
-    return { status: "pass", label: "Supabase connectivity", detail: "query succeeded" };
-  } catch (err) {
-    return { status: "fail", label: "Supabase connectivity", detail: err instanceof Error ? err.message : String(err) };
-  }
-}
-
-async function checkTelegramToken(): Promise<CheckResult> {
-  const token = process.env.TELEGRAM_BOT_TOKEN;
-  if (!token) return { status: "warn", label: "Telegram bot token", detail: "TELEGRAM_BOT_TOKEN not set — skipped" };
-
-  try {
-    const response = await fetch(`https://api.telegram.org/bot${token}/getMe`, {
-      signal: AbortSignal.timeout(5000),
-    });
-    const body = (await response.json()) as { ok: boolean; description?: string };
-    if (!response.ok || !body.ok) {
-      return { status: "fail", label: "Telegram bot token", detail: body.description ?? `HTTP ${response.status}` };
-    }
-    return { status: "pass", label: "Telegram bot token", detail: "getMe succeeded" };
-  } catch (err) {
-    return { status: "fail", label: "Telegram bot token", detail: err instanceof Error ? err.message : String(err) };
-  }
-}
-
-function printResults(section: string, results: CheckResult[]): void {
+function printResults(section: string, results: EnvCheckResult[]): void {
   console.log(`\n${section}`);
   for (const r of results) {
     console.log(`  ${ICON[r.status]} ${r.label.padEnd(28)} ${r.detail}`);
@@ -93,9 +42,9 @@ async function main(): Promise<void> {
   ];
   printResults("Optional (deliberate defaults exist)", optional);
 
-  const connectivity: CheckResult[] = [];
+  const connectivity: EnvCheckResult[] = [];
   if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    connectivity.push(await checkSupabaseConnectivity());
+    connectivity.push(await checkSupabaseConnectivity(createSupabaseServiceClient()));
   } else {
     connectivity.push({ status: "warn", label: "Supabase connectivity", detail: "skipped — required vars missing above" });
   }

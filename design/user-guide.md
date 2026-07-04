@@ -302,6 +302,16 @@ npm run notify
 | `npm run analytics` | 30-day per-source quality report (keep rate, low performers) |
 | `npm run verify` | Full quality gate: typecheck → tests → production build |
 
+### Production Verification Framework (v1.4)
+
+| Command | Purpose |
+|---|---|
+| `npm run verify:production` | Runs all 24 infrastructure/application/external/data-quality checks; writes `verification-reports/latest.{md,json}` and prints a console summary with a Ready/Needs Attention/Not Ready verdict |
+| `npm run diagnostics` | Same checks, console-only (no files written) — quick ad-hoc health check |
+
+Exits `1` only when the verdict is `not_ready` (a critical-severity failure) — see
+`docs/operations/production-verification.md` for the full check catalog and deployment checklist.
+
 ---
 
 ## 11. Troubleshooting
