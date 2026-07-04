@@ -33,8 +33,11 @@ export function normalizeWhitespace(value: string): string {
   return value.trim().replace(/\s+/g, " ");
 }
 
+// Escapes the 4 entities Telegram's HTML parse mode recognizes (&lt; &gt;
+// &amp; &quot;) -- quote escaping matters when the escaped value is placed
+// inside an HTML attribute (e.g. <a href="...">), not just a text node.
 export function escapeHtml(text: string): string {
-  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
 export function capitalizeFirst(tag: string): string {
