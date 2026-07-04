@@ -15,6 +15,12 @@ function makeMatch(overrides: Partial<JobMatch> = {}): JobMatch {
     aiReasoning: null,
     description: "A great job.",
     minYears: null,
+    employmentType: null,
+    urgentHiring: false,
+    salaryCurrency: null,
+    salaryMin: null,
+    salaryMax: null,
+    salaryPeriod: null,
     ...overrides,
   };
 }

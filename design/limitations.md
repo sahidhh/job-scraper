@@ -33,6 +33,14 @@ Only board-token companies (greenhouse/lever/ashby) get a `company_career_pages`
 ### 1.9 Contact Email Extraction Coverage
 `extractContactEmail` (`docs/decisions.md` AD-21) only sees the plain text left after each scraper's `stripHtml()` runs — an email address that exists only inside a `mailto:` href with non-email link text (e.g. `<a href="mailto:jane@co.com">Apply now</a>`) is invisible to it and `contact_email` stays null for that job, even though a real contact address exists. Categorization (recruiter/hr/hiring_manager/company_contact) is a local-part keyword match only, not text-proximity or NLP — most personal-name addresses (the common case) fall back to `company_contact`/`low` confidence rather than a more specific guess. The extraction regex's local-part character class is ASCII-only, so an address with an accented/non-Latin local part (e.g. `josé@company.com`) is not matched at all.
 
+### 1.11 Job Attributes Extraction Coverage
+
+`extractJobAttributes` (v1.2) recognizes a fixed set of keyword patterns for employment type, seniority, work arrangement, visa sponsorship, relocation assistance, security clearance, and urgent hiring -- regex-only, no AI, same tradeoff philosophy as `extractSalary`/`extractContactEmail`. Known gaps, deliberately not handled this pass:
+- **Notice period, shift work, travel requirements, and graduate-program-as-a-distinct-category** are not extracted at all (out of scope for v1.2; see the v2.0 roadmap).
+- Seniority's `lead` value only fires on explicit phrases (`tech lead`, `team lead`, `lead engineer`, `lead developer`) -- a bare "Lead" in a title without one of those phrases is not detected, to avoid false positives like "Sales Lead Generation".
+- `workArrangement` only distinguishes `hybrid`/`onsite` for postings that use those words explicitly; a job with no work-arrangement text at all (common for onsite-only regional postings) returns `null`, indistinguishable from "not mentioned". Fully-remote jobs are already covered by `jobs.location_tags` (the `remote` tag), not by this field.
+- `visaSponsorship`/`relocationAssistance` are tri-state (`null` = not mentioned, `true`/`false` = explicit) but the negative-phrase pattern list is small; an unusual negative phrasing not in the list will be misread as `null` (not mentioned) rather than `false` (explicitly ruled out).
+
 ### 1.10 Salary Extraction Coverage
 `extractSalary` (`docs/decisions.md` AD-22) only recognizes a fixed set of formats (₹/$/S$/Rs symbols; USD/INR/SGD/AED codes; India-specific LPA/lakh units; `/year`, `/month`, `/hour`-style periods). Postings that state salary in an unrecognized format (spelled-out numbers, other currencies/regions, a link to a separate compensation page) are not extracted — `jobs.salary_*` stays null, indistinguishable from "no salary mentioned at all." This is a deliberate false-negative-over-false-positive tradeoff (a bare number is never guessed as a salary without a currency/unit/period signal attached), not a bug. A range that repeats a currency *code* as a prefix on both bounds (e.g. "INR 800000 - INR 1200000 per annum") also collapses to a single figure (the first number only, `medium` confidence, no period) — the equivalent case for a repeated currency *symbol* ("$50,000 - $70,000 per year") is handled correctly; see the comment above `PATTERNS` in `extractSalary.ts`.
 
@@ -88,7 +96,10 @@ The `notifications_log` table prevents duplicate sends for jobs already notified
 The Telegram Bot API enforces rate limits (approximately 30 messages/second globally, 20 messages/minute per chat). Large batches of high-scoring jobs may experience queuing delays. The platform respects `retry_after` headers (capped at 30s).
 
 ### 4.3 No Notification Categories or Filters
-All jobs above `NOTIFY_THRESHOLD` are notified. There is no per-source, per-company, or per-location notification filter beyond the threshold score.
+All jobs above `NOTIFY_THRESHOLD` are notified unless narrowed by `NotificationPreferences` (role/skill/location/experience/source include filters, plus `blockedCompanies`/`excludeEmploymentTypes` exclude filters as of v1.2), configurable from the `/settings` "Notification filters" card.
+
+### 4.4 "Why This Job" Highlights Are Best-Effort
+The Telegram highlight badges (remote/urgent/salary/employment-type, v1.2) are derived entirely from `extractJobAttributes`/`extractSalary` output already computed at ingest -- they inherit all the coverage gaps documented in §1.11/§1.10 (e.g. a job with an unrecognized salary format shows no salary badge, not an approximate one). There is no "matches preferred company/tech stack" badge yet -- that would require a `preferredCompanies`/`preferredTechnologies` preference, which is not implemented (see v2.0 roadmap).
 
 ---
 

@@ -41,6 +41,13 @@ const job: Job = {
   salaryMax: null,
   salaryPeriod: null,
   salaryConfidence: null,
+  employmentType: null,
+  seniority: null,
+  workArrangement: null,
+  visaSponsorship: null,
+  relocationAssistance: null,
+  securityClearance: false,
+  urgentHiring: false,
 };
 
 const resume: Resume = {

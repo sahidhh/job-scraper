@@ -199,9 +199,9 @@
 **Main Flow:**
 1. Load notification preferences from `app_settings` (optional; absent = notify all)
 2. Query: jobs where `ai_score >= NOTIFY_THRESHOLD` AND no row in `notifications_log`
-3. Apply notification preferences filter (role, skill, location, experience, source) if set
+3. Apply notification preferences filter (include: role, skill, location, experience, source; exclude: blocked companies, excluded employment types) if set
 4. For each passing match (isolated):
-   a. Format Telegram HTML message (title, company, location, source, URL, AI reasoning)
+   a. Format Telegram HTML message (title, company, location, source, URL, AI reasoning), including "why this job" highlight badges (remote, urgent hiring, salary range, employment type) derived from `extractJobAttributes.ts`/`extractSalary.ts`
    b. POST to Telegram Bot API
    c. On success: upsert `notifications_log` row (prevents re-send)
 5. Per-match failure is logged; does not block remaining matches
@@ -213,13 +213,15 @@
 ### UC-13 — Configure Notification Preferences
 
 **Actor:** User  
-**Trigger:** User sets notification preferences (via server action or direct DB)  
+**Trigger:** User edits the "Notification filters" card on `/settings`  
 **Main Flow:**
-1. User calls `setNotificationPreferencesAction(prefs)` with desired filters
-2. Preferences stored as JSON in `app_settings` under key `notification_preferences`
-3. Next notify cron run applies filters before sending
+1. User edits comma-separated fields (roles, skills, locations, sources, blocked companies, excluded employment types) and min/max experience
+2. Client validates enum fields (locations/sources/employment types) against the known vocab before submitting
+3. `setNotificationPreferencesAction(prefs)` validates the shape server-side (`validateNotificationPreferences`) and upserts
+4. Preferences stored as JSON in `app_settings` under key `notification_preferences`
+5. Next notify cron run applies filters before sending
 
-**Alternate Flow (clear):** `setNotificationPreferencesAction(null)` removes the row; cron reverts to notify-all
+**Alternate Flow (clear):** Clearing every field and saving calls `setNotificationPreferencesAction(null)`, which removes the row; cron reverts to notify-all
 
 ---
 
@@ -275,3 +277,5 @@
 | US-09 | view score distributions | I understand the quality of matches over time |
 | US-10 | edit extracted skills | I correct any parsing errors |
 | US-11 | configure notification filters | I only receive alerts for jobs matching my criteria |
+| US-12 | block companies/agencies and exclude employment types (internship/contract/etc.) from alerts | I stop seeing postings I'd never apply to |
+| US-13 | see why a job was surfaced (remote, urgent, salary, employment type badges) at a glance in Telegram | I can triage without opening the dashboard |

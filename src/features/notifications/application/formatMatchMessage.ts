@@ -1,5 +1,6 @@
 import type { JobMatch } from "@/features/notifications/domain/types";
 import { capitalizeFirst, escapeHtml } from "@/shared/infrastructure/text";
+import { buildJobHighlights } from "./buildJobHighlights";
 
 // Telegram message format (scoring.md §4), sent with parse_mode "HTML"
 // (TelegramBotSender) -- title/companyName/aiReasoning/url come from
@@ -20,6 +21,11 @@ export function formatMatchMessage(match: JobMatch): string {
     `${escapeHtml(match.title)} @ ${escapeHtml(match.companyName)}`,
     `📍 ${location}`,
   ];
+
+  const highlights = buildJobHighlights(match);
+  if (highlights.length > 0) {
+    lines.push(highlights.join(" · "));
+  }
 
   if (match.aiReasoning) {
     lines.push(escapeHtml(match.aiReasoning));

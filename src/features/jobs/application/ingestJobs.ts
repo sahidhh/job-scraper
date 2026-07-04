@@ -1,6 +1,7 @@
 import type { JobRepository } from "@/features/jobs/domain/JobRepository";
 import type { NormalizedJob, UpsertResult } from "@/features/jobs/domain/types";
 import { extractContactEmail } from "@/features/jobs/domain/extractContactEmail";
+import { extractJobAttributes } from "@/features/jobs/domain/extractJobAttributes";
 import { extractSalary } from "@/features/jobs/domain/extractSalary";
 import { validateNormalizedJob } from "@/features/jobs/domain/validation";
 import { dedupeJobs } from "./dedupeJobs";
@@ -33,12 +34,15 @@ export async function ingestJobs(
   }
 
   // Derive the soft experience signal (P2), a best-effort contact email
-  // (Phase 2 Task 9), and a best-effort salary (Phase 2 Task 10) at ingest,
-  // all parsed from title+description.
+  // (Phase 2 Task 9), a best-effort salary (Phase 2 Task 10), and
+  // deterministic job attributes (employment type/seniority/work
+  // arrangement/visa/relocation/clearance/urgency -- personal-intelligence
+  // polish) at ingest, all parsed from title+description.
   const enriched = deduped.map((job) => {
     const text = `${job.title}\n${job.description}`;
     const contact = extractContactEmail(text);
     const salary = extractSalary(text);
+    const attributes = extractJobAttributes(text);
     return {
       ...job,
       minYears: parseMinYears(text),
@@ -50,6 +54,13 @@ export async function ingestJobs(
       salaryMax: salary?.max ?? null,
       salaryPeriod: salary?.period ?? null,
       salaryConfidence: salary?.confidence ?? null,
+      employmentType: attributes.employmentType,
+      seniority: attributes.seniority,
+      workArrangement: attributes.workArrangement,
+      visaSponsorship: attributes.visaSponsorship,
+      relocationAssistance: attributes.relocationAssistance,
+      securityClearance: attributes.securityClearance,
+      urgentHiring: attributes.urgentHiring,
     };
   });
 

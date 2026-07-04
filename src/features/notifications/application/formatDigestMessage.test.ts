@@ -14,6 +14,12 @@ function makeMatch(overrides: Partial<JobMatch> = {}): JobMatch {
     aiReasoning: "Strong match on React and Node.js experience.",
     description: "We are looking for a Senior React Developer.",
     minYears: 3,
+    employmentType: null,
+    urgentHiring: false,
+    salaryCurrency: null,
+    salaryMin: null,
+    salaryMax: null,
+    salaryPeriod: null,
     ...overrides,
   };
 }

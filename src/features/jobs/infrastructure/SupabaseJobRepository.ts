@@ -71,6 +71,13 @@ function toJob(row: JobRow): Job {
     salaryMax: row.salary_max,
     salaryPeriod: row.salary_period as Job["salaryPeriod"],
     salaryConfidence: row.salary_confidence as Job["salaryConfidence"],
+    employmentType: row.employment_type as Job["employmentType"],
+    seniority: row.seniority as Job["seniority"],
+    workArrangement: row.work_arrangement as Job["workArrangement"],
+    visaSponsorship: row.visa_sponsorship,
+    relocationAssistance: row.relocation_assistance,
+    securityClearance: row.security_clearance,
+    urgentHiring: row.urgent_hiring,
   };
 }
 
@@ -138,6 +145,13 @@ function toUpsertRow(job: NormalizedJob, fingerprint: string): JobInsertRow {
     salary_max: job.salaryMax ?? null,
     salary_period: job.salaryPeriod ?? null,
     salary_confidence: job.salaryConfidence ?? null,
+    employment_type: job.employmentType ?? null,
+    seniority: job.seniority ?? null,
+    work_arrangement: job.workArrangement ?? null,
+    visa_sponsorship: job.visaSponsorship ?? null,
+    relocation_assistance: job.relocationAssistance ?? null,
+    security_clearance: job.securityClearance ?? false,
+    urgent_hiring: job.urgentHiring ?? false,
   };
 }
 

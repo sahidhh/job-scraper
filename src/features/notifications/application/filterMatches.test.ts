@@ -14,6 +14,12 @@ function makeMatch(overrides: Partial<JobMatch> = {}): JobMatch {
     aiReasoning: "Strong ASP.NET background.",
     description: "We are looking for a Backend Engineer with ASP.NET and C# experience.",
     minYears: 3,
+    employmentType: null,
+    urgentHiring: false,
+    salaryCurrency: null,
+    salaryMin: null,
+    salaryMax: null,
+    salaryPeriod: null,
     ...overrides,
   };
 }
@@ -68,6 +74,11 @@ describe("filterMatches", () => {
       const match = makeMatch({ description: "We use Python and Django." });
       expect(filterMatches([match], { skills: ["ASP.NET", "Python"] })).toHaveLength(1);
     });
+
+    it("passes when a skill appears only in the title, not the description (matches scoreJob.ts's title+description text source)", () => {
+      const match = makeMatch({ title: "React Developer", description: "We're looking for a developer." });
+      expect(filterMatches([match], { skills: ["React"] })).toHaveLength(1);
+    });
   });
 
   describe("location filter", () => {
@@ -113,6 +124,40 @@ describe("filterMatches", () => {
     it("blocks when source is not in the listed sources", () => {
       const match = makeMatch({ source: "greenhouse" });
       expect(filterMatches([match], { sources: ["lever"] })).toHaveLength(0);
+    });
+  });
+
+  describe("blocked company filter", () => {
+    it("blocks when companyName contains a blocked entry (case-insensitive)", () => {
+      const match = makeMatch({ companyName: "Acme Staffing Solutions" });
+      expect(filterMatches([match], { blockedCompanies: ["staffing"] })).toHaveLength(0);
+    });
+
+    it("passes when companyName matches no blocked entry", () => {
+      const match = makeMatch({ companyName: "Acme Corp" });
+      expect(filterMatches([match], { blockedCompanies: ["staffing"] })).toHaveLength(1);
+    });
+
+    it("passes all through when blockedCompanies is empty", () => {
+      const match = makeMatch();
+      expect(filterMatches([match], { blockedCompanies: [] })).toHaveLength(1);
+    });
+  });
+
+  describe("employment type exclude filter", () => {
+    it("blocks when employmentType is in the exclude list", () => {
+      const match = makeMatch({ employmentType: "internship" });
+      expect(filterMatches([match], { excludeEmploymentTypes: ["internship", "contract"] })).toHaveLength(0);
+    });
+
+    it("passes when employmentType is not in the exclude list", () => {
+      const match = makeMatch({ employmentType: "full_time" });
+      expect(filterMatches([match], { excludeEmploymentTypes: ["internship"] })).toHaveLength(1);
+    });
+
+    it("always passes when employmentType is null (unknown, never excluded)", () => {
+      const match = makeMatch({ employmentType: null });
+      expect(filterMatches([match], { excludeEmploymentTypes: ["internship"] })).toHaveLength(1);
     });
   });
 

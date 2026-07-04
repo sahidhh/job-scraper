@@ -212,6 +212,30 @@ The Worth Reviewing and Dashboard buttons require `APP_URL` and `TELEGRAM_CALLBA
 ### Adjust the Threshold
 Set `NOTIFY_THRESHOLD` in your GitHub Actions secrets (and Vercel env vars if you want the setting visible in the UI).
 
+### Notification Filters (v1.2)
+
+**Location:** `/settings` → "Notification filters" card
+
+Narrow which matched jobs actually trigger a Telegram alert, without changing `NOTIFY_THRESHOLD`. All fields are optional comma-separated lists (or a single number for experience); leaving a field blank means "no filter" for that dimension. Leaving every field blank clears preferences entirely (notify on every match above the threshold — the default).
+
+| Field | Effect |
+|---|---|
+| Roles | Only notify if the job title contains one of these (case-insensitive) |
+| Skills | Only notify if the job mentions one of these skills |
+| Locations | Only notify for these location tags (`india`, `singapore`, `uae`, `remote`) |
+| Sources | Only notify from these sources (`greenhouse`, `lever`, `ashby`, `wellfound`, `remoteok`, `mycareersfuture`) |
+| Min / Max experience | Only notify for jobs whose parsed `min_years` falls in this range (unknown experience always passes) |
+| Blocked companies | Never notify if the company name contains one of these — use this to silence staffing agencies or specific recruiters |
+| Exclude employment types | Never notify for these employment types (`internship`, `contract`, `freelance`, `temporary`, `part_time`, `full_time`) — jobs whose type couldn't be determined are never excluded |
+
+### "Why This Job" Highlights (v1.2)
+
+Every Telegram message (individual and digest modes) now includes a short highlight line when applicable, derived from data already extracted at ingest — no extra AI calls:
+- 🌍 Remote
+- ⚡ Urgent hiring
+- 💰 Salary range (e.g. `USD120,000–150,000/yr`), when a salary was parsed from the posting
+- 📄 Employment type, only shown for non-full-time types (contract/freelance/internship/temporary/part-time)
+
 ### Stop Notifications for a Job
 Mark the job as "Archived" or "Rejected" in the dashboard. (Note: this does not directly suppress notifications — the threshold is score-based only. A job already notified will not be notified again regardless of status.)
 
@@ -241,6 +265,16 @@ npm run score
 npm run notify
 ```
 
+### Diagnostic Commands (v1.2)
+
+| Command | Purpose |
+|---|---|
+| `npm run doctor` | Checks required/optional env vars are set and does a live Supabase + Telegram connectivity check. Run this first if a cron run fails with a "Missing required environment variable" error |
+| `npm run health` | Probes all configured ATS board tokens (alias of `validate-sources`) |
+| `npm run diagnose` | Recent scrape-run/failure report + fetch→location-filter→ingest funnel, for debugging why a source is yielding few jobs |
+| `npm run analytics` | 30-day per-source quality report (keep rate, low performers) |
+| `npm run verify` | Full quality gate: typecheck → tests → production build |
+
 ---
 
 ## 11. Troubleshooting
@@ -254,3 +288,5 @@ npm run notify
 | Company jobs not appearing | Board token incorrect or company set inactive | Check `/settings` → Company Config |
 | Resume skills look wrong | PDF parsing missed skills | Manually add/remove skills on `/resume` |
 | Skill insights empty | No scored jobs yet | Run a full scrape → score cycle |
+| Cron script fails with "Missing required environment variable" | A required secret isn't set in this environment | Run `npm run doctor` locally to see exactly which vars are missing |
+| Expected notification didn't arrive | A notification filter (blocked company, excluded employment type, etc.) silently excluded it | Check `/settings` → "Notification filters" — clear a field to test, or check `docs/reviews` for the exclude-filter semantics |

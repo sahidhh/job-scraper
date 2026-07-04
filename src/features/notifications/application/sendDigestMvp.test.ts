@@ -18,6 +18,12 @@ function makeMatch(overrides: Partial<JobMatch> = {}): JobMatch {
     aiReasoning: null,
     description: "Build systems.",
     minYears: 3,
+    employmentType: null,
+    urgentHiring: false,
+    salaryCurrency: null,
+    salaryMin: null,
+    salaryMax: null,
+    salaryPeriod: null,
     ...overrides,
   };
 }
