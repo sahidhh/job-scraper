@@ -198,6 +198,9 @@ erDiagram
 | `company_career_pages` | `UNIQUE (canonical_company_name)` | One career page per canonicalized company name, upserted on rediscovery |
 | `job_scores` | `UNIQUE (job_id, role_selection_id, resume_version)` | One score per job+role+resume-version triple; prior-version rows preserved |
 | `job_scores` | `INDEX (ai_score DESC NULLS LAST)` | Dashboard sorted by relevance |
+| `job_scores` | `INDEX (role_selection_id, resume_version, scored_at) WHERE ai_score IS NULL` | `findAwaitingAi`'s unscored-queue shape |
+| `jobs` | `INDEX (is_active) WHERE is_active = true` | Active-jobs filter shared by `findUnscored`/`countMatchingExpandedRoles`/`countJobStats`/`markExpiredJobs` |
+| `scrape_runs` | `INDEX (source, run_at DESC)` | `listRecentBySource` (per-source health report, called once per source per `/analytics` load) |
 | `resumes` | `UNIQUE (is_active) WHERE is_active = true` | Enforce single active resume |
 | `role_selections` | `UNIQUE (is_active) WHERE is_active = true` | Enforce single active role |
 | `notifications_log` | `UNIQUE (job_id)` | Guarantee at-most-one Telegram send |
