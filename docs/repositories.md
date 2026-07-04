@@ -237,6 +237,8 @@ interface MatchedJobsRepository {
 
 **Responsibilities:** feeds the skill-gap / demand views (`/insights`). Returns role-matched jobs reduced to text + score; the page extracts skills at read time via the shared dictionary (no persisted `jobs.skills` column — recompute chosen over persist, see docs/plans/phase-p1-insights.md).
 
+This interface also carries every `/analytics` aggregation query (not shown above -- this doc predates most of them): `getScrapeRuns`, `getAiScores`, `getStatusBreakdown`, `getJobsExperienceData`, `getJobsLocationData`, `getTokenUsageStats`, `getScoredJobsBySource`, and, added in Phase 4 Task 13, `getJobsCompanyData` (company_name for active jobs, feeds `computeJobsByCompany`), `getJobsSalaryData` (salary_currency/min/max for all jobs, feeds `computeSalaryStats`), and `getScrapeRunStats` (status/duration_ms/duplicate_count for every scrape_runs row regardless of status, feeds `computePipelineStats` -- distinct from `getScrapeRuns`, which is success-only and feeds the jobs-over-time/by-source charts). Each is a single narrow, unbounded `select` on `jobs` or `scrape_runs` — no `.limit()`, consistent with `design/limitations.md` §7.1's documented in-memory-aggregation approach.
+
 **Query pattern:** `select title, description, job_scores!left(ai_score, role_selection_id)` filtered by the same `.or(buildRoleFilter(expandedRoles))` predicate as `JobRepository`, scoped to the active role selection. Uses the shared `buildRoleFilter` from `shared/infrastructure/roleFilter.ts` (extracted from `SupabaseJobRepository` so both repos share it without crossing the no-cross-feature-infra rule).
 
 ## 7c. SettingsRepository (`features/settings`, P2)

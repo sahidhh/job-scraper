@@ -80,8 +80,10 @@ A single technical professional (software engineer, data scientist, or similar) 
 
 | Feature | Description |
 |---|---|
-| Analytics charts | Jobs over time, by source, by experience bracket, score histogram |
+| Analytics charts | Jobs over time, by source, by experience bracket, by company, score histogram |
 | Status breakdown | Pie chart of jobs per workflow status |
+| Job metrics (Phase 4 Task 13) | Remote %, salary averages by currency |
+| Pipeline/scoring-queue/source-health dashboards (Phase 4 Task 13) | Surfaces Phase 1's `getSourceHealthReport`/`getScoringQueueReport` (previously backend-only) plus new scrape_runs-derived pipeline stats (duplicates skipped, failed runs, avg latency) on `/analytics` |
 
 ### P4 — Future / Experimental
 

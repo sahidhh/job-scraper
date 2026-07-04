@@ -122,4 +122,41 @@ describe("SupabaseMatchedJobsRepository", () => {
     );
     expect(result[0]!.count).toBeGreaterThanOrEqual(result[1]!.count);
   });
+
+  it("getJobsCompanyData maps company_name for active jobs only", async () => {
+    const { client, builder } = mockSupabaseClient({
+      data: [{ company_name: "Acme" }, { company_name: "Beta" }],
+      error: null,
+    });
+    const repo = new SupabaseMatchedJobsRepository(client);
+    const result = await repo.getJobsCompanyData();
+    expect(result).toEqual([{ companyName: "Acme" }, { companyName: "Beta" }]);
+    expect(builder.eq).toHaveBeenCalledWith("is_active", true);
+  });
+
+  it("getJobsSalaryData maps salary_currency/min/max", async () => {
+    const { client } = mockSupabaseClient({
+      data: [{ salary_currency: "USD", salary_min: 100_000, salary_max: 120_000 }],
+      error: null,
+    });
+    const repo = new SupabaseMatchedJobsRepository(client);
+    const result = await repo.getJobsSalaryData();
+    expect(result).toEqual([{ currency: "USD", min: 100_000, max: 120_000 }]);
+  });
+
+  it("getScrapeRunStats maps status/duration_ms/duplicate_count for every run", async () => {
+    const { client } = mockSupabaseClient({
+      data: [
+        { status: "success", duration_ms: 1000, duplicate_count: 1 },
+        { status: "failed", duration_ms: null, duplicate_count: null },
+      ],
+      error: null,
+    });
+    const repo = new SupabaseMatchedJobsRepository(client);
+    const result = await repo.getScrapeRunStats();
+    expect(result).toEqual([
+      { status: "success", durationMs: 1000, duplicateCount: 1 },
+      { status: "failed", durationMs: null, duplicateCount: null },
+    ]);
+  });
 });
