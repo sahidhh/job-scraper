@@ -17,6 +17,8 @@ function passesAllFilters(match: JobMatch, prefs: NotificationPreferences): bool
   if (!passesLocationFilter(match, prefs)) return false;
   if (!passesExperienceFilter(match, prefs)) return false;
   if (!passesSourceFilter(match, prefs)) return false;
+  if (!passesExcludedCompanyFilter(match, prefs)) return false;
+  if (!passesExcludedKeywordFilter(match, prefs)) return false;
   return true;
 }
 
@@ -63,4 +65,16 @@ function passesExperienceFilter(match: JobMatch, prefs: NotificationPreferences)
 function passesSourceFilter(match: JobMatch, prefs: NotificationPreferences): boolean {
   if (!prefs.sources || prefs.sources.length === 0) return true;
   return prefs.sources.includes(match.source);
+}
+
+function passesExcludedCompanyFilter(match: JobMatch, prefs: NotificationPreferences): boolean {
+  if (!prefs.excludeCompanies || prefs.excludeCompanies.length === 0) return true;
+  const companyLower = match.companyName.toLowerCase();
+  return !prefs.excludeCompanies.some((company) => companyLower.includes(company.toLowerCase()));
+}
+
+function passesExcludedKeywordFilter(match: JobMatch, prefs: NotificationPreferences): boolean {
+  if (!prefs.excludeKeywords || prefs.excludeKeywords.length === 0) return true;
+  const titleLower = match.title.toLowerCase();
+  return !prefs.excludeKeywords.some((keyword) => titleLower.includes(keyword.toLowerCase()));
 }

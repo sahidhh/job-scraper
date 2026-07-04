@@ -116,6 +116,30 @@ describe("filterMatches", () => {
     });
   });
 
+  describe("excluded company filter", () => {
+    it("blocks when companyName contains a muted company (case-insensitive)", () => {
+      const match = makeMatch({ companyName: "Acme Corp" });
+      expect(filterMatches([match], { excludeCompanies: ["acme"] })).toHaveLength(0);
+    });
+
+    it("passes when companyName matches no muted company", () => {
+      const match = makeMatch({ companyName: "Other Corp" });
+      expect(filterMatches([match], { excludeCompanies: ["acme"] })).toHaveLength(1);
+    });
+  });
+
+  describe("excluded keyword filter", () => {
+    it("blocks when title contains a muted keyword (case-insensitive)", () => {
+      const match = makeMatch({ title: "Senior Backend Engineer" });
+      expect(filterMatches([match], { excludeKeywords: ["senior"] })).toHaveLength(0);
+    });
+
+    it("passes when title matches no muted keyword", () => {
+      const match = makeMatch({ title: "Junior Backend Engineer" });
+      expect(filterMatches([match], { excludeKeywords: ["senior"] })).toHaveLength(1);
+    });
+  });
+
   describe("combined filters (AND logic)", () => {
     it("requires all specified filters to pass", () => {
       const matches = [

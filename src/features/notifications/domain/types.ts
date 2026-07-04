@@ -65,4 +65,6 @@ export interface NotificationPreferences {
   minExperience?: number;    // min_years must be >= this (null min_years always passes)
   maxExperience?: number;    // min_years must be <= this (null min_years always passes)
   sources?: JobSource[];     // source must be in this list
+  excludeCompanies?: string[]; // company name (case-insensitive substring) mutes the match
+  excludeKeywords?: string[];  // title (case-insensitive substring) mutes the match
 }

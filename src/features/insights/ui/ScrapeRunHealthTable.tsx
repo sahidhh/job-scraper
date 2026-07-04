@@ -16,7 +16,10 @@ export function ScrapeRunHealthTable({ summaries }: { summaries: SourceHealthSum
     return <p className="text-sm text-muted-foreground">No scrape history yet.</p>;
   }
 
-  const sorted = [...summaries].sort((a, b) => b.consecutiveFailures - a.consecutiveFailures);
+  const sorted = [...summaries].sort((a, b) => {
+    if (a.isStale !== b.isStale) return a.isStale ? -1 : 1;
+    return b.consecutiveFailures - a.consecutiveFailures;
+  });
 
   return (
     <div className="overflow-x-auto">
@@ -36,15 +39,25 @@ export function ScrapeRunHealthTable({ summaries }: { summaries: SourceHealthSum
             <tr key={s.source} className="border-b border-border last:border-0">
               <td className="py-2 pr-4 font-medium">{s.source}</td>
               <td className="py-2 pr-4">
-                {s.lastRunStatus ? (
-                  <span
-                    className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_STYLES[s.lastRunStatus] ?? ""}`}
-                  >
-                    {s.lastRunStatus}
-                  </span>
-                ) : (
-                  "—"
-                )}
+                <div className="flex items-center gap-1.5">
+                  {s.lastRunStatus ? (
+                    <span
+                      className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_STYLES[s.lastRunStatus] ?? ""}`}
+                    >
+                      {s.lastRunStatus}
+                    </span>
+                  ) : (
+                    "—"
+                  )}
+                  {s.isStale && (
+                    <span
+                      className="inline-block rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-800"
+                      title={`No run in ${Math.round(s.hoursSinceLastRun ?? 0)}h`}
+                    >
+                      stale
+                    </span>
+                  )}
+                </div>
               </td>
               <td className="py-2 pr-4 tabular-nums">{(s.successRate * 100).toFixed(0)}%</td>
               <td className="py-2 pr-4 tabular-nums">

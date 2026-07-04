@@ -81,6 +81,8 @@ erDiagram
         numeric estimated_cost_usd "cost estimate (tokens/1k * OPENROUTER_COST_PER_1K_TOKENS); null if env unset"
         timestamptz scored_at
         integer retry_count "incremented by upsert_job_score() whenever a write leaves ai_score null; never reset"
+        real overall_score "nullable; ai_score + configurable ranking bonuses, computeOverallScore.ts; null iff ai_score is null"
+        text[] overall_score_reasons "nullable; bonuses applied (e.g. 'preferred company'), for dashboard display"
     }
 
     JOB_STATUSES {
@@ -197,7 +199,8 @@ erDiagram
 | `job_duplicates` | `UNIQUE (source, source_job_id)` | One provenance row per (other-source, id) rediscovery |
 | `company_career_pages` | `UNIQUE (canonical_company_name)` | One career page per canonicalized company name, upserted on rediscovery |
 | `job_scores` | `UNIQUE (job_id, role_selection_id, resume_version)` | One score per job+role+resume-version triple; prior-version rows preserved |
-| `job_scores` | `INDEX (ai_score DESC NULLS LAST)` | Dashboard sorted by relevance |
+| `job_scores` | `INDEX (ai_score DESC NULLS LAST)` | Retained for the queries still keyed on raw AI match quality (e.g. `minAiScore` filter) |
+| `job_scores` | `INDEX (overall_score DESC NULLS LAST)` | Dashboard default sort (Theme 1 composite ranking score); backfilled to `= ai_score` for pre-existing rows, migration `20260704000003_ranking_overall_score.sql` |
 | `job_scores` | `INDEX (role_selection_id, resume_version, scored_at) WHERE ai_score IS NULL` | `findAwaitingAi`'s unscored-queue shape |
 | `jobs` | `INDEX (is_active)` | Active-jobs filter shared by `findUnscored`/`countMatchingExpandedRoles`/`countJobStats`/`markExpiredJobs` (created in `20260618000001_expired_job_detection.sql`, not repeated by the 2026-07-04 hardening migration) |
 | `scrape_runs` | `INDEX (source, run_at DESC)` | `listRecentBySource` (per-source health report, called once per source per `/analytics` load) |
@@ -232,15 +235,16 @@ erDiagram
 
 Both functions run in a single transaction, ensuring exactly one active record at all times.
 
-### `upsert_job_score(p_job_id, p_role_selection_id, p_resume_version, p_keyword_score, p_ai_score, p_ai_reasoning, p_model, p_tokens_input, p_tokens_output, p_estimated_cost_usd)`
+### `upsert_job_score(p_job_id, p_role_selection_id, p_resume_version, p_keyword_score, p_ai_score, p_ai_reasoning, p_model, p_tokens_input, p_tokens_output, p_estimated_cost_usd, p_overall_score default null, p_overall_score_reasons default null)`
 
 ```
 1. INSERT INTO job_scores (…) ON CONFLICT (job_id, role_selection_id, resume_version)
    DO UPDATE SET keyword_score/ai_score/ai_reasoning/model/tokens_*/estimated_cost_usd = excluded.*,
-                 retry_count = job_scores.retry_count + (1 if excluded.ai_score IS NULL else 0)
+                 retry_count = job_scores.retry_count + (1 if excluded.ai_score IS NULL else 0),
+                 overall_score/overall_score_reasons = excluded.*
 ```
 
-Atomic single-round-trip write + conditional counter increment (Phase 1 Task 6) -- a plain client-side `.upsert()` can't express "increment only when this write leaves ai_score null" without a read-modify-write per job.
+Atomic single-round-trip write + conditional counter increment (Phase 1 Task 6) -- a plain client-side `.upsert()` can't express "increment only when this write leaves ai_score null" without a read-modify-write per job. `p_overall_score`/`p_overall_score_reasons` (Theme 1 continuous-improvement pass) were appended as trailing parameters with defaults in `20260704000003_ranking_overall_score.sql` -- `CREATE OR REPLACE FUNCTION` supports adding parameters this way without creating a duplicate overload, so pre-existing callers that omit them are unaffected.
 
 ---
 

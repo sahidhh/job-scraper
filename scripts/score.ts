@@ -4,6 +4,7 @@ import { SupabaseRoleRepository } from "@/features/roles/infrastructure/Supabase
 import { getScoringQueueReport } from "@/features/scoring/application/getScoringQueueReport";
 import { scoreJob } from "@/features/scoring/application/scoreJob";
 import { OpenRouterAiScoreProvider } from "@/features/scoring/infrastructure/OpenRouterAiScoreProvider";
+import { SupabaseRankingPreferencesRepository } from "@/features/scoring/infrastructure/SupabaseRankingPreferencesRepository";
 import { SupabaseScoreRepository } from "@/features/scoring/infrastructure/SupabaseScoreRepository";
 import { SKILLS_DICTIONARY } from "@/shared/config/skills-dictionary";
 import { optionalEnv } from "@/shared/infrastructure/env";
@@ -17,6 +18,7 @@ async function main(): Promise<void> {
   const resumeRepository = new SupabaseResumeRepository(client);
   const roleRepository = new SupabaseRoleRepository(client);
   const scoreRepository = new SupabaseScoreRepository(client);
+  const rankingPreferencesRepository = new SupabaseRankingPreferencesRepository(client);
   const aiScoreProvider = new OpenRouterAiScoreProvider();
 
   const resume = await resumeRepository.getActive();
@@ -54,6 +56,10 @@ async function main(): Promise<void> {
   const jobs = await jobRepository.findUnscored(roleSelection.id, roleSelection.expandedRoles, resume.version, keywordThreshold);
   console.log(`[score] scoring ${jobs.length} unscored/retry job(s) for role selection ${roleSelection.id}`);
 
+  // Composite ranking score bonuses (Theme 1); absent settings row means
+  // aiScore-only ranking (computeOverallScore.ts defaults to zero bonuses).
+  const rankingPreferences = (await rankingPreferencesRepository.getPreferences()) ?? {};
+
   let scored = 0;
   let skippedBelowGate = 0;
   for (const job of jobs) {
@@ -64,6 +70,7 @@ async function main(): Promise<void> {
         skillsDictionary: SKILLS_DICTIONARY,
         keywordThreshold,
         costPer1kTokens,
+        rankingPreferences,
       });
 
       if (result.keywordScore < keywordThreshold) {

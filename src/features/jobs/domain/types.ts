@@ -128,6 +128,16 @@ export interface JobFilters {
   // Keep jobs requiring at most this many years (P2, soft). Jobs with
   // min_years NULL ("unknown") always pass and are never excluded.
   maxYears?: number;
+  // Free-text search matched against title OR company name (case-insensitive
+  // substring). Structural PostgREST filter characters are stripped, same as
+  // buildRoleFilter (shared/infrastructure/roleFilter.ts).
+  search?: string;
+  // Hide jobs whose company name contains any of these (case-insensitive
+  // substring) -- muted companies, sourced from notification preferences'
+  // excludeCompanies (features/notifications) so a "never show me this
+  // company" mute is enforced consistently everywhere, not just in Telegram
+  // alerts.
+  excludeCompanies?: string[];
 }
 
 // Job joined with its score for the active role_selection. Omits
@@ -150,6 +160,12 @@ export interface JobWithScore extends Omit<Job, JobWithScoreOmittedKeys> {
   keywordScore: number | null;
   aiScore: number | null;
   aiReasoning: string | null;
+  // Composite ranking score (Theme 1): aiScore + configurable bonuses, or
+  // null whenever aiScore is null. Drives the dashboard's default sort.
+  overallScore: number | null;
+  // Bonuses applied to reach overallScore (e.g. "preferred company"), for
+  // display next to the score. Null/empty when none applied.
+  overallScoreReasons: string[] | null;
   minYears: number | null;
   // Current status (job_state join, P0). Null => unset, rendered as the
   // first seeded status (New) by the UI.

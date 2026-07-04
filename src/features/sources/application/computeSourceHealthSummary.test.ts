@@ -30,6 +30,8 @@ describe("computeSourceHealthSummary", () => {
     expect(result.totalRuns).toBe(0);
     expect(result.successRate).toBe(0);
     expect(result.avgLatencyMs).toBeNull();
+    expect(result.hoursSinceLastRun).toBeNull();
+    expect(result.isStale).toBe(false);
     expect(result.recommendation).toBe("No scrape history yet.");
   });
 
@@ -39,12 +41,14 @@ describe("computeSourceHealthSummary", () => {
       makeRun({ runAt: "2026-01-02T00:00:00Z", durationMs: 1000 }),
       makeRun({ runAt: "2026-01-01T00:00:00Z", durationMs: 3000 }),
     ];
-    const result = computeSourceHealthSummary("greenhouse", runs);
+    const now = new Date("2026-01-03T01:00:00Z"); // 1h after the latest run, well within the stale window
+    const result = computeSourceHealthSummary("greenhouse", runs, now);
     expect(result.totalRuns).toBe(3);
     expect(result.successCount).toBe(3);
     expect(result.successRate).toBe(1);
     expect(result.avgLatencyMs).toBe(2000);
     expect(result.consecutiveFailures).toBe(0);
+    expect(result.isStale).toBe(false);
     expect(result.recommendation).toBe("Healthy.");
   });
 
@@ -55,7 +59,8 @@ describe("computeSourceHealthSummary", () => {
       makeRun({ runAt: "2026-01-03T00:00:00Z", status: "failed", failureCategory: "timeout" }),
       makeRun({ runAt: "2026-01-02T00:00:00Z", status: "success" }),
     ];
-    const result = computeSourceHealthSummary("greenhouse", runs);
+    const now = new Date("2026-01-04T01:00:00Z");
+    const result = computeSourceHealthSummary("greenhouse", runs, now);
     expect(result.consecutiveFailures).toBe(2);
     expect(result.lastRunStatus).toBe("failed");
     expect(result.topFailureCategory).toBe("timeout");
@@ -68,7 +73,8 @@ describe("computeSourceHealthSummary", () => {
       makeRun({ runAt: "2026-01-02T00:00:00Z", status: "success" }),
       makeRun({ runAt: "2026-01-01T00:00:00Z", status: "failed", failureCategory: "blocked" }),
     ];
-    const result = computeSourceHealthSummary("greenhouse", runs);
+    const now = new Date("2026-01-02T01:00:00Z");
+    const result = computeSourceHealthSummary("greenhouse", runs, now);
     expect(result.recoveryDetected).toBe(true);
     expect(result.consecutiveFailures).toBe(0);
   });
@@ -78,7 +84,8 @@ describe("computeSourceHealthSummary", () => {
       makeRun({ runAt: "2026-01-02T00:00:00Z", status: "success" }),
       makeRun({ runAt: "2026-01-01T00:00:00Z", status: "success" }),
     ];
-    const result = computeSourceHealthSummary("greenhouse", runs);
+    const now = new Date("2026-01-02T01:00:00Z");
+    const result = computeSourceHealthSummary("greenhouse", runs, now);
     expect(result.recoveryDetected).toBe(false);
   });
 
@@ -87,7 +94,8 @@ describe("computeSourceHealthSummary", () => {
     const runs = Array.from({ length: threshold }, (_, i) =>
       makeRun({ runAt: `2026-01-0${i + 1}T00:00:00Z`, status: "failed", failureCategory: "not_found" }),
     );
-    const result = computeSourceHealthSummary("greenhouse", runs);
+    const now = new Date("2026-01-07T01:00:00Z");
+    const result = computeSourceHealthSummary("greenhouse", runs, now);
     expect(result.consecutiveFailures).toBe(threshold);
     expect(result.recommendation).toContain("disable threshold");
   });
@@ -97,7 +105,8 @@ describe("computeSourceHealthSummary", () => {
       makeRun({ runAt: "2026-01-02T00:00:00Z", status: "success", foundCount: 0, failureCategory: "empty_feed" }),
       makeRun({ runAt: "2026-01-01T00:00:00Z", status: "success", foundCount: 0, failureCategory: "empty_feed" }),
     ];
-    const result = computeSourceHealthSummary("wellfound", runs);
+    const now = new Date("2026-01-02T01:00:00Z");
+    const result = computeSourceHealthSummary("wellfound", runs, now);
     expect(result.consecutiveFailures).toBe(0);
     expect(result.recommendation).toContain("empty-feed");
   });
@@ -108,8 +117,42 @@ describe("computeSourceHealthSummary", () => {
       makeRun({ runAt: "2026-01-01T00:00:00Z", status: "success" }),
       makeRun({ runAt: "2026-01-02T00:00:00Z", status: "success" }),
     ];
-    const result = computeSourceHealthSummary("greenhouse", runs);
+    const now = new Date("2026-01-03T01:00:00Z");
+    const result = computeSourceHealthSummary("greenhouse", runs, now);
     expect(result.lastFailureAt).toBe("2026-01-03T00:00:00Z");
     expect(result.lastSuccessAt).toBe("2026-01-02T00:00:00Z");
+  });
+
+  describe("staleness", () => {
+    it("is not stale when the last run was within the staleAfterHours window", () => {
+      const runs = [makeRun({ runAt: "2026-01-01T00:00:00Z", status: "success" })];
+      const now = new Date("2026-01-01T05:00:00Z"); // 5h later, default threshold is 6h
+      const result = computeSourceHealthSummary("greenhouse", runs, now);
+      expect(result.hoursSinceLastRun).toBeCloseTo(5, 5);
+      expect(result.isStale).toBe(false);
+      expect(result.recommendation).toBe("Healthy.");
+    });
+
+    it("flags stale once the last run exceeds staleAfterHours, even with a healthy run history", () => {
+      const runs = [
+        makeRun({ runAt: "2026-01-01T00:00:00Z", status: "success" }),
+        makeRun({ runAt: "2025-12-31T00:00:00Z", status: "success" }),
+      ];
+      const now = new Date("2026-01-01T07:00:00Z"); // 7h later, past the default 6h threshold
+      const result = computeSourceHealthSummary("greenhouse", runs, now);
+      expect(result.hoursSinceLastRun).toBeCloseTo(7, 5);
+      expect(result.isStale).toBe(true);
+      expect(result.recommendation).toContain("Stale");
+      expect(result.recommendation).toContain("7h");
+    });
+
+    it("stale recommendation takes priority over a failing-streak recommendation", () => {
+      const runs = [makeRun({ runAt: "2026-01-01T00:00:00Z", status: "failed", failureCategory: "timeout" })];
+      const now = new Date("2026-01-02T00:00:00Z"); // 24h later -- both stale and "failing"
+      const result = computeSourceHealthSummary("greenhouse", runs, now);
+      expect(result.isStale).toBe(true);
+      expect(result.recommendation).toContain("Stale");
+      expect(result.recommendation).not.toContain("consecutive run(s)");
+    });
   });
 });

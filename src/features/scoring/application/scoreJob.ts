@@ -2,10 +2,11 @@ import type { Job } from "@/features/jobs/domain/types";
 import type { Resume } from "@/features/resume/domain/types";
 import type { AiScoreProvider } from "@/features/scoring/domain/AiScoreProvider";
 import type { ScoreRepository } from "@/features/scoring/domain/ScoreRepository";
-import type { NewJobScore } from "@/features/scoring/domain/types";
+import type { NewJobScore, RankingPreferences } from "@/features/scoring/domain/types";
 import { validateNewJobScore } from "@/features/scoring/domain/validation";
 import { extractSkills, type SkillDictionaryEntry } from "@/shared/domain/skills";
 import { computeKeywordScore } from "./computeKeywordScore";
+import { computeOverallScore } from "./computeOverallScore";
 
 export interface ScoreJobDeps {
   scoreRepository: ScoreRepository;
@@ -13,6 +14,8 @@ export interface ScoreJobDeps {
   skillsDictionary: readonly SkillDictionaryEntry[];
   keywordThreshold: number;
   costPer1kTokens?: number | null;
+  /** Composite-ranking-score bonuses (Theme 1); absent/empty = aiScore-only ranking. */
+  rankingPreferences?: RankingPreferences;
 }
 
 /**
@@ -53,6 +56,14 @@ export async function scoreJob(
     }
   }
 
+  let overallScore: number | null = null;
+  let overallScoreReasons: string[] | null = null;
+  if (aiScore !== null) {
+    const result = computeOverallScore(job, aiScore, deps.rankingPreferences ?? {});
+    overallScore = result.overallScore;
+    overallScoreReasons = result.reasons;
+  }
+
   const score: NewJobScore = {
     jobId: job.id,
     roleSelectionId,
@@ -64,6 +75,8 @@ export async function scoreJob(
     tokensInput,
     tokensOutput,
     estimatedCostUsd,
+    overallScore,
+    overallScoreReasons,
   };
 
   validateNewJobScore(score);

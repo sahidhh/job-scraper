@@ -38,12 +38,13 @@
 **Precondition:** Authenticated; at least one scrape run completed  
 **Main Flow:**
 1. Page fetches jobs joined with scores (active role_selection) and job_state
-2. Jobs displayed in table sorted by ai_score descending
-3. User can filter by location, source, status, and min/max score
-4. User can sort by any column
-5. Pagination loads next page on demand
+2. Jobs displayed in table sorted by overall_score descending (ai_score + configurable ranking
+   bonuses, see UC-06b), then posted_at descending as tiebreaker
+3. User can filter by location, source, status, min/max score, max experience, and a free-text
+   search over title/company; muted companies (UC-13) are always excluded
+4. Pagination loads next page on demand
 
-**Postcondition:** User sees paginated, filtered job list with scores and statuses
+**Postcondition:** User sees paginated, filtered job list with scores, ranking-bonus reasons, and statuses
 
 ---
 
@@ -126,6 +127,21 @@
 
 ---
 
+### UC-06b — Configure Ranking Preferences
+
+**Actor:** User
+**Trigger:** User navigates to `/settings` → Ranking
+**Main Flow:**
+1. User lists preferred companies, toggles "prefer remote", and/or adjusts bonus amounts
+2. `setRankingPreferencesAction(prefs)` called; stored as JSON in `app_settings` under `ranking_preferences`
+3. Next `score.ts` run computes `overall_score = ai_score + bonuses` per job (`computeOverallScore.ts`) and dashboard sorts by it
+
+**Alternate Flow (clear):** `setRankingPreferencesAction(null)` removes the row; ranking reverts to aiScore-only (bonuses default to zero)
+
+**Postcondition:** Jobs from preferred companies, remote postings (if preferred), and jobs with a disclosed salary rank slightly higher; the dashboard shows why next to the score
+
+---
+
 ### UC-07 — Configure Company Board Tokens
 
 **Actor:** User  
@@ -199,7 +215,7 @@
 **Main Flow:**
 1. Load notification preferences from `app_settings` (optional; absent = notify all)
 2. Query: jobs where `ai_score >= NOTIFY_THRESHOLD` AND no row in `notifications_log`
-3. Apply notification preferences filter (role, skill, location, experience, source) if set
+3. Apply notification preferences filter (role, skill, location, experience, source include-filters; excludeCompanies/excludeKeywords mutes) if set
 4. For each passing match (isolated):
    a. Format Telegram HTML message (title, company, location, source, URL, AI reasoning)
    b. POST to Telegram Bot API
@@ -213,13 +229,13 @@
 ### UC-13 — Configure Notification Preferences
 
 **Actor:** User  
-**Trigger:** User sets notification preferences (via server action or direct DB)  
+**Trigger:** User navigates to `/settings` → Notifications  
 **Main Flow:**
-1. User calls `setNotificationPreferencesAction(prefs)` with desired filters
-2. Preferences stored as JSON in `app_settings` under key `notification_preferences`
-3. Next notify cron run applies filters before sending
+1. User fills in roles/skills/locations/sources/min-max experience (include-only filters) and/or muted companies/keywords
+2. `setNotificationPreferencesAction(prefs)` called; stored as JSON in `app_settings` under key `notification_preferences`
+3. Next notify cron run applies filters before sending; `excludeCompanies` is also applied to the dashboard job list (UC-02) via the same stored setting
 
-**Alternate Flow (clear):** `setNotificationPreferencesAction(null)` removes the row; cron reverts to notify-all
+**Alternate Flow (clear):** `setNotificationPreferencesAction(null)` removes the row; cron reverts to notify-all and the dashboard stops muting any companies
 
 ---
 

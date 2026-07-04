@@ -17,7 +17,15 @@ function formatScore(score: number | null): string {
 
 // AI score thresholds mirror scoring.md §3/§5: KEYWORD_THRESHOLD (0.25) and
 // NOTIFY_THRESHOLD (0.75) define the meaningful bands for the AI score.
-function ScoreBadge({ aiScore, keywordScore }: { aiScore: number | null; keywordScore: number | null }) {
+function ScoreBadge({
+  aiScore,
+  keywordScore,
+  overallScoreReasons,
+}: {
+  aiScore: number | null;
+  keywordScore: number | null;
+  overallScoreReasons: string[] | null;
+}) {
   if (aiScore === null) {
     return (
       <div className="flex flex-col gap-0.5">
@@ -33,6 +41,14 @@ function ScoreBadge({ aiScore, keywordScore }: { aiScore: number | null; keyword
     <div className="flex flex-col gap-0.5">
       <Badge variant={variant}>{formatScore(aiScore)}</Badge>
       <span className="text-xs text-muted-foreground">AI score</span>
+      {overallScoreReasons && overallScoreReasons.length > 0 && (
+        <span
+          className="text-xs text-muted-foreground"
+          title="Ranking bonuses applied on top of the AI score -- see Settings → Ranking"
+        >
+          + {overallScoreReasons.join(", ")}
+        </span>
+      )}
     </div>
   );
 }
@@ -90,7 +106,7 @@ export function JobRow({
         </TableCell>
         <TableCell>
           <div className="flex flex-col gap-0.5">
-            <ScoreBadge aiScore={job.aiScore} keywordScore={job.keywordScore} />
+            <ScoreBadge aiScore={job.aiScore} keywordScore={job.keywordScore} overallScoreReasons={job.overallScoreReasons} />
             {job.minYears !== null && (
               <span className="text-xs text-muted-foreground">{job.minYears}+ yrs</span>
             )}

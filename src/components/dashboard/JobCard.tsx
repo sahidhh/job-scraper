@@ -101,10 +101,15 @@ export function JobCard({
 
       {/* Expanded AI reasoning */}
       {expanded && (
-        <div className="border-t px-4 py-3">
+        <div className="border-t px-4 py-3 space-y-1">
           <p className="text-sm text-muted-foreground">
             {job.aiReasoning ?? `AI review pending — keyword match: ${formatScore(job.keywordScore)}`}
           </p>
+          {job.overallScoreReasons && job.overallScoreReasons.length > 0 && (
+            <p className="text-xs text-muted-foreground">
+              Ranking bonus: {job.overallScoreReasons.join(", ")}
+            </p>
+          )}
         </div>
       )}
 

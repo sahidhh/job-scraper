@@ -75,6 +75,7 @@ These are explicitly banned by the project rules (CLAUDE.md):
 | `SOURCE_DISABLE_THRESHOLD` | `7` | Number of consecutive probe failures before a source is auto-disabled |
 | `MIN_HEALTHY_SOURCE_COUNT` | `3` | Minimum number of healthy sources; validation exits 1 if count drops below this |
 | `SCORING_STUCK_THRESHOLD_HOURS` | `48` | Hours an AI-retry job can wait before `score.ts` logs it as "stuck" (Phase 1 Task 6, `getScoringQueueReport`) |
+| `SOURCE_STALE_HOURS` | `6` | Hours since a source's last scrape_runs row (of any status) before it's flagged `isStale` on `/analytics` -- distinct from an actively-failing source |
 
 ## 4. Runtime Targets
 

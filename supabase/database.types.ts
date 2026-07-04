@@ -137,6 +137,8 @@ export type Database = {
           job_id: string
           keyword_score: number
           model: string | null
+          overall_score: number | null
+          overall_score_reasons: string[] | null
           resume_version: number
           retry_count: number
           role_selection_id: string
@@ -152,6 +154,8 @@ export type Database = {
           job_id: string
           keyword_score: number
           model?: string | null
+          overall_score?: number | null
+          overall_score_reasons?: string[] | null
           resume_version: number
           retry_count?: number
           role_selection_id: string
@@ -167,6 +171,8 @@ export type Database = {
           job_id?: string
           keyword_score?: number
           model?: string | null
+          overall_score?: number | null
+          overall_score_reasons?: string[] | null
           resume_version?: number
           retry_count?: number
           role_selection_id?: string
@@ -639,6 +645,8 @@ export type Database = {
           p_job_id: string
           p_keyword_score: number
           p_model: string | null
+          p_overall_score?: number | null
+          p_overall_score_reasons?: string[] | null
           p_resume_version: number
           p_role_selection_id: string
           p_tokens_input: number | null

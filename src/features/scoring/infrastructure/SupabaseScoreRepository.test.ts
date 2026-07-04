@@ -28,7 +28,29 @@ describe("SupabaseScoreRepository", () => {
       p_tokens_input: null,
       p_tokens_output: null,
       p_estimated_cost_usd: null,
+      p_overall_score: null,
+      p_overall_score_reasons: null,
     });
+  });
+
+  it("insertScore passes overallScore and overallScoreReasons through to the RPC", async () => {
+    const { client } = mockSupabaseClient({ data: null, error: null });
+    const repo = new SupabaseScoreRepository(client);
+
+    await repo.insertScore({
+      jobId: "job-1",
+      roleSelectionId: "role-selection-1",
+      resumeVersion: 1,
+      keywordScore: 1,
+      aiScore: 0.85,
+      overallScore: 0.9,
+      overallScoreReasons: ["preferred company"],
+    });
+
+    expect(vi.mocked(client.rpc)).toHaveBeenCalledWith(
+      "upsert_job_score",
+      expect.objectContaining({ p_overall_score: 0.9, p_overall_score_reasons: ["preferred company"] }),
+    );
   });
 
   it("insertScore defaults missing ai fields and model to null", async () => {

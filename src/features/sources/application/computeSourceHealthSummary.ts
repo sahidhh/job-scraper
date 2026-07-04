@@ -21,6 +21,11 @@ export interface SourceHealthSummary {
   recoveryDetected: boolean;
   /** Most frequent non-null failure_category across failed/empty_feed runs in the window. */
   topFailureCategory: FailureCategory | null;
+  /** Hours since the most recent run of any status; null if the source has never run. */
+  hoursSinceLastRun: number | null;
+  /** True when hoursSinceLastRun exceeds SOURCE_HEALTH_CONFIG.staleAfterHours -- the
+   * source has stopped running entirely, as opposed to running and failing. */
+  isStale: boolean;
   /** Deterministic, rule-based operator guidance -- no AI (Phase 1 Task 7). */
   recommendation: string;
 }
@@ -34,7 +39,13 @@ export interface SourceHealthSummary {
  * `runs` does not need to be pre-sorted -- this defensively sorts by runAt
  * descending so the result is correct regardless of repository ordering.
  */
-export function computeSourceHealthSummary(source: JobSource, runs: readonly ScrapeRun[]): SourceHealthSummary {
+const HOUR_MS = 60 * 60 * 1000;
+
+export function computeSourceHealthSummary(
+  source: JobSource,
+  runs: readonly ScrapeRun[],
+  now: Date = new Date(),
+): SourceHealthSummary {
   const sorted = [...runs].sort((a, b) => new Date(b.runAt).getTime() - new Date(a.runAt).getTime());
 
   const totalRuns = sorted.length;
@@ -73,11 +84,16 @@ export function computeSourceHealthSummary(source: JobSource, runs: readonly Scr
     }
   }
 
+  const hoursSinceLastRun = sorted[0] ? (now.getTime() - new Date(sorted[0].runAt).getTime()) / HOUR_MS : null;
+  const isStale = hoursSinceLastRun !== null && hoursSinceLastRun >= SOURCE_HEALTH_CONFIG.staleAfterHours;
+
   const recommendation = buildRecommendation({
     totalRuns,
     consecutiveFailures,
     lastRunStatus,
     topFailureCategory,
+    hoursSinceLastRun,
+    isStale,
   });
 
   return {
@@ -93,6 +109,8 @@ export function computeSourceHealthSummary(source: JobSource, runs: readonly Scr
     lastRunStatus,
     recoveryDetected,
     topFailureCategory,
+    hoursSinceLastRun,
+    isStale,
     recommendation,
   };
 }
@@ -102,11 +120,19 @@ function buildRecommendation(input: {
   consecutiveFailures: number;
   lastRunStatus: ScrapeRun["status"] | null;
   topFailureCategory: FailureCategory | null;
+  hoursSinceLastRun: number | null;
+  isStale: boolean;
 }): string {
-  const { totalRuns, consecutiveFailures, lastRunStatus, topFailureCategory } = input;
+  const { totalRuns, consecutiveFailures, lastRunStatus, topFailureCategory, hoursSinceLastRun, isStale } = input;
   const threshold = SOURCE_HEALTH_CONFIG.disableAfterConsecutiveFailures;
 
   if (totalRuns === 0) return "No scrape history yet.";
+
+  // Staleness (hasn't run at all) is a distinct, more urgent signal than a
+  // healthy or failing-but-still-running source -- surface it first.
+  if (isStale && hoursSinceLastRun !== null) {
+    return `Stale -- no run in ${Math.round(hoursSinceLastRun)}h (expected every ~2h). Check the scrape workflow is still including this source.`;
+  }
 
   if (consecutiveFailures === 0) {
     if (lastRunStatus === "success" && topFailureCategory === "empty_feed") {

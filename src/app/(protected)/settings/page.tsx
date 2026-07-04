@@ -3,13 +3,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CompaniesTable } from "@/components/settings/CompaniesTable";
 import { CompanyFormDialog } from "@/components/settings/CompanyFormDialog";
 import { ExperienceCard } from "@/components/settings/ExperienceCard";
+import { NotificationPreferencesCard } from "@/components/settings/NotificationPreferencesCard";
 import { NotificationsLogList } from "@/components/settings/NotificationsLogList";
+import { RankingPreferencesCard } from "@/components/settings/RankingPreferencesCard";
 import { ScrapeRunsList } from "@/components/settings/ScrapeRunsList";
 import { StatusConfigSection } from "@/components/settings/StatusConfigSection";
 import { ThresholdsCard } from "@/components/settings/ThresholdsCard";
 import { SupabaseCompanyRepository } from "@/features/companies/infrastructure/SupabaseCompanyRepository";
 import { SupabaseJobRepository } from "@/features/jobs/infrastructure/SupabaseJobRepository";
+import { SupabaseNotificationPreferencesRepository } from "@/features/notifications/infrastructure/SupabaseNotificationPreferencesRepository";
 import { SupabaseNotificationRepository } from "@/features/notifications/infrastructure/SupabaseNotificationRepository";
+import { SupabaseRankingPreferencesRepository } from "@/features/scoring/infrastructure/SupabaseRankingPreferencesRepository";
 import { SupabaseSettingsRepository } from "@/features/settings/infrastructure/SupabaseSettingsRepository";
 import { SupabaseScrapeRunRepository } from "@/features/sources/infrastructure/SupabaseScrapeRunRepository";
 import { createSupabaseServerClient } from "@/shared/infrastructure/supabase/server";
@@ -29,14 +33,26 @@ export default async function SettingsPage() {
   const jobRepository = new SupabaseJobRepository(client);
   const scrapeRunRepository = new SupabaseScrapeRunRepository(client);
   const notificationRepository = new SupabaseNotificationRepository(client);
+  const notificationPreferencesRepository = new SupabaseNotificationPreferencesRepository(client);
+  const rankingPreferencesRepository = new SupabaseRankingPreferencesRepository(client);
   const settingsRepository = new SupabaseSettingsRepository(client);
 
-  const [companies, statuses, scrapeRuns, notifications, desiredExperience] = await Promise.all([
+  const [
+    companies,
+    statuses,
+    scrapeRuns,
+    notifications,
+    desiredExperience,
+    notificationPreferences,
+    rankingPreferences,
+  ] = await Promise.all([
     companyRepository.list(),
     jobRepository.listStatuses(),
     scrapeRunRepository.listRecent(20),
     notificationRepository.listRecent(20),
     settingsRepository.getDesiredExperienceYears(),
+    notificationPreferencesRepository.getPreferences(),
+    rankingPreferencesRepository.getPreferences(),
   ]);
 
   const keywordThreshold = optionalEnv("KEYWORD_THRESHOLD", "0.25");
@@ -63,6 +79,7 @@ export default async function SettingsPage() {
         </Card>
         <ExperienceCard current={desiredExperience} />
         <ThresholdsCard keywordThreshold={keywordThreshold} notifyThreshold={notifyThreshold} />
+        <RankingPreferencesCard current={rankingPreferences} />
       </section>
 
       {/* Workflow */}
@@ -76,6 +93,12 @@ export default async function SettingsPage() {
             <StatusConfigSection initialStatuses={statuses} />
           </CardContent>
         </Card>
+      </section>
+
+      {/* Notifications */}
+      <section className="space-y-3">
+        <SectionLabel>Notifications</SectionLabel>
+        <NotificationPreferencesCard current={notificationPreferences} />
       </section>
 
       {/* Activity */}

@@ -73,25 +73,43 @@ After the first scrape+score+notify run, your dashboard will show scored jobs an
 **Location:** `/dashboard`
 
 ### Overview
-The dashboard shows all jobs scraped for your active role, ranked by AI relevance score (highest first). Each row shows:
+The dashboard shows all jobs scraped for your active role, ranked by overall score (highest first) —
+your AI relevance score plus any ranking bonuses you've configured (see "Ranking Preferences" below). Each row shows:
 - **Title** and **Company**
 - **Location** tags (India / Singapore / UAE / Remote)
 - **Source** (Greenhouse, Lever, Ashby, Wellfound, RemoteOK, MyCareersFuture)
 - **Posted** date
 - **Keyword Score** (0–100%) — cheap keyword overlap score
 - **AI Score** (0–100%) — AI-assessed relevance (may be null if below keyword threshold or pending)
+- **Ranking bonus** — shown next to the AI score when a bonus applied (e.g. "+ preferred company, remote")
 - **Status** — your workflow status for this job
 - **Actions** — open job URL in new tab
 
 ### Filtering
-- **Location:** Filter by India / Singapore / UAE / Remote (multi-select)
+- **Search:** Filter by keyword in title or company name
+- **Location:** Filter by India / Singapore / UAE / Remote (single-select)
 - **Source:** Filter by ATS/board source
 - **Status:** Filter by workflow status
-- **Score range:** Set min/max AI score slider
-- **Search:** Filter by keyword in title or company name
+- **Score range:** Set a min AI score
+- **Max experience:** Hide jobs requiring more years than this (unknown requirement always shown)
+- **Show archived jobs:** Off by default
+- Companies you've muted (Notification preferences, §9) never appear here either
 
 ### Sorting
-Click any column header to sort. Click again to reverse. Default sort: AI score descending.
+Sorted by overall score descending, then posted date descending as a tiebreaker. There's no
+column-header sort yet — adjust ranking bonuses (below) or filters above to change what surfaces first.
+
+### Ranking Preferences
+**Location:** `/settings` → Ranking
+
+The dashboard's overall score is your AI score plus small bonuses:
+- **Preferred companies:** list company names (comma-separated); a match adds the company bonus (default +5%)
+- **Prefer remote:** when on, jobs tagged Remote add the remote bonus (default +3%)
+- **Salary disclosed:** any job with a parsed salary automatically adds the salary bonus (default +2%) — no setting needed
+- Each bonus amount is editable; leave a bonus field blank to use its default
+
+Freshness isn't a separate bonus — the dashboard already breaks ties by posting date, so it's covered
+without double-counting. Leave everything blank (or click "Clear all") to rank by AI score alone.
 
 ### Changing Job Status
 1. Click the status badge on any job row
@@ -180,6 +198,12 @@ Shows the most-requested skills across all matched and scored jobs — regardles
 | Status Breakdown | Pie chart of jobs by current workflow status |
 | Jobs by Experience | Bar chart of jobs grouped by minimum years required |
 
+### Source Health
+Two tables cover source reliability from different signals (intentionally not merged — see
+`design/limitations.md`). The scrape-run-derived table now also flags a source **stale** (orange
+badge) when it hasn't run at all in `SOURCE_STALE_HOURS` (default 6h) — a distinct problem from a
+source that's running but failing, and sorted to the top of the table.
+
 ---
 
 ## 9. Notifications
@@ -212,8 +236,19 @@ The Worth Reviewing and Dashboard buttons require `APP_URL` and `TELEGRAM_CALLBA
 ### Adjust the Threshold
 Set `NOTIFY_THRESHOLD` in your GitHub Actions secrets (and Vercel env vars if you want the setting visible in the UI).
 
+### Notification Preferences
+**Location:** `/settings` → Notifications
+
+Narrow which matches actually reach Telegram:
+- **Roles / Skills / Locations / Sources:** include-only filters — leave blank to skip that filter
+- **Min / max experience:** only jobs whose parsed `min_years` falls in this range notify (jobs with no parsed experience always pass)
+- **Muted companies:** never notify for these companies — and they're also hidden from the dashboard job list entirely, not just the alert
+- **Muted keywords:** never notify when the title contains one of these (e.g. "intern", "staffing")
+
+Click "Clear all" to remove every preference and revert to notify-all.
+
 ### Stop Notifications for a Job
-Mark the job as "Archived" or "Rejected" in the dashboard. (Note: this does not directly suppress notifications — the threshold is score-based only. A job already notified will not be notified again regardless of status.)
+Mark the job as "Archived" or "Rejected" in the dashboard. (Note: this does not directly suppress notifications — the threshold is score-based only. A job already notified will not be notified again regardless of status.) To stop notifications for an entire company or keyword going forward, use Muted companies/keywords above instead.
 
 ---
 
