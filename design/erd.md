@@ -55,6 +55,13 @@ erDiagram
         numeric salary_max "nullable"
         text salary_period "nullable; yearly | monthly | hourly"
         text salary_confidence "nullable; high | medium | low"
+        text employment_type "nullable; internship|contract|freelance|temporary|part_time|full_time, extractJobAttributes.ts"
+        text seniority "nullable; executive|principal|lead|senior|entry|mid"
+        text work_arrangement "nullable; hybrid|onsite (remote is location_tags, not this)"
+        boolean visa_sponsorship "nullable; null=not mentioned, true=offered, false=explicitly not offered"
+        boolean relocation_assistance "nullable; same tri-state as visa_sponsorship"
+        boolean security_clearance "NOT NULL default false"
+        boolean urgent_hiring "NOT NULL default false"
     }
 
     JOB_DUPLICATES {
@@ -201,6 +208,7 @@ erDiagram
 | `job_scores` | `INDEX (role_selection_id, resume_version, scored_at) WHERE ai_score IS NULL` | `findAwaitingAi`'s unscored-queue shape |
 | `jobs` | `INDEX (is_active)` | Active-jobs filter shared by `findUnscored`/`countMatchingExpandedRoles`/`countJobStats`/`markExpiredJobs` (created in `20260618000001_expired_job_detection.sql`, not repeated by the 2026-07-04 hardening migration) |
 | `scrape_runs` | `INDEX (source, run_at DESC)` | `listRecentBySource` (per-source health report, called once per source per `/analytics` load) |
+| `jobs` | `INDEX (employment_type)` | Notification-preference `excludeEmploymentTypes` filter reads this at digest time |
 | `resumes` | `UNIQUE (is_active) WHERE is_active = true` | Enforce single active resume |
 | `role_selections` | `UNIQUE (is_active) WHERE is_active = true` | Enforce single active role |
 | `notifications_log` | `UNIQUE (job_id)` | Guarantee at-most-one Telegram send |

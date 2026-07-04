@@ -14,6 +14,12 @@ function makeMatch(overrides: Partial<JobMatch> = {}): JobMatch {
     aiReasoning: "Strong match on React and Node.js experience.",
     description: "We are looking for a Senior React Developer.",
     minYears: 3,
+    employmentType: null,
+    urgentHiring: false,
+    salaryCurrency: null,
+    salaryMin: null,
+    salaryMax: null,
+    salaryPeriod: null,
     ...overrides,
   };
 }
@@ -27,6 +33,7 @@ describe("formatMatchMessage", () => {
         "🎯 New match (87%)",
         "Senior React Developer @ Acme Corp",
         "📍 Remote",
+        "\u{1F30D} Remote",
         "Strong match on React and Node.js experience.",
         "https://example.com/jobs/123",
       ].join("\n"),
@@ -53,6 +60,7 @@ describe("formatMatchMessage", () => {
         "🎯 New match (87%)",
         "Senior React Developer @ Acme Corp",
         "📍 Remote",
+        "\u{1F30D} Remote",
         "https://example.com/jobs/123",
       ].join("\n"),
     );
@@ -69,6 +77,21 @@ describe("formatMatchMessage", () => {
 
     expect(message).toContain("C++ &lt;Senior&gt; Engineer @ Acme &amp; Co");
     expect(message).toContain("Strong match on &lt;strong&gt;React&lt;/strong&gt; &amp; Node.js");
+  });
+
+  it("includes a highlights line for salary and employment type when present", () => {
+    const message = formatMatchMessage(
+      makeMatch({ salaryCurrency: "USD", salaryMin: 120000, salaryMax: 120000, salaryPeriod: "yearly", employmentType: "contract" }),
+    );
+
+    expect(message).toContain("\u{1F30D} Remote · \u{1F4B0} USD120,000/yr · \u{1F4C4} Contract");
+  });
+
+  it("omits the highlights line entirely when there is nothing to highlight", () => {
+    const message = formatMatchMessage(makeMatch({ locationTags: ["india"] }));
+
+    expect(message).not.toContain("\u{1F30D}");
+    expect(message).not.toContain("\u{1F4B0}");
   });
 
   it("does not throw and leaves Markdown special characters untouched for a title with _, *, `, [", () => {

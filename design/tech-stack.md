@@ -75,6 +75,8 @@ These are explicitly banned by the project rules (CLAUDE.md):
 | `SOURCE_DISABLE_THRESHOLD` | `7` | Number of consecutive probe failures before a source is auto-disabled |
 | `MIN_HEALTHY_SOURCE_COUNT` | `3` | Minimum number of healthy sources; validation exits 1 if count drops below this |
 | `SCORING_STUCK_THRESHOLD_HOURS` | `48` | Hours an AI-retry job can wait before `score.ts` logs it as "stuck" (Phase 1 Task 6, `getScoringQueueReport`) |
+| `JOB_EXPIRATION_DAYS` | `14` | Days since `last_seen_at` before `scrape.ts` soft-deactivates a job (`is_active = false`, `inactive_reason = 'expired'`) |
+| `REMOTEOK_DISABLED` | _(unset)_ | Set `true` or `1` to explicitly disable RemoteOK ingestion (set in `scrape.yml` — RemoteOK's near-zero yield made it not worth probing on every run, see `docs/remoteok-evaluation.md`) |
 
 ## 4. Runtime Targets
 
@@ -123,12 +125,19 @@ These are explicitly banned by the project rules (CLAUDE.md):
 | `test` | `vitest run` | Run unit tests once |
 | `test:watch` | `vitest` | Watch mode for tests |
 | `typecheck` | `tsc --noEmit` | Type-check without build |
+| `verify` | `npm run typecheck && npm run test && npm run build` | Single quality-gate command (v1.2) — run before considering any change done |
 | `check:service-role-boundary` | `tsx scripts/checkServiceRoleBoundary.ts` | CI safety gate — ensures service role key not used in app/ |
 | `scrape` | `tsx scripts/scrape.ts` | Manual scrape run |
 | `score` | `tsx scripts/score.ts` | Manual scoring run |
 | `notify` | `tsx scripts/notify.ts` | Manual notification run |
+| `doctor` | `tsx scripts/doctor.ts` | (v1.2) Checks required/optional env vars are set and does a live Supabase + Telegram connectivity check; exit 1 if anything required is missing or unreachable |
+| `health` | `tsx scripts/validate-sources.ts` | (v1.2) Alias of `validate-sources` under the name used elsewhere in the mission's dev-experience vocabulary |
+| `diagnose` | `tsx scripts/report-sources.ts && tsx scripts/filter-analysis.ts` | (v1.2) Combined pipeline diagnostic: recent-run/failure report + fetch→location-filter→ingest funnel |
+| `analytics` | `tsx scripts/source-analytics.ts` | (v1.2) 30-day per-source quality report (keep rate, low performers) |
+| `report:sources` | `tsx scripts/report-sources.ts` | (v1.2) Explicit name for the last-run/recent-failures report (previously unwired) |
 | `validate-sources` | `tsx scripts/validate-sources.ts` | Probe all configured ATS boards; exit 1 only on new failures or healthy count below minimum |
 | `backfill:fingerprints` | `tsx scripts/backfill-fingerprints.ts` | One-off backfill of `jobs.fingerprint` for rows inserted before cross-source dedup (Phase 1 Task 1) |
+| `backfill:min-years` | `tsx scripts/backfill-min-years.ts` | (v1.2) Explicit name for the one-off `min_years` backfill (previously unwired) |
 | `discover:career-pages` | `tsx scripts/discover-career-pages.ts` | Manual run of ATS career-page discovery (Phase 2 Task 8) |
 | `setup:webhook` | `tsx scripts/setup-webhook.ts` | One-off Telegram webhook registration |
 

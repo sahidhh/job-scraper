@@ -17,6 +17,12 @@ interface UnnotifiedMatchRow {
   url: string;
   description: string;
   min_years: number | null;
+  employment_type: string | null;
+  urgent_hiring: boolean;
+  salary_currency: string | null;
+  salary_min: number | null;
+  salary_max: number | null;
+  salary_period: string | null;
   job_scores: { ai_score: number | null; ai_reasoning: string | null }[];
   notifications_log: { id: string }[] | null;
 }
@@ -38,7 +44,7 @@ export class SupabaseNotificationRepository implements NotificationRepository {
     const { data, error } = await this.client
       .from("jobs")
       .select(
-        "id, title, company_name, location_tags, source, url, description, min_years, job_scores!inner(ai_score, ai_reasoning), notifications_log(id)",
+        "id, title, company_name, location_tags, source, url, description, min_years, employment_type, urgent_hiring, salary_currency, salary_min, salary_max, salary_period, job_scores!inner(ai_score, ai_reasoning), notifications_log(id)",
       )
       .eq("job_scores.role_selection_id", roleSelectionId)
       .eq("job_scores.resume_version", resumeVersion)
@@ -63,6 +69,12 @@ export class SupabaseNotificationRepository implements NotificationRepository {
           aiReasoning: score.ai_reasoning,
           description: row.description,
           minYears: row.min_years,
+          employmentType: row.employment_type as JobMatch["employmentType"],
+          urgentHiring: row.urgent_hiring,
+          salaryCurrency: row.salary_currency,
+          salaryMin: row.salary_min,
+          salaryMax: row.salary_max,
+          salaryPeriod: row.salary_period as JobMatch["salaryPeriod"],
         };
       });
   }

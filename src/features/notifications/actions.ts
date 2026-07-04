@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import type { NotificationPreferences } from "@/features/notifications/domain/types";
+import { validateNotificationPreferences } from "@/features/notifications/domain/validation";
 import { SupabaseNotificationPreferencesRepository } from "@/features/notifications/infrastructure/SupabaseNotificationPreferencesRepository";
 import type { ActionResult } from "@/shared/actionResult";
 import { createSupabaseServerClient } from "@/shared/infrastructure/supabase/server";
@@ -25,6 +26,7 @@ export async function setNotificationPreferencesAction(
   prefs: NotificationPreferences | null,
 ): Promise<ActionResult> {
   try {
+    if (prefs !== null) validateNotificationPreferences(prefs);
     const client = await createSupabaseServerClient();
     const repo = new SupabaseNotificationPreferencesRepository(client);
     await repo.setPreferences(prefs);

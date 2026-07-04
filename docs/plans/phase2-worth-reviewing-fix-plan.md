@@ -1,5 +1,7 @@
 # Phase 2A — Worth Reviewing Correctness Fix Plan
 
+> **✅ All 5 findings (F1–F5) fixed and merged** — see `docs/investigations/worth-reviewing-analysis.md` and `design/technical-design.md` §9. This file is retained as the original fix plan, not a pending task.
+
 **Date:** 2026-06-22  
 **Status:** Planning only. No code changes.  
 **Source:** `docs/investigations/worth-reviewing-analysis.md`  

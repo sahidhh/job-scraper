@@ -1,5 +1,7 @@
 # Database (Supabase / Postgres)
 
+> **The inline schema below (§2) is out of date** — it predates `fingerprint`, `canonical_company_name`, `contact_email*`, `salary_*`, `employment_type`/`seniority`/`work_arrangement`/`visa_sponsorship`/`relocation_assistance`/`security_clearance`/`urgent_hiring`, and several other columns added since. **[`design/erd.md`](../design/erd.md) is the current, maintained schema reference** (kept in sync under CLAUDE.md's Document Maintenance Rules); for the exact live column set, read `supabase/migrations/` in order or `supabase/database.types.ts`. §7 (Migration Strategy) and §8 (Storage) below are still accurate and procedural, not schema-dependent.
+
 Single-user app: no `user_id` columns. Supabase Auth provides the login gate for the Next.js app; cron scripts use the **service role key** (bypasses RLS).
 
 ## 1. Enums

@@ -3,12 +3,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CompaniesTable } from "@/components/settings/CompaniesTable";
 import { CompanyFormDialog } from "@/components/settings/CompanyFormDialog";
 import { ExperienceCard } from "@/components/settings/ExperienceCard";
+import { NotificationPreferencesCard } from "@/components/settings/NotificationPreferencesCard";
 import { NotificationsLogList } from "@/components/settings/NotificationsLogList";
 import { ScrapeRunsList } from "@/components/settings/ScrapeRunsList";
 import { StatusConfigSection } from "@/components/settings/StatusConfigSection";
 import { ThresholdsCard } from "@/components/settings/ThresholdsCard";
 import { SupabaseCompanyRepository } from "@/features/companies/infrastructure/SupabaseCompanyRepository";
 import { SupabaseJobRepository } from "@/features/jobs/infrastructure/SupabaseJobRepository";
+import { SupabaseNotificationPreferencesRepository } from "@/features/notifications/infrastructure/SupabaseNotificationPreferencesRepository";
 import { SupabaseNotificationRepository } from "@/features/notifications/infrastructure/SupabaseNotificationRepository";
 import { SupabaseSettingsRepository } from "@/features/settings/infrastructure/SupabaseSettingsRepository";
 import { SupabaseScrapeRunRepository } from "@/features/sources/infrastructure/SupabaseScrapeRunRepository";
@@ -29,15 +31,18 @@ export default async function SettingsPage() {
   const jobRepository = new SupabaseJobRepository(client);
   const scrapeRunRepository = new SupabaseScrapeRunRepository(client);
   const notificationRepository = new SupabaseNotificationRepository(client);
+  const notificationPreferencesRepository = new SupabaseNotificationPreferencesRepository(client);
   const settingsRepository = new SupabaseSettingsRepository(client);
 
-  const [companies, statuses, scrapeRuns, notifications, desiredExperience] = await Promise.all([
-    companyRepository.list(),
-    jobRepository.listStatuses(),
-    scrapeRunRepository.listRecent(20),
-    notificationRepository.listRecent(20),
-    settingsRepository.getDesiredExperienceYears(),
-  ]);
+  const [companies, statuses, scrapeRuns, notifications, desiredExperience, notificationPreferences] =
+    await Promise.all([
+      companyRepository.list(),
+      jobRepository.listStatuses(),
+      scrapeRunRepository.listRecent(20),
+      notificationRepository.listRecent(20),
+      settingsRepository.getDesiredExperienceYears(),
+      notificationPreferencesRepository.getPreferences(),
+    ]);
 
   const keywordThreshold = optionalEnv("KEYWORD_THRESHOLD", "0.25");
   const notifyThreshold = optionalEnv("NOTIFY_THRESHOLD", "0.75");
@@ -109,6 +114,7 @@ export default async function SettingsPage() {
             <NotificationsLogList entries={notifications} />
           </CardContent>
         </Card>
+        <NotificationPreferencesCard current={notificationPreferences} />
       </section>
     </div>
   );

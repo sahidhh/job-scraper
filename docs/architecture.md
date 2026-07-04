@@ -1,5 +1,7 @@
 # Architecture
 
+> **Canonical architecture doc is [`design/architecture.md`](../design/architecture.md)** (kept current under CLAUDE.md's Document Maintenance Rules). This file predates it and is retained only for its request/data-flow prose (§3.4 Role Selection, §3.5 Resume Upload, §3.6 Dashboard Read) not duplicated there. Everything else below overlaps `design/architecture.md` — treat that file as the source of truth if the two ever disagree.
+
 ## 1. System Overview
 
 The Job Intelligence Platform is a **single-user** application that:

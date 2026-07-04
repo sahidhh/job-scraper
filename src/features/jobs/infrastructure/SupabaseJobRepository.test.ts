@@ -51,6 +51,13 @@ const jobRow: JobRow = {
   salary_max: null,
   salary_period: null,
   salary_confidence: null,
+  employment_type: null,
+  seniority: null,
+  work_arrangement: null,
+  visa_sponsorship: null,
+  relocation_assistance: null,
+  security_clearance: false,
+  urgent_hiring: false,
 };
 
 describe("SupabaseJobRepository", () => {
@@ -208,6 +215,13 @@ describe("SupabaseJobRepository", () => {
           salaryMax: null,
           salaryPeriod: null,
           salaryConfidence: null,
+          employmentType: null,
+          seniority: null,
+          workArrangement: null,
+          visaSponsorship: null,
+          relocationAssistance: null,
+          securityClearance: false,
+          urgentHiring: false,
         },
       ]);
 
