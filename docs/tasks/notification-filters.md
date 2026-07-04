@@ -1,5 +1,7 @@
 # Notification Filters — Phase 1
 
+> **✅ Implemented and shipped** (`NotificationPreferences`/`filterMatches.ts`), and extended in v1.2 with `blockedCompanies`/`excludeEmploymentTypes` plus a `/settings` UI. See `design/api-reference.md` and `docs/reviews/2026-07-04/v1.2-polish-report.md`. This file is retained as the original pre-implementation design rationale, not a pending task.
+
 ## Problem
 
 Any job scoring above `NOTIFY_THRESHOLD` generates a Telegram notification.

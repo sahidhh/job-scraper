@@ -1,5 +1,7 @@
 # `findUnscored` Regression — Investigation & Remediation
 
+> **✅ Implemented and merged.** See `docs/reports/findUnscored-regression-fix.md` and `design/limitations.md` §3.6. The "pending approval" status line below is historical.
+
 **Branch:** `fix/findUnscored-regression`
 **Status:** Investigation complete; implementation pending approval.
 

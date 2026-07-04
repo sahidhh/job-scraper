@@ -49,7 +49,7 @@ for (const dir of SCAN_DIRS) {
 }
 
 if (violations.length > 0) {
-  console.error("Service-role key boundary violation(s) found:");
+  console.error("[check-service-role-boundary] violation(s) found:");
   for (const violation of violations) console.error(`  - ${violation}`);
   console.error(
     '\n"SUPABASE_SERVICE_ROLE_KEY" and "createSupabaseServiceClient" may only appear under scripts/** or src/shared/infrastructure/supabaseClient.ts.',
@@ -57,4 +57,4 @@ if (violations.length > 0) {
   process.exit(1);
 }
 
-console.log("Service-role key boundary check passed.");
+console.log("[check-service-role-boundary] check passed.");
