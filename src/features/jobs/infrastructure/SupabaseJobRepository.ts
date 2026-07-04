@@ -66,6 +66,11 @@ function toJob(row: JobRow): Job {
     contactEmail: row.contact_email,
     contactEmailCategory: row.contact_email_category as Job["contactEmailCategory"],
     contactEmailConfidence: row.contact_email_confidence as Job["contactEmailConfidence"],
+    salaryCurrency: row.salary_currency,
+    salaryMin: row.salary_min,
+    salaryMax: row.salary_max,
+    salaryPeriod: row.salary_period as Job["salaryPeriod"],
+    salaryConfidence: row.salary_confidence as Job["salaryConfidence"],
   };
 }
 
@@ -128,6 +133,11 @@ function toUpsertRow(job: NormalizedJob): JobInsertRow {
     contact_email: job.contactEmail ?? null,
     contact_email_category: job.contactEmailCategory ?? null,
     contact_email_confidence: job.contactEmailConfidence ?? null,
+    salary_currency: job.salaryCurrency ?? null,
+    salary_min: job.salaryMin ?? null,
+    salary_max: job.salaryMax ?? null,
+    salary_period: job.salaryPeriod ?? null,
+    salary_confidence: job.salaryConfidence ?? null,
   };
 }
 

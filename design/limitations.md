@@ -33,6 +33,9 @@ Only board-token companies (greenhouse/lever/ashby) get a `company_career_pages`
 ### 1.9 Contact Email Extraction Coverage
 `extractContactEmail` (`docs/decisions.md` AD-21) only sees the plain text left after each scraper's `stripHtml()` runs — an email address that exists only inside a `mailto:` href with non-email link text (e.g. `<a href="mailto:jane@co.com">Apply now</a>`) is invisible to it and `contact_email` stays null for that job, even though a real contact address exists. Categorization (recruiter/hr/hiring_manager/company_contact) is a local-part keyword match only, not text-proximity or NLP — most personal-name addresses (the common case) fall back to `company_contact`/`low` confidence rather than a more specific guess.
 
+### 1.10 Salary Extraction Coverage
+`extractSalary` (`docs/decisions.md` AD-22) only recognizes a fixed set of formats (₹/$/S$/Rs symbols; USD/INR/SGD/AED codes; India-specific LPA/lakh units; `/year`, `/month`, `/hour`-style periods). Postings that state salary in an unrecognized format (spelled-out numbers, other currencies/regions, a link to a separate compensation page) are not extracted — `jobs.salary_*` stays null, indistinguishable from "no salary mentioned at all." This is a deliberate false-negative-over-false-positive tradeoff (a bare number is never guessed as a salary without a currency/unit/period signal attached), not a bug.
+
 ---
 
 ## 2. Resume & Skill Extraction

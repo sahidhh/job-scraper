@@ -36,6 +36,11 @@ function makeJob(overrides: Partial<Job> = {}): Job {
     contactEmail: null,
     contactEmailCategory: null,
     contactEmailConfidence: null,
+    salaryCurrency: null,
+    salaryMin: null,
+    salaryMax: null,
+    salaryPeriod: null,
+    salaryConfidence: null,
     ...overrides,
   };
 }

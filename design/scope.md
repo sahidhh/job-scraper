@@ -60,6 +60,7 @@ A single technical professional (software engineer, data scientist, or similar) 
 |---|---|
 | Career page discovery | `discoverAtsCareerPages`/`company_career_pages` -- deterministic careers-page URL for every ATS-registry (greenhouse/lever/ashby) company, keyed by canonical company name. Aggregator-sourced companies (wellfound/remoteok/mycareersfuture) not yet covered -- see `docs/decisions.md` AD-20 |
 | Contact email extraction | `extractContactEmail` categorizes the best contact email per job (recruiter/hr/hiring_manager/company_contact + confidence), stored on `jobs.contact_email*`. Plain-text/regex only -- mailto:-only addresses not in visible text are not extracted (AD-21) |
+| Salary extraction | `extractSalary` normalizes currency/min/max/period/confidence from title+description (₹/$/S$/Rs symbols, USD/INR/SGD/AED codes, India-specific LPA/lakh units, yearly/monthly/hourly periods), stored on `jobs.salary_*`. Deterministic regex only, no AI (AD-22) |
 
 ### P2 — Medium Priority
 
@@ -90,7 +91,6 @@ A single technical professional (software engineer, data scientist, or similar) 
 | Resume generation / editing | Platform assists skill tagging only |
 | Cover letter generation | Out of scope for V1 |
 | Interview preparation | Out of scope |
-| Salary data enrichment | Not available from target ATS sources |
 | Job board accounts (LinkedIn, Indeed) | No public API; scraping would violate ToS |
 | Mobile application | Web-only; Telegram notifications serve mobile alerting |
 | Team / recruiter features | Single-user tool |

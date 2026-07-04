@@ -1,5 +1,6 @@
 import type { JobSource, LocationTag } from "@/shared/domain/enums";
 import type { EmailCategory, EmailConfidence } from "./extractContactEmail";
+import type { SalaryConfidence, SalaryPeriod } from "./extractSalary";
 
 // Mirrors the `jobs` table (database.md §2).
 export interface Job {
@@ -33,6 +34,15 @@ export interface Job {
   contactEmail: string | null;
   contactEmailCategory: EmailCategory | null;
   contactEmailConfidence: EmailConfidence | null;
+  // Best-effort salary parsed from title+description at ingest (Phase 2
+  // Task 10) -- see extractSalary.ts. All null when no salary text found;
+  // salaryMin/Max/Currency/Period null but salaryConfidence 'low' for
+  // explicit "Negotiable"/"Competitive" text with no figure.
+  salaryCurrency: string | null;
+  salaryMin: number | null;
+  salaryMax: number | null;
+  salaryPeriod: SalaryPeriod | null;
+  salaryConfidence: SalaryConfidence | null;
 }
 
 // Input to JobRepository.upsertMany() -- a TaggedRawJob ready to persist.
@@ -57,6 +67,13 @@ export interface NormalizedJob {
   contactEmail?: string | null;
   contactEmailCategory?: EmailCategory | null;
   contactEmailConfidence?: EmailConfidence | null;
+  // Best-effort salary parsed from the posting at ingest (Phase 2 Task 10).
+  // Optional on input; derived by ingestJobs, not the scraper.
+  salaryCurrency?: string | null;
+  salaryMin?: number | null;
+  salaryMax?: number | null;
+  salaryPeriod?: SalaryPeriod | null;
+  salaryConfidence?: SalaryConfidence | null;
 }
 
 export interface UpsertResult {
@@ -116,8 +133,20 @@ export interface JobFilters {
 // Job joined with its score for the active role_selection. Omits
 // `description` -- the dashboard query doesn't select it (P1 #4, never
 // rendered by JobRow).
-export interface JobWithScore
-  extends Omit<Job, "description" | "fingerprint" | "canonicalCompanyName" | "contactEmail" | "contactEmailCategory" | "contactEmailConfidence"> {
+type JobWithScoreOmittedKeys =
+  | "description"
+  | "fingerprint"
+  | "canonicalCompanyName"
+  | "contactEmail"
+  | "contactEmailCategory"
+  | "contactEmailConfidence"
+  | "salaryCurrency"
+  | "salaryMin"
+  | "salaryMax"
+  | "salaryPeriod"
+  | "salaryConfidence";
+
+export interface JobWithScore extends Omit<Job, JobWithScoreOmittedKeys> {
   keywordScore: number | null;
   aiScore: number | null;
   aiReasoning: string | null;

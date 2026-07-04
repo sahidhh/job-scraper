@@ -36,6 +36,11 @@ const job: Job = {
   contactEmail: null,
   contactEmailCategory: null,
   contactEmailConfidence: null,
+  salaryCurrency: null,
+  salaryMin: null,
+  salaryMax: null,
+  salaryPeriod: null,
+  salaryConfidence: null,
 };
 
 const resume: Resume = {

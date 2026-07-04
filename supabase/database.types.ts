@@ -267,6 +267,11 @@ export type Database = {
           location_tags: Database["public"]["Enums"]["location_tag"][]
           min_years: number | null
           posted_at: string | null
+          salary_confidence: string | null
+          salary_currency: string | null
+          salary_max: number | null
+          salary_min: number | null
+          salary_period: string | null
           source: Database["public"]["Enums"]["job_source"]
           source_job_id: string
           title: string
@@ -291,6 +296,11 @@ export type Database = {
           location_tags?: Database["public"]["Enums"]["location_tag"][]
           min_years?: number | null
           posted_at?: string | null
+          salary_confidence?: string | null
+          salary_currency?: string | null
+          salary_max?: number | null
+          salary_min?: number | null
+          salary_period?: string | null
           source: Database["public"]["Enums"]["job_source"]
           source_job_id: string
           title: string
@@ -315,6 +325,11 @@ export type Database = {
           location_tags?: Database["public"]["Enums"]["location_tag"][]
           min_years?: number | null
           posted_at?: string | null
+          salary_confidence?: string | null
+          salary_currency?: string | null
+          salary_max?: number | null
+          salary_min?: number | null
+          salary_period?: string | null
           source?: Database["public"]["Enums"]["job_source"]
           source_job_id?: string
           title?: string

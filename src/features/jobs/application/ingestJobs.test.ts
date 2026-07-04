@@ -112,4 +112,35 @@ describe("ingestJobs", () => {
       contactEmailConfidence: null,
     });
   });
+
+  it("derives salary fields from title+description (Phase 2 Task 10)", async () => {
+    const jobRepository = makeRepository();
+    const job = makeJob({ description: "Compensation: $120k/year" });
+
+    await ingestJobs([job], { jobRepository });
+
+    const passed = vi.mocked(jobRepository.upsertMany).mock.calls[0]?.[0];
+    expect(passed?.[0]).toMatchObject({
+      salaryCurrency: "USD",
+      salaryMin: 120_000,
+      salaryMax: 120_000,
+      salaryPeriod: "yearly",
+      salaryConfidence: "high",
+    });
+  });
+
+  it("leaves salary fields null when no salary text is present", async () => {
+    const jobRepository = makeRepository();
+
+    await ingestJobs([makeJob()], { jobRepository });
+
+    const passed = vi.mocked(jobRepository.upsertMany).mock.calls[0]?.[0];
+    expect(passed?.[0]).toMatchObject({
+      salaryCurrency: null,
+      salaryMin: null,
+      salaryMax: null,
+      salaryPeriod: null,
+      salaryConfidence: null,
+    });
+  });
 });

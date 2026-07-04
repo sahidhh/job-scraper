@@ -50,6 +50,11 @@ erDiagram
         text contact_email "nullable; best-effort, extractContactEmail.ts"
         text contact_email_category "nullable; recruiter | hr | hiring_manager | company_contact"
         text contact_email_confidence "nullable; high | medium | low"
+        text salary_currency "nullable; INR | USD | SGD | AED, extractSalary.ts"
+        numeric salary_min "nullable"
+        numeric salary_max "nullable"
+        text salary_period "nullable; yearly | monthly | hourly"
+        text salary_confidence "nullable; high | medium | low"
     }
 
     JOB_DUPLICATES {

@@ -46,6 +46,11 @@ const jobRow: JobRow = {
   contact_email: null,
   contact_email_category: null,
   contact_email_confidence: null,
+  salary_currency: null,
+  salary_min: null,
+  salary_max: null,
+  salary_period: null,
+  salary_confidence: null,
 };
 
 describe("SupabaseJobRepository", () => {
@@ -173,6 +178,11 @@ describe("SupabaseJobRepository", () => {
           contactEmail: null,
           contactEmailCategory: null,
           contactEmailConfidence: null,
+          salaryCurrency: null,
+          salaryMin: null,
+          salaryMax: null,
+          salaryPeriod: null,
+          salaryConfidence: null,
         },
       ]);
 

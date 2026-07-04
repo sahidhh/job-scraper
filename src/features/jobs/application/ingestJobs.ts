@@ -1,6 +1,7 @@
 import type { JobRepository } from "@/features/jobs/domain/JobRepository";
 import type { NormalizedJob, UpsertResult } from "@/features/jobs/domain/types";
 import { extractContactEmail } from "@/features/jobs/domain/extractContactEmail";
+import { extractSalary } from "@/features/jobs/domain/extractSalary";
 import { validateNormalizedJob } from "@/features/jobs/domain/validation";
 import { dedupeJobs } from "./dedupeJobs";
 import { parseMinYears } from "./parseMinYears";
@@ -31,16 +32,24 @@ export async function ingestJobs(
     return { inserted: 0, updated: 0, duplicates: 0 };
   }
 
-  // Derive the soft experience signal (P2) and a best-effort contact email
-  // (Phase 2 Task 9) at ingest, both parsed from title+description.
+  // Derive the soft experience signal (P2), a best-effort contact email
+  // (Phase 2 Task 9), and a best-effort salary (Phase 2 Task 10) at ingest,
+  // all parsed from title+description.
   const enriched = deduped.map((job) => {
-    const contact = extractContactEmail(`${job.title}\n${job.description}`);
+    const text = `${job.title}\n${job.description}`;
+    const contact = extractContactEmail(text);
+    const salary = extractSalary(text);
     return {
       ...job,
-      minYears: parseMinYears(`${job.title}\n${job.description}`),
+      minYears: parseMinYears(text),
       contactEmail: contact?.email ?? null,
       contactEmailCategory: contact?.category ?? null,
       contactEmailConfidence: contact?.confidence ?? null,
+      salaryCurrency: salary?.currency ?? null,
+      salaryMin: salary?.min ?? null,
+      salaryMax: salary?.max ?? null,
+      salaryPeriod: salary?.period ?? null,
+      salaryConfidence: salary?.confidence ?? null,
     };
   });
 
