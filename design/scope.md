@@ -62,6 +62,13 @@ A single technical professional (software engineer, data scientist, or similar) 
 | Contact email extraction | `extractContactEmail` categorizes the best contact email per job (recruiter/hr/hiring_manager/company_contact + confidence), stored on `jobs.contact_email*`. Plain-text/regex only -- mailto:-only addresses not in visible text are not extracted (AD-21) |
 | Salary extraction | `extractSalary` normalizes currency/min/max/period/confidence from title+description (₹/$/S$/Rs symbols, USD/INR/SGD/AED codes, India-specific LPA/lakh units, yearly/monthly/hourly periods), stored on `jobs.salary_*`. Deterministic regex only, no AI (AD-22) |
 
+### P1.8 — AI Cost Optimization (in progress)
+
+| Feature | Description |
+|---|---|
+| AI prompt truncation | Resume/job-description text capped (`OPENROUTER_MAX_RESUME_PROMPT_CHARS`/`OPENROUTER_MAX_DESCRIPTION_PROMPT_CHARS`) before being sent to the paid AI call, reducing token usage on every stage-2 call. Keyword-gate scoring still sees full untruncated text (AD-23) |
+| AI cost investigation | `docs/research/ai-cost-optimization-phase3.md` covers all 6 Task 12 areas; batching and adaptive (cheap-then-premium) model routing are designed but not implemented -- both are new-architecture changes needing explicit approval per CLAUDE.md |
+
 ### P2 — Medium Priority
 
 | Feature | Description |

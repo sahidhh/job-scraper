@@ -38,8 +38,8 @@ This is pure set arithmetic over two string arrays — no external calls, runs f
 Triggered only when `keyword_score >= KEYWORD_THRESHOLD` (config default `0.25`, env-overridable).
 
 1. Build a single OpenRouter chat completion request:
-   - **System/context:** resume `parsed_text` (full PDF-extracted text; the skills list is not sent separately — it is already embedded in `parsed_text`).
-   - **User content:** job `title`, `company_name`, `location_raw` + `location_tags` (structured geography, e.g. `tags: singapore, remote`), `min_years` when non-null (e.g. `Experience required: 5+ years`), `description`.
+   - **System/context:** resume `parsed_text`, capped at `OPENROUTER_MAX_RESUME_PROMPT_CHARS` (default 4000 chars, Phase 3 Task 11-12 cost control -- see `docs/research/ai-cost-optimization-phase3.md`); the skills list is not sent separately — it is already embedded in `parsed_text`.
+   - **User content:** job `title`, `company_name`, `location_raw` + `location_tags` (structured geography, e.g. `tags: singapore, remote`), `min_years` when non-null (e.g. `Experience required: 5+ years`), `description` capped at `OPENROUTER_MAX_DESCRIPTION_PROMPT_CHARS` (default 2000 chars). Only the AI prompt is truncated -- the stored `jobs.description`/`resumes.parsed_text` and the free keyword-gate stage (`extractSkills`) always see the full, untruncated text.
    - **Requested output:** structured JSON — `{ "score": number (0-1), "reasoning": string (1-3 sentences) }`, enforced via OpenRouter's JSON response-format / schema feature.
 2. Model is configurable via `OPENROUTER_MODEL` env var (pick a low-cost model suitable for short classification+reasoning tasks — exact model left as a deploy-time choice, not hardcoded).
 3. Request has a timeout and **one retry** on timeout/5xx. On repeated failure: `ai_score`/`ai_reasoning` stay `null`, `keyword_score` row already upserted — job still visible in dashboard, just unscored at stage 2.
@@ -50,8 +50,8 @@ Triggered only when `keyword_score >= KEYWORD_THRESHOLD` (config default `0.25`,
 
 | Component | Typical range |
 |---|---|
-| System prompt (resume text only — skills list removed) | 1 000 – 3 500 tokens |
-| User prompt (title + location tags + min_years + description) | 500 – 2 000 tokens |
+| System prompt (resume text, capped at 4000 chars — skills list removed) | 1 000 – 3 500 tokens |
+| User prompt (title + location tags + min_years + description, capped at 2000 chars) | 500 – 2 000 tokens |
 | Output (score + reasoning JSON) | 50 – 120 tokens |
 | `max_tokens` ceiling | 300 tokens |
 
@@ -100,4 +100,6 @@ All failures leave `ai_score` null. `OpenRouterAiScoreProvider.getStats()` retur
 | `NOTIFY_THRESHOLD` | `0.75` | Minimum `ai_score` to trigger a Telegram message |
 | `OPENROUTER_MODEL` | (set at deploy) | Model used for stage-2 scoring and role-expansion AI fallback |
 | `OPENROUTER_MAX_TOKENS` | `300` | Maximum output tokens for stage-2 AI response (score + reasoning); keep at 300 unless reasoning is being truncated |
+| `OPENROUTER_MAX_RESUME_PROMPT_CHARS` | `4000` | Caps resume text sent in the AI prompt (Phase 3 Task 11-12 cost control) |
+| `OPENROUTER_MAX_DESCRIPTION_PROMPT_CHARS` | `2000` | Caps job description text sent in the AI prompt (Phase 3 Task 11-12 cost control) |
 | `OPENROUTER_COST_PER_1K_TOKENS` | _(unset)_ | Blended per-1k-token rate for the model in use (e.g. `0.0008` for $0.80/1M tokens). When set, each successful AI call stores an `estimated_cost_usd` on the `job_scores` row and `score.ts` logs estimated run cost. When unset, `estimated_cost_usd` is left null and the cost log line is omitted. |

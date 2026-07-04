@@ -40,3 +40,13 @@ export function escapeHtml(text: string): string {
 export function capitalizeFirst(tag: string): string {
   return tag.length === 0 ? tag : tag[0]!.toUpperCase() + tag.slice(1);
 }
+
+// AI prompt-cost control (Phase 3 Task 11-12): caps how much of a long text
+// (resume, job description) is sent to a paid LLM call. A hard character
+// slice, not a token count, is deliberate -- exact tokenization is
+// model-specific and this only needs to be a cheap, deterministic upper
+// bound, not a precise budget.
+export function truncateText(text: string, maxChars: number): string {
+  if (text.length <= maxChars) return text;
+  return `${text.slice(0, maxChars)}... [truncated]`;
+}

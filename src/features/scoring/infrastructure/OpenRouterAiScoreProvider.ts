@@ -1,8 +1,25 @@
 import type { Job } from "@/features/jobs/domain/types";
 import type { Resume } from "@/features/resume/domain/types";
 import type { AiScoreProvider, AiScoreResult } from "@/features/scoring/domain/AiScoreProvider";
-import { requireEnv } from "@/shared/infrastructure/env";
+import { optionalEnv, requireEnv } from "@/shared/infrastructure/env";
 import { type AiFailureReason, OpenRouterError, callOpenRouterJson } from "@/shared/infrastructure/openrouterClient";
+import { truncateText } from "@/shared/infrastructure/text";
+
+// Prompt-cost control (Phase 3 Task 11-12): the AI call is the expensive
+// part of scoring, so both inputs are capped before being sent. Resumes and
+// job descriptions carry their strongest matching signal in their first
+// portion (skills/summary up top, requirements early) -- truncating the
+// tail trades a small amount of recall on unusually long postings/resumes
+// for a real, direct reduction in prompt tokens on every single AI call.
+// Read per-call (not module-level), matching OPENROUTER_MAX_TOKENS's
+// pattern in openrouterClient.ts, so an env change takes effect immediately.
+function maxResumePromptChars(): number {
+  return Number(optionalEnv("OPENROUTER_MAX_RESUME_PROMPT_CHARS", "4000"));
+}
+
+function maxDescriptionPromptChars(): number {
+  return Number(optionalEnv("OPENROUTER_MAX_DESCRIPTION_PROMPT_CHARS", "2000"));
+}
 
 const SCHEMA = {
   type: "object",
@@ -40,7 +57,7 @@ function buildSystemPrompt(resume: Resume): string {
   return [
     "You are an assistant that scores how well a job posting matches a candidate's resume.",
     "Candidate resume:",
-    resume.parsedText,
+    truncateText(resume.parsedText, maxResumePromptChars()),
     "Respond with score (a number from 0 to 1) and reasoning (1-3 sentences explaining the score).",
   ].join("\n");
 }
@@ -61,7 +78,7 @@ function buildJobPrompt(job: Job): string {
     lines.push(`Experience required: ${job.minYears}+ years`);
   }
 
-  lines.push("Description:", job.description);
+  lines.push("Description:", truncateText(job.description, maxDescriptionPromptChars()));
   return lines.join("\n");
 }
 

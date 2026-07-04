@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeWhitespace, stripHtml } from "./text";
+import { normalizeWhitespace, stripHtml, truncateText } from "./text";
 
 describe("stripHtml", () => {
   it("converts block-level tags to line breaks", () => {
@@ -32,6 +32,21 @@ describe("normalizeWhitespace", () => {
 
   it("returns an empty string for whitespace-only input", () => {
     expect(normalizeWhitespace("   ")).toBe("");
+  });
+});
+
+describe("truncateText", () => {
+  it("returns text unchanged when at or under the limit", () => {
+    expect(truncateText("hello", 5)).toBe("hello");
+    expect(truncateText("hello", 10)).toBe("hello");
+  });
+
+  it("slices and appends a truncation marker when over the limit", () => {
+    expect(truncateText("hello world", 5)).toBe("hello... [truncated]");
+  });
+
+  it("handles empty string", () => {
+    expect(truncateText("", 10)).toBe("");
   });
 });
 

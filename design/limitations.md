@@ -74,6 +74,9 @@ Scoring quality depends entirely on the configured `OPENROUTER_MODEL`. Changing 
 ### 3.5 No Score Invalidation on Resume Change
 Existing `job_scores` rows are not deleted when a new resume is activated. The new resume's skills will affect only newly scored jobs. The user must understand that old scores reflect the previous resume.
 
+### 3.7 AI Prompt Truncation
+Resume text and job descriptions are capped (`OPENROUTER_MAX_RESUME_PROMPT_CHARS`/`OPENROUTER_MAX_DESCRIPTION_PROMPT_CHARS`, defaults 4000/2000 chars) before being sent to the AI stage (`docs/decisions.md` AD-23) to control token cost. A resume or posting whose single most relevant detail appears only after the cap will lose that signal to the AI score/reasoning — a real, deliberate tradeoff, not a bug. The free keyword-gate stage (`extractSkills`) always sees the full untruncated text, so this never affects which jobs reach the AI stage, only what the AI sees once there.
+
 ---
 
 ## 4. Notifications
