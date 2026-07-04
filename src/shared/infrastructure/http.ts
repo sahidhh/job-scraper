@@ -5,6 +5,12 @@
 export interface FetchWithRetryOptions {
   retries?: number; // default 1
   retryDelayMs?: number; // default 2000
+  // When set, each attempt gets its own AbortController aborted after this
+  // many ms -- a fresh timeout window per attempt, not one shared signal
+  // across all attempts (a caller-supplied, already-aborted signal would
+  // otherwise make every retry fail instantly instead of getting a real
+  // second chance).
+  timeoutMs?: number;
 }
 
 function isRetryableStatus(status: number): boolean {
@@ -13,7 +19,7 @@ function isRetryableStatus(status: number): boolean {
 
 export async function fetchWithRetry(
   url: string,
-  init?: RequestInit,
+  init: RequestInit = {},
   options: FetchWithRetryOptions = {},
 ): Promise<Response> {
   const retries = options.retries ?? 1;
@@ -21,8 +27,10 @@ export async function fetchWithRetry(
 
   let attempt = 0;
   while (true) {
+    const controller = options.timeoutMs != null ? new AbortController() : null;
+    const timeout = controller ? setTimeout(() => controller.abort(), options.timeoutMs) : null;
     try {
-      const response = await fetch(url, init);
+      const response = await fetch(url, controller ? { ...init, signal: controller.signal } : init);
       if (!isRetryableStatus(response.status) || attempt >= retries) {
         return response;
       }
@@ -30,6 +38,8 @@ export async function fetchWithRetry(
       if (attempt >= retries) {
         throw error;
       }
+    } finally {
+      if (timeout) clearTimeout(timeout);
     }
     attempt += 1;
     await delay(retryDelayMs);

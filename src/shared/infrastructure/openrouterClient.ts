@@ -81,27 +81,27 @@ export async function callOpenRouterJson(request: OpenRouterJsonRequest): Promis
   const model = requireEnv("OPENROUTER_MODEL");
   const maxTokens = Number(optionalEnv("OPENROUTER_MAX_TOKENS", String(DEFAULT_MAX_TOKENS)));
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-
   try {
-    const response = await fetchWithRetry(OPENROUTER_API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model,
-        messages: request.messages,
-        max_tokens: maxTokens,
-        response_format: {
-          type: "json_schema",
-          json_schema: { name: request.schemaName, strict: true, schema: request.schema },
+    const response = await fetchWithRetry(
+      OPENROUTER_API_URL,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
         },
-      }),
-      signal: controller.signal,
-    });
+        body: JSON.stringify({
+          model,
+          messages: request.messages,
+          max_tokens: maxTokens,
+          response_format: {
+            type: "json_schema",
+            json_schema: { name: request.schemaName, strict: true, schema: request.schema },
+          },
+        }),
+      },
+      { timeoutMs: REQUEST_TIMEOUT_MS },
+    );
 
     if (!response.ok) {
       const body = await response.text().catch(() => "");
@@ -136,7 +136,5 @@ export async function callOpenRouterJson(request: OpenRouterJsonRequest): Promis
     const reason: AiFailureReason = err instanceof Error && err.name === "AbortError" ? "timeout" : "unknown";
     console.warn(`[openrouter] model=${model} max_tokens=${maxTokens} reason=${reason}`);
     throw new OpenRouterError(err instanceof Error ? err.message : String(err), reason);
-  } finally {
-    clearTimeout(timeout);
   }
 }
