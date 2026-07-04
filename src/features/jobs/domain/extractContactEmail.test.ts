@@ -73,4 +73,48 @@ describe("extractContactEmail", () => {
     const result = extractContactEmail(text);
     expect(result?.email.toLowerCase()).toBe("jane@company.com");
   });
+
+  it("does not miscategorize a personal-name address containing 'hr' as a substring (e.g. chris, shreya)", () => {
+    // Regression test: the "hr" keyword used to match anywhere in the local
+    // part, so "chris"/"shreya" (which both contain "hr") were wrongly
+    // categorized as hr/high instead of a personal name/low.
+    expect(extractContactEmail("Send CV to chris@techcorp.sg")).toEqual({
+      email: "chris@techcorp.sg",
+      category: "company_contact",
+      confidence: "low",
+    });
+    expect(extractContactEmail("Send CV to shreya@techcorp.sg")).toEqual({
+      email: "shreya@techcorp.sg",
+      category: "company_contact",
+      confidence: "low",
+    });
+  });
+
+  it("does not miscategorize outsourcing@ as a recruiter address", () => {
+    // Regression test: "sourcing" used to match as a substring of
+    // "outsourcing", which is an unrelated vendor/company-contact mailbox.
+    expect(extractContactEmail("Contact our vendor at outsourcing@company.com")).toEqual({
+      email: "outsourcing@company.com",
+      category: "company_contact",
+      confidence: "low",
+    });
+  });
+
+  it("still categorizes hyphenated/dotted hr and talent-sourcing addresses correctly", () => {
+    expect(extractContactEmail("Contact hr-team@startup.io")?.category).toBe("hr");
+    expect(extractContactEmail("Contact jane.hr@startup.io")?.category).toBe("hr");
+    expect(extractContactEmail("Contact talent-sourcing@startup.io")?.category).toBe("recruiter");
+  });
+
+  it("excludes an automated mailbox even when plus-addressed with a tag", () => {
+    // Regression test: "noreply+jobs@ats.com" used to slip past the
+    // automated-prefix filter (exact match on the full local part) and get
+    // categorized as a real company_contact via the "jobs" keyword.
+    const text = "noreply+jobs@ats.com is automated. Reach recruiting@company.com for details.";
+    expect(extractContactEmail(text)).toEqual({
+      email: "recruiting@company.com",
+      category: "recruiter",
+      confidence: "high",
+    });
+  });
 });

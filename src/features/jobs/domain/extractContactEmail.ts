@@ -25,20 +25,35 @@ const AUTOMATED_PREFIXES = new Set([
 // recruiter > hr > hiring manager > generic company contact) so an address
 // matching multiple lists (unlikely, but possible) resolves to the
 // highest-priority category.
-const RECRUITER_KEYWORDS = ["recruit", "talent", "sourcing"];
+// "sourcing" (bare) is deliberately not a keyword here -- it's a substring
+// of the unrelated word "outsourcing", and the realistic recruiter address
+// it's meant to catch ("talentsourcing@", "talent-sourcing@") is already
+// matched via "talent".
+const RECRUITER_KEYWORDS = ["recruit", "talent"];
 const HR_KEYWORDS = ["humanresources", "peopleteam", "people", "hr"];
 const HIRING_MANAGER_KEYWORDS = ["hiringmanager"];
 // Generic/company-wide mailboxes -- a real inbox, just not a named person or
 // dedicated recruiting/HR/hiring-manager address.
 const COMPANY_CONTACT_KEYWORDS = ["careers", "jobs", "hiring", "apply", "info", "hello", "contact", "support"];
 
-function categorize(localPart: string): { category: EmailCategory; confidence: EmailConfidence } {
-  const normalized = localPart.toLowerCase().replace(/[._-]/g, "");
+// Keywords this short risk colliding with an unrelated word/name that
+// happens to contain them as a substring (e.g. "hr" inside "chris"/
+// "shreya") -- require an exact separator-delimited token match instead of
+// a substring match. Longer keywords keep substring matching so compound
+// forms without a separator ("recruiting", "hiringmanager") still match.
+const EXACT_TOKEN_MAX_LENGTH = 2;
 
-  if (RECRUITER_KEYWORDS.some((k) => normalized.includes(k))) return { category: "recruiter", confidence: "high" };
-  if (HR_KEYWORDS.some((k) => normalized.includes(k))) return { category: "hr", confidence: "high" };
-  if (HIRING_MANAGER_KEYWORDS.some((k) => normalized.includes(k))) return { category: "hiring_manager", confidence: "medium" };
-  if (COMPANY_CONTACT_KEYWORDS.some((k) => normalized.includes(k))) return { category: "company_contact", confidence: "medium" };
+function categorize(localPart: string): { category: EmailCategory; confidence: EmailConfidence } {
+  const tokens = localPart.toLowerCase().split(/[._-]/);
+  const normalized = tokens.join("");
+
+  const matchesKeyword = (keyword: string) =>
+    keyword.length <= EXACT_TOKEN_MAX_LENGTH ? tokens.includes(keyword) : normalized.includes(keyword);
+
+  if (RECRUITER_KEYWORDS.some(matchesKeyword)) return { category: "recruiter", confidence: "high" };
+  if (HR_KEYWORDS.some(matchesKeyword)) return { category: "hr", confidence: "high" };
+  if (HIRING_MANAGER_KEYWORDS.some(matchesKeyword)) return { category: "hiring_manager", confidence: "medium" };
+  if (COMPANY_CONTACT_KEYWORDS.some(matchesKeyword)) return { category: "company_contact", confidence: "medium" };
 
   // No keyword match -- looks like a personal-name mailbox (e.g.
   // jane.doe@co.com). It's a real person, but the local part alone can't
@@ -72,7 +87,11 @@ export function extractContactEmail(text: string): ExtractedEmail | null {
     seen.add(lower);
 
     const localPart = email.split("@")[0]!;
-    if (AUTOMATED_PREFIXES.has(localPart.toLowerCase())) continue;
+    // Strip a "+tag" suffix (plus-addressing, e.g. "noreply+jobs@ats.com")
+    // before checking against AUTOMATED_PREFIXES -- otherwise the tag makes
+    // an automated mailbox look like a real one.
+    const localPartBase = localPart.split("+")[0]!;
+    if (AUTOMATED_PREFIXES.has(localPartBase.toLowerCase())) continue;
 
     candidates.push({ email, ...categorize(localPart) });
   }
