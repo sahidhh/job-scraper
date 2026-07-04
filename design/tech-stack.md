@@ -128,6 +128,9 @@ These are explicitly banned by the project rules (CLAUDE.md):
 | `score` | `tsx scripts/score.ts` | Manual scoring run |
 | `notify` | `tsx scripts/notify.ts` | Manual notification run |
 | `validate-sources` | `tsx scripts/validate-sources.ts` | Probe all configured ATS boards; exit 1 only on new failures or healthy count below minimum |
+| `backfill:fingerprints` | `tsx scripts/backfill-fingerprints.ts` | One-off backfill of `jobs.fingerprint` for rows inserted before cross-source dedup (Phase 1 Task 1) |
+| `discover:career-pages` | `tsx scripts/discover-career-pages.ts` | Manual run of ATS career-page discovery (Phase 2 Task 8) |
+| `setup:webhook` | `tsx scripts/setup-webhook.ts` | One-off Telegram webhook registration |
 
 ## 7. CI / CD
 

@@ -12,6 +12,16 @@ on:
   schedule:
     - cron: "0 */6 * * *"
 
+# A manual dispatch overlapping a scheduled run (or two scheduled runs if a
+# prior one overruns its 6h slot) could each independently pass the
+# fingerprint dedup check-then-write for the same logical job before either
+# has committed, producing two rows with the same fingerprint. Queue instead
+# of running concurrently; never cancel a run partway through scrape/score/
+# notify since that could leave the pipeline mid-step.
+concurrency:
+  group: scrape-pipeline
+  cancel-in-progress: false
+
 jobs:
   pipeline:
     runs-on: ubuntu-latest

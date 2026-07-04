@@ -9,6 +9,7 @@
     "start": "next start",
     "test": "vitest run",
     "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
     "scrape": "tsx scripts/scrape.ts",
     "score": "tsx scripts/score.ts",
     "notify": "tsx scripts/notify.ts",
