@@ -15,6 +15,14 @@ import { SupabaseScrapeRunRepository } from "@/features/sources/infrastructure/S
 import { createSupabaseServerClient } from "@/shared/infrastructure/supabase/server";
 import { optionalEnv } from "@/shared/infrastructure/env";
 
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <h2 className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+      {children}
+    </h2>
+  );
+}
+
 export default async function SettingsPage() {
   const client = await createSupabaseServerClient();
   const companyRepository = new SupabaseCompanyRepository(client);
@@ -35,69 +43,73 @@ export default async function SettingsPage() {
   const notifyThreshold = optionalEnv("NOTIFY_THRESHOLD", "0.75");
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
+    <div className="mx-auto max-w-4xl space-y-8">
       <div>
         <h1 className="text-2xl font-semibold">Settings</h1>
-        <p className="text-sm text-muted-foreground">Manage companies, scrape history, and scoring thresholds.</p>
+        <p className="text-sm text-muted-foreground">Companies, statuses, scoring, and activity.</p>
       </div>
 
-      <Card>
-        <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <CardTitle>Companies</CardTitle>
-          <CompanyFormDialog
-            trigger={
-              <Button size="sm">Add company</Button>
-            }
-          />
-        </CardHeader>
-        <CardContent>
-          <CompaniesTable companies={companies} />
-        </CardContent>
-      </Card>
+      {/* Sources */}
+      <section className="space-y-3">
+        <SectionLabel>Sources</SectionLabel>
+        <Card>
+          <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <CardTitle>Companies</CardTitle>
+            <CompanyFormDialog trigger={<Button size="sm">Add company</Button>} />
+          </CardHeader>
+          <CardContent>
+            <CompaniesTable companies={companies} />
+          </CardContent>
+        </Card>
+        <ExperienceCard current={desiredExperience} />
+        <ThresholdsCard keywordThreshold={keywordThreshold} notifyThreshold={notifyThreshold} />
+      </section>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Status</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <StatusConfigSection initialStatuses={statuses} />
-        </CardContent>
-      </Card>
+      {/* Workflow */}
+      <section className="space-y-3">
+        <SectionLabel>Workflow</SectionLabel>
+        <Card>
+          <CardHeader>
+            <CardTitle>Job statuses</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <StatusConfigSection initialStatuses={statuses} />
+          </CardContent>
+        </Card>
+      </section>
 
-      <ExperienceCard current={desiredExperience} />
+      {/* Activity */}
+      <section className="space-y-3">
+        <SectionLabel>Activity</SectionLabel>
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent scrape runs</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="rounded-xl border border-border bg-muted/50 px-4 py-3 text-sm text-muted-foreground">
+              The scrape → score → notify pipeline runs via GitHub Actions.{" "}
+              <a
+                href="https://github.com/sahidhh/job-scraper/actions"
+                target="_blank"
+                rel="noreferrer"
+                className="font-medium text-foreground underline-offset-2 hover:underline"
+              >
+                Trigger manually &rarr;
+              </a>
+            </div>
+            <ScrapeRunsList runs={scrapeRuns} />
+          </CardContent>
+        </Card>
 
-      <ThresholdsCard keywordThreshold={keywordThreshold} notifyThreshold={notifyThreshold} />
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent scrape runs</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="rounded-md border border-border bg-muted/50 p-3 text-sm text-muted-foreground">
-            The scrape &rarr; score &rarr; notify pipeline runs via GitHub Actions, not from this app. Trigger it
-            manually from the{" "}
-            <a
-              href="https://github.com/sahidhh/job-scraper/actions"
-              target="_blank"
-              rel="noreferrer"
-              className="underline"
-            >
-              repository&apos;s Actions tab
-            </a>{" "}
-            (workflow_dispatch).
-          </div>
-          <ScrapeRunsList runs={scrapeRuns} />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent notifications</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <NotificationsLogList entries={notifications} />
-        </CardContent>
-      </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent notifications</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <NotificationsLogList entries={notifications} />
+          </CardContent>
+        </Card>
+      </section>
     </div>
   );
 }
