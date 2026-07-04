@@ -47,6 +47,9 @@ erDiagram
         boolean is_active "false when not seen for JOB_EXPIRATION_DAYS"
         text inactive_reason "nullable; 'expired' when set by sweep"
         text fingerprint "sha256(normalized title + canonical company + location tags); cross-source dedup key"
+        text contact_email "nullable; best-effort, extractContactEmail.ts"
+        text contact_email_category "nullable; recruiter | hr | hiring_manager | company_contact"
+        text contact_email_confidence "nullable; high | medium | low"
     }
 
     JOB_DUPLICATES {

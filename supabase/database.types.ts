@@ -253,6 +253,9 @@ export type Database = {
           canonical_company_name: string
           company_id: string | null
           company_name: string
+          contact_email: string | null
+          contact_email_category: string | null
+          contact_email_confidence: string | null
           description: string
           fingerprint: string
           first_seen_at: string
@@ -274,6 +277,9 @@ export type Database = {
           canonical_company_name?: string
           company_id?: string | null
           company_name: string
+          contact_email?: string | null
+          contact_email_category?: string | null
+          contact_email_confidence?: string | null
           description?: string
           fingerprint?: string
           first_seen_at?: string
@@ -295,6 +301,9 @@ export type Database = {
           canonical_company_name?: string
           company_id?: string | null
           company_name?: string
+          contact_email?: string | null
+          contact_email_category?: string | null
+          contact_email_confidence?: string | null
           description?: string
           fingerprint?: string
           first_seen_at?: string

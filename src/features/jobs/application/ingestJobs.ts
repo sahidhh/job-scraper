@@ -1,5 +1,6 @@
 import type { JobRepository } from "@/features/jobs/domain/JobRepository";
 import type { NormalizedJob, UpsertResult } from "@/features/jobs/domain/types";
+import { extractContactEmail } from "@/features/jobs/domain/extractContactEmail";
 import { validateNormalizedJob } from "@/features/jobs/domain/validation";
 import { dedupeJobs } from "./dedupeJobs";
 import { parseMinYears } from "./parseMinYears";
@@ -30,12 +31,18 @@ export async function ingestJobs(
     return { inserted: 0, updated: 0, duplicates: 0 };
   }
 
-  // Derive the soft experience signal at ingest (P2): parsed best-effort
-  // from title+description, null when unknown.
-  const withYears = deduped.map((job) => ({
-    ...job,
-    minYears: parseMinYears(`${job.title}\n${job.description}`),
-  }));
+  // Derive the soft experience signal (P2) and a best-effort contact email
+  // (Phase 2 Task 9) at ingest, both parsed from title+description.
+  const enriched = deduped.map((job) => {
+    const contact = extractContactEmail(`${job.title}\n${job.description}`);
+    return {
+      ...job,
+      minYears: parseMinYears(`${job.title}\n${job.description}`),
+      contactEmail: contact?.email ?? null,
+      contactEmailCategory: contact?.category ?? null,
+      contactEmailConfidence: contact?.confidence ?? null,
+    };
+  });
 
-  return deps.jobRepository.upsertMany(withYears);
+  return deps.jobRepository.upsertMany(enriched);
 }

@@ -40,17 +40,3 @@ export function escapeHtml(text: string): string {
 export function capitalizeFirst(tag: string): string {
   return tag.length === 0 ? tag : tag[0]!.toUpperCase() + tag.slice(1);
 }
-
-const EMAIL_REGEX = /\b[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}\b/g;
-// Generic/automated prefixes unlikely to reach a recruiter.
-const EXCLUDED_PREFIXES = new Set(["noreply", "no-reply", "support", "info", "privacy", "unsubscribe", "donotreply", "do-not-reply", "hello", "contact", "careers"]);
-
-export function extractRecruiterEmail(text: string): string | null {
-  const matches = text.match(EMAIL_REGEX);
-  if (!matches) return null;
-  for (const email of matches) {
-    const prefix = email.split("@")[0]!.toLowerCase();
-    if (!EXCLUDED_PREFIXES.has(prefix)) return email;
-  }
-  return null;
-}

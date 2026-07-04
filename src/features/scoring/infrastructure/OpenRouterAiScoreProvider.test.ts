@@ -33,6 +33,9 @@ const job: Job = {
   minYears: null,
   canonicalCompanyName: "Acme",
   fingerprint: "test-fingerprint",
+  contactEmail: null,
+  contactEmailCategory: null,
+  contactEmailConfidence: null,
 };
 
 const resume: Resume = {

@@ -43,6 +43,9 @@ const jobRow: JobRow = {
   inactive_reason: null,
   canonical_company_name: "Acme",
   fingerprint: "test-fingerprint",
+  contact_email: null,
+  contact_email_category: null,
+  contact_email_confidence: null,
 };
 
 describe("SupabaseJobRepository", () => {
@@ -167,6 +170,9 @@ describe("SupabaseJobRepository", () => {
           minYears: null,
           canonicalCompanyName: "Acme",
           fingerprint: "test-fingerprint",
+          contactEmail: null,
+          contactEmailCategory: null,
+          contactEmailConfidence: null,
         },
       ]);
 

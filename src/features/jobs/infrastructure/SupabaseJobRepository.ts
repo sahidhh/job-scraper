@@ -63,6 +63,9 @@ function toJob(row: JobRow): Job {
     minYears: row.min_years ?? null,
     canonicalCompanyName: row.canonical_company_name,
     fingerprint: row.fingerprint,
+    contactEmail: row.contact_email,
+    contactEmailCategory: row.contact_email_category as Job["contactEmailCategory"],
+    contactEmailConfidence: row.contact_email_confidence as Job["contactEmailConfidence"],
   };
 }
 
@@ -122,6 +125,9 @@ function toUpsertRow(job: NormalizedJob): JobInsertRow {
     is_active: true,
     min_years: job.minYears ?? null,
     fingerprint: computeFingerprint(job),
+    contact_email: job.contactEmail ?? null,
+    contact_email_category: job.contactEmailCategory ?? null,
+    contact_email_confidence: job.contactEmailConfidence ?? null,
   };
 }
 

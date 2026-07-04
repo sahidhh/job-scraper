@@ -85,4 +85,31 @@ describe("ingestJobs", () => {
 
     await expect(ingestJobs([invalid], { jobRepository })).rejects.toThrow(DomainValidationError);
   });
+
+  it("derives contactEmail/category/confidence from title+description (Phase 2 Task 9)", async () => {
+    const jobRepository = makeRepository();
+    const job = makeJob({ description: "Please apply and send your resume to recruiting@acme.com" });
+
+    await ingestJobs([job], { jobRepository });
+
+    const passed = vi.mocked(jobRepository.upsertMany).mock.calls[0]?.[0];
+    expect(passed?.[0]).toMatchObject({
+      contactEmail: "recruiting@acme.com",
+      contactEmailCategory: "recruiter",
+      contactEmailConfidence: "high",
+    });
+  });
+
+  it("leaves contact fields null when no email is present", async () => {
+    const jobRepository = makeRepository();
+
+    await ingestJobs([makeJob()], { jobRepository });
+
+    const passed = vi.mocked(jobRepository.upsertMany).mock.calls[0]?.[0];
+    expect(passed?.[0]).toMatchObject({
+      contactEmail: null,
+      contactEmailCategory: null,
+      contactEmailConfidence: null,
+    });
+  });
 });

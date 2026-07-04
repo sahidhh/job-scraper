@@ -1,4 +1,5 @@
 import type { JobSource, LocationTag } from "@/shared/domain/enums";
+import type { EmailCategory, EmailConfidence } from "./extractContactEmail";
 
 // Mirrors the `jobs` table (database.md §2).
 export interface Job {
@@ -27,6 +28,11 @@ export interface Job {
   // title + canonical company + sorted location tags. Computed at write
   // time -- see computeFingerprint.ts.
   fingerprint: string;
+  // Best-effort contact email parsed from title+description at ingest
+  // (Phase 2 Task 9) -- see extractContactEmail.ts. Null when none found.
+  contactEmail: string | null;
+  contactEmailCategory: EmailCategory | null;
+  contactEmailConfidence: EmailConfidence | null;
 }
 
 // Input to JobRepository.upsertMany() -- a TaggedRawJob ready to persist.
@@ -46,6 +52,11 @@ export interface NormalizedJob {
   // Best-effort minimum years of experience parsed from the posting at
   // ingest (P2). Optional on input; derived by ingestJobs, not the scraper.
   minYears?: number | null;
+  // Best-effort contact email parsed from the posting at ingest (Phase 2
+  // Task 9). Optional on input; derived by ingestJobs, not the scraper.
+  contactEmail?: string | null;
+  contactEmailCategory?: EmailCategory | null;
+  contactEmailConfidence?: EmailConfidence | null;
 }
 
 export interface UpsertResult {
@@ -105,7 +116,8 @@ export interface JobFilters {
 // Job joined with its score for the active role_selection. Omits
 // `description` -- the dashboard query doesn't select it (P1 #4, never
 // rendered by JobRow).
-export interface JobWithScore extends Omit<Job, "description" | "fingerprint" | "canonicalCompanyName"> {
+export interface JobWithScore
+  extends Omit<Job, "description" | "fingerprint" | "canonicalCompanyName" | "contactEmail" | "contactEmailCategory" | "contactEmailConfidence"> {
   keywordScore: number | null;
   aiScore: number | null;
   aiReasoning: string | null;

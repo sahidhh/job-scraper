@@ -27,6 +27,12 @@ Jobs not seen in recent scrapes are soft-deactivated after `JOB_EXPIRATION_DAYS`
 ### 1.7 Cross-Source Duplicate Detection Scope
 Fingerprint-based dedup (`docs/decisions.md` AD-16) only checks a new job against rows already persisted in the DB — it does not dedupe two postings that collide on fingerprint within the *same* scrape batch (same source, same run). This is rare in practice (would require one source listing the same title/company/location twice in one run) and is left unhandled rather than adding logic to resolve IDs for rows not yet inserted. Existing jobs ingested before the fingerprint migration have `fingerprint = ''` until `npm run backfill:fingerprints` is run once; until then they are not matched against by the cross-source check (fails safe — no false merges, just temporarily un-deduped). Title normalization also deliberately strips seniority modifiers (senior/sr/junior/jr/lead/staff/principal), so a Senior and non-senior posting for the same title/company/location are treated as the same logical job — acceptable for the stated use case, but worth knowing if it ever needs to change.
 
+### 1.8 Career Page Discovery Coverage
+Only board-token companies (greenhouse/lever/ashby) get a `company_career_pages` entry (deterministic, from `source`+`board_token`). Aggregator-sourced companies (wellfound/remoteok/mycareersfuture — see §1.1, these carry the bulk of job volume) have no career page discovered; guessing a company's domain from its name alone was deliberately not attempted this pass (`docs/decisions.md` AD-20) because it can't be verified reliably without a search API or live network validation against real companies.
+
+### 1.9 Contact Email Extraction Coverage
+`extractContactEmail` (`docs/decisions.md` AD-21) only sees the plain text left after each scraper's `stripHtml()` runs — an email address that exists only inside a `mailto:` href with non-email link text (e.g. `<a href="mailto:jane@co.com">Apply now</a>`) is invisible to it and `contact_email` stays null for that job, even though a real contact address exists. Categorization (recruiter/hr/hiring_manager/company_contact) is a local-part keyword match only, not text-proximity or NLP — most personal-name addresses (the common case) fall back to `company_contact`/`low` confidence rather than a more specific guess.
+
 ---
 
 ## 2. Resume & Skill Extraction
