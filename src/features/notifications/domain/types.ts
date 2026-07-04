@@ -1,3 +1,5 @@
+import type { EmploymentType } from "@/features/jobs/domain/extractJobAttributes";
+import type { SalaryPeriod } from "@/features/jobs/domain/extractSalary";
 import type { JobSource, LocationTag } from "@/shared/domain/enums";
 
 // Controls whether the cron sends one message per job (individual) or a
@@ -43,6 +45,16 @@ export interface JobMatch {
   aiReasoning: string | null;
   description: string;     // used for skill-based filtering
   minYears: number | null; // used for experience-based filtering
+  // Deterministic job attributes (extractJobAttributes.ts), used for
+  // exclude-filters and digest "why this job" annotations.
+  employmentType: EmploymentType | null;
+  urgentHiring: boolean;
+  // Best-effort salary (extractSalary.ts), used for the digest's salary
+  // highlight. All null when no salary text was found on the posting.
+  salaryCurrency: string | null;
+  salaryMin: number | null;
+  salaryMax: number | null;
+  salaryPeriod: SalaryPeriod | null;
 }
 
 // One row per digest run — stores worth-reviewing job IDs for Telegram pagination.
@@ -65,6 +77,9 @@ export interface NotificationPreferences {
   minExperience?: number;    // min_years must be >= this (null min_years always passes)
   maxExperience?: number;    // min_years must be <= this (null min_years always passes)
   sources?: JobSource[];     // source must be in this list
-  excludeCompanies?: string[]; // company name (case-insensitive substring) mutes the match
-  excludeKeywords?: string[];  // title (case-insensitive substring) mutes the match
+  // Exclude filters: all ANDed with the include filters above. Absent/empty
+  // means "no exclusion".
+  blockedCompanies?: string[];        // companyName must NOT contain any of these (case-insensitive)
+  excludeEmploymentTypes?: EmploymentType[]; // employmentType must NOT be one of these (null always passes -- unknown type is never excluded)
+  excludeKeywords?: string[];  // title must NOT contain any of these (case-insensitive)
 }

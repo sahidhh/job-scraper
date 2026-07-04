@@ -1,5 +1,7 @@
 # Phase 5A — Analytics Dashboard Plan
 
+> **✅ Implemented and shipped** (see `docs/decisions.md` AD-24 and the `/analytics` page). This file is retained as the original pre-implementation plan, not a pending task.
+
 **Goal:** Extend `/analytics` with AI cost visibility, scored-job source breakdown, and source health. Zero new tracking. No new tables. Reuse existing `job_scores`, `scrape_runs`, and `companies` data.
 
 ---

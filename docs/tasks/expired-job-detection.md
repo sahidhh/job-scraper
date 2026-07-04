@@ -1,5 +1,7 @@
 # Expired Job Detection (Phase 1)
 
+> **✅ Implemented and shipped.** See `jobs.is_active`/`inactive_reason`, `markExpiredJobs`, and `JOB_EXPIRATION_DAYS` in `design/tech-stack.md`/`design/limitations.md` §1.6. This file is retained as the original pre-implementation design rationale, not a pending task.
+
 ## Problem
 
 Jobs scraped into the platform remain in the `jobs` table indefinitely. When a posting is removed from the source board (filled, expired, or delisted), it continues to appear in the dashboard, skewing analytics and lowering trust in recommendations. Users have no way to tell whether a job is still accepting applications.

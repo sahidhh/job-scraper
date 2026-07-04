@@ -55,6 +55,13 @@ erDiagram
         numeric salary_max "nullable"
         text salary_period "nullable; yearly | monthly | hourly"
         text salary_confidence "nullable; high | medium | low"
+        text employment_type "nullable; internship|contract|freelance|temporary|part_time|full_time, extractJobAttributes.ts"
+        text seniority "nullable; executive|principal|lead|senior|entry|mid"
+        text work_arrangement "nullable; hybrid|onsite (remote is location_tags, not this)"
+        boolean visa_sponsorship "nullable; null=not mentioned, true=offered, false=explicitly not offered"
+        boolean relocation_assistance "nullable; same tri-state as visa_sponsorship"
+        boolean security_clearance "NOT NULL default false"
+        boolean urgent_hiring "NOT NULL default false"
     }
 
     JOB_DUPLICATES {
@@ -200,10 +207,11 @@ erDiagram
 | `company_career_pages` | `UNIQUE (canonical_company_name)` | One career page per canonicalized company name, upserted on rediscovery |
 | `job_scores` | `UNIQUE (job_id, role_selection_id, resume_version)` | One score per job+role+resume-version triple; prior-version rows preserved |
 | `job_scores` | `INDEX (ai_score DESC NULLS LAST)` | Retained for the queries still keyed on raw AI match quality (e.g. `minAiScore` filter) |
-| `job_scores` | `INDEX (overall_score DESC NULLS LAST)` | Dashboard default sort (Theme 1 composite ranking score); backfilled to `= ai_score` for pre-existing rows, migration `20260704000003_ranking_overall_score.sql` |
+| `job_scores` | `INDEX (overall_score DESC NULLS LAST)` | Dashboard default sort (Theme 1 composite ranking score); backfilled to `= ai_score` for pre-existing rows, migration `20260704000004_ranking_overall_score.sql` |
 | `job_scores` | `INDEX (role_selection_id, resume_version, scored_at) WHERE ai_score IS NULL` | `findAwaitingAi`'s unscored-queue shape |
 | `jobs` | `INDEX (is_active)` | Active-jobs filter shared by `findUnscored`/`countMatchingExpandedRoles`/`countJobStats`/`markExpiredJobs` (created in `20260618000001_expired_job_detection.sql`, not repeated by the 2026-07-04 hardening migration) |
 | `scrape_runs` | `INDEX (source, run_at DESC)` | `listRecentBySource` (per-source health report, called once per source per `/analytics` load) |
+| `jobs` | `INDEX (employment_type)` | Notification-preference `excludeEmploymentTypes` filter reads this at digest time |
 | `resumes` | `UNIQUE (is_active) WHERE is_active = true` | Enforce single active resume |
 | `role_selections` | `UNIQUE (is_active) WHERE is_active = true` | Enforce single active role |
 | `notifications_log` | `UNIQUE (job_id)` | Guarantee at-most-one Telegram send |
@@ -244,7 +252,7 @@ Both functions run in a single transaction, ensuring exactly one active record a
                  overall_score/overall_score_reasons = excluded.*
 ```
 
-Atomic single-round-trip write + conditional counter increment (Phase 1 Task 6) -- a plain client-side `.upsert()` can't express "increment only when this write leaves ai_score null" without a read-modify-write per job. `p_overall_score`/`p_overall_score_reasons` (Theme 1 continuous-improvement pass) were appended as trailing parameters with defaults in `20260704000003_ranking_overall_score.sql` -- `CREATE OR REPLACE FUNCTION` supports adding parameters this way without creating a duplicate overload, so pre-existing callers that omit them are unaffected.
+Atomic single-round-trip write + conditional counter increment (Phase 1 Task 6) -- a plain client-side `.upsert()` can't express "increment only when this write leaves ai_score null" without a read-modify-write per job. `p_overall_score`/`p_overall_score_reasons` (Theme 1 continuous-improvement pass) were appended as trailing parameters with defaults in `20260704000004_ranking_overall_score.sql` -- `CREATE OR REPLACE FUNCTION` supports adding parameters this way without creating a duplicate overload, so pre-existing callers that omit them are unaffected.
 
 ---
 

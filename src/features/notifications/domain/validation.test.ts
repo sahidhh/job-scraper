@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { DomainValidationError } from "@/shared/domain/errors";
 import { validateNotificationPreferences, validateNotifyThreshold } from "./validation";
 
 describe("validateNotifyThreshold", () => {
@@ -7,7 +8,7 @@ describe("validateNotifyThreshold", () => {
   });
 
   it("rejects values outside [0, 1]", () => {
-    expect(() => validateNotifyThreshold(1.5)).toThrow();
+    expect(() => validateNotifyThreshold(1.5)).toThrow(DomainValidationError);
   });
 });
 
@@ -16,44 +17,47 @@ describe("validateNotificationPreferences", () => {
     expect(() => validateNotificationPreferences({})).not.toThrow();
   });
 
-  it("accepts fully populated valid preferences", () => {
+  it("accepts a fully-populated valid preferences object", () => {
     expect(() =>
       validateNotificationPreferences({
         roles: ["backend engineer"],
-        skills: ["ASP.NET"],
+        skills: ["React"],
         locations: ["remote", "india"],
         sources: ["greenhouse", "lever"],
         minExperience: 2,
         maxExperience: 5,
-        excludeCompanies: ["Acme"],
+        blockedCompanies: ["Staffing Co"],
+        excludeEmploymentTypes: ["internship", "contract"],
         excludeKeywords: ["intern"],
       }),
     ).not.toThrow();
   });
 
-  it("rejects an unknown location", () => {
-    expect(() =>
-      validateNotificationPreferences({ locations: ["mars" as never] }),
-    ).toThrow(/Unknown location/);
+  it("rejects an invalid location", () => {
+    expect(() => validateNotificationPreferences({ locations: ["mars" as never] })).toThrow(DomainValidationError);
   });
 
-  it("rejects an unknown source", () => {
-    expect(() =>
-      validateNotificationPreferences({ sources: ["monster" as never] }),
-    ).toThrow(/Unknown source/);
+  it("rejects an invalid source", () => {
+    expect(() => validateNotificationPreferences({ sources: ["linkedin" as never] })).toThrow(DomainValidationError);
+  });
+
+  it("rejects an invalid employment type", () => {
+    expect(() => validateNotificationPreferences({ excludeEmploymentTypes: ["bogus" as never] })).toThrow(
+      DomainValidationError,
+    );
   });
 
   it("rejects a negative minExperience", () => {
-    expect(() => validateNotificationPreferences({ minExperience: -1 })).toThrow(/>= 0/);
+    expect(() => validateNotificationPreferences({ minExperience: -1 })).toThrow(DomainValidationError);
   });
 
   it("rejects a negative maxExperience", () => {
-    expect(() => validateNotificationPreferences({ maxExperience: -1 })).toThrow(/>= 0/);
+    expect(() => validateNotificationPreferences({ maxExperience: -1 })).toThrow(DomainValidationError);
   });
 
   it("rejects minExperience greater than maxExperience", () => {
-    expect(() =>
-      validateNotificationPreferences({ minExperience: 6, maxExperience: 3 }),
-    ).toThrow(/cannot exceed/);
+    expect(() => validateNotificationPreferences({ minExperience: 5, maxExperience: 2 })).toThrow(
+      DomainValidationError,
+    );
   });
 });

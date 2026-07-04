@@ -209,7 +209,7 @@ Actions **never throw** to the client. On success they call `revalidatePath()` t
 
 #### `setNotificationPreferencesAction(prefs)`
 **File:** `src/features/notifications/actions.ts`  
-**Description:** Persists notification filter preferences. Pass `null` to clear preferences and revert to notify-all. Filters are include-only; each specified filter must pass (AND logic), with any single match within a filter sufficient (OR logic).
+**Description:** Validates (`validateNotificationPreferences`) and persists notification filter preferences. Pass `null` to clear preferences and revert to notify-all. Include filters are ANDed with each other (any single match within a filter is sufficient — OR logic within the filter); the exclude filters (v1.2) further narrow the result after the include filters pass. Editable from the `/settings` "Notification filters" card as of v1.2 (previously only settable programmatically).
 
 | Param | Type | Description |
 |---|---|---|
@@ -225,8 +225,11 @@ Actions **never throw** to the client. On success they call `revalidatePath()` t
 | `minExperience` | `number` (optional) | `min_years` must be ≥ this; null `min_years` always passes |
 | `maxExperience` | `number` (optional) | `min_years` must be ≤ this; null `min_years` always passes |
 | `sources` | `JobSource[]` (optional) | Source must be one of these |
-| `excludeCompanies` | `string[]` (optional) | Company name (case-insensitive substring) mutes the match -- also enforced on the dashboard job list, not just Telegram (shared via the same setting) |
-| `excludeKeywords` | `string[]` (optional) | Title (case-insensitive substring) mutes the match |
+| `blockedCompanies` | `string[]` (optional, v1.2) | Company name must NOT contain any of these (case-insensitive substring) -- also enforced on the dashboard job list, not just Telegram (shared via the same setting, see `JobFilters.excludeCompanies`) |
+| `excludeEmploymentTypes` | `EmploymentType[]` (optional, v1.2) | `employmentType` must NOT be one of these; null (unrecognized) always passes |
+| `excludeKeywords` | `string[]` (optional) | Title must NOT contain any of these (case-insensitive substring) |
+
+**Validation:** `validateNotificationPreferences` (throws `DomainValidationError`, surfaced as `ActionResult.error`) rejects unknown `locations`/`sources`/`excludeEmploymentTypes` values and an inverted min/max experience range.
 
 **Returns:** `ActionResult<undefined>`
 

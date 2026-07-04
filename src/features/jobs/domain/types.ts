@@ -1,5 +1,6 @@
 import type { JobSource, LocationTag } from "@/shared/domain/enums";
 import type { EmailCategory, EmailConfidence } from "./extractContactEmail";
+import type { EmploymentType, SeniorityLevel, WorkArrangement } from "./extractJobAttributes";
 import type { SalaryConfidence, SalaryPeriod } from "./extractSalary";
 
 // Mirrors the `jobs` table (database.md §2).
@@ -43,6 +44,15 @@ export interface Job {
   salaryMax: number | null;
   salaryPeriod: SalaryPeriod | null;
   salaryConfidence: SalaryConfidence | null;
+  // Deterministic job attributes parsed from title+description at ingest
+  // (Phase 2 personal-intelligence polish) -- see extractJobAttributes.ts.
+  employmentType: EmploymentType | null;
+  seniority: SeniorityLevel | null;
+  workArrangement: WorkArrangement | null;
+  visaSponsorship: boolean | null;
+  relocationAssistance: boolean | null;
+  securityClearance: boolean;
+  urgentHiring: boolean;
 }
 
 // Input to JobRepository.upsertMany() -- a TaggedRawJob ready to persist.
@@ -74,6 +84,16 @@ export interface NormalizedJob {
   salaryMax?: number | null;
   salaryPeriod?: SalaryPeriod | null;
   salaryConfidence?: SalaryConfidence | null;
+  // Best-effort job attributes parsed from the posting at ingest (Phase 2
+  // personal-intelligence polish). Optional on input; derived by
+  // ingestJobs, not the scraper.
+  employmentType?: EmploymentType | null;
+  seniority?: SeniorityLevel | null;
+  workArrangement?: WorkArrangement | null;
+  visaSponsorship?: boolean | null;
+  relocationAssistance?: boolean | null;
+  securityClearance?: boolean;
+  urgentHiring?: boolean;
 }
 
 export interface UpsertResult {
@@ -154,7 +174,14 @@ type JobWithScoreOmittedKeys =
   | "salaryMin"
   | "salaryMax"
   | "salaryPeriod"
-  | "salaryConfidence";
+  | "salaryConfidence"
+  | "employmentType"
+  | "seniority"
+  | "workArrangement"
+  | "visaSponsorship"
+  | "relocationAssistance"
+  | "securityClearance"
+  | "urgentHiring";
 
 export interface JobWithScore extends Omit<Job, JobWithScoreOmittedKeys> {
   keywordScore: number | null;

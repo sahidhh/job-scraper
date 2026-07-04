@@ -177,13 +177,14 @@ npm run dev
 
 ```bash
 npm run dev          # local dev server
-npm test             # run unit tests
-npm run typecheck    # TypeScript check
-npm run check:service-role-boundary  # CI safety gate
+npm run verify       # typecheck + tests + production build in one command
+npm run doctor       # check env vars + live Supabase/Telegram connectivity
 npm run scrape       # manual scrape run
 npm run score        # manual scoring run
 npm run notify       # manual notification run
-npm run validate-sources  # probe ATS boards; report dead tokens
+npm run health       # probe ATS boards; report dead tokens (= validate-sources)
+npm run diagnose     # recent-run/failure report + fetch→filter→ingest funnel
+npm run analytics    # 30-day per-source quality report
 ```
 
 ---
@@ -203,9 +204,15 @@ supabase/
   seed.sql      # Initial statuses + role expansion map
 scripts/
   scrape.ts   score.ts   notify.ts   # Cron entry points
-design/         # 📐 Technical design documents
-docs/           # 📖 Architecture & operational docs
+design/         # 📐 Technical design documents (canonical, kept current)
+docs/           # 📖 Historical decision log, deep-dives, and point-in-time reports
 ```
+
+---
+
+## 🧭 Start Here
+
+New to this repo (human or AI)? Read, in order: [`AI_HANDOFF.md`](AI_HANDOFF.md) → [`PROJECT_STATE.md`](PROJECT_STATE.md) → [`ARCHITECTURE.md`](ARCHITECTURE.md) → [`OPERATIONS.md`](OPERATIONS.md) → [`ROADMAP.md`](ROADMAP.md) / [`TECHNICAL_DEBT.md`](TECHNICAL_DEBT.md).
 
 ---
 

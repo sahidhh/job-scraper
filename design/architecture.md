@@ -228,7 +228,7 @@ via `RankingPreferences` (`app_settings` key `ranking_preferences`, `/settings` 
 applied are stored alongside as `overall_score_reasons` and shown next to the score on the
 dashboard. `overall_score` (not `ai_score`) is the dashboard's default sort key; `posted_at desc`
 remains the tiebreaker, which already covers freshness without double-weighting it into the bonus
-formula. Deliberately not ML/embeddings-based -- see `docs/decisions.md` AD-25.
+formula. Deliberately not ML/embeddings-based -- see `docs/decisions.md` AD-26.
 
 ---
 

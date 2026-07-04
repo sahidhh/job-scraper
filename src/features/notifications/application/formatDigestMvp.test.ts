@@ -15,6 +15,12 @@ function makeMatch(overrides: Partial<JobMatch> = {}): JobMatch {
     aiReasoning: "Strong match.",
     description: "Build systems at scale.",
     minYears: 3,
+    employmentType: null,
+    urgentHiring: false,
+    salaryCurrency: null,
+    salaryMin: null,
+    salaryMax: null,
+    salaryPeriod: null,
     ...overrides,
   };
 }
@@ -78,6 +84,12 @@ describe("formatDigestMvp", () => {
     expect(text).toMatch(/Showing Top \d+ Strong Match/);
   });
 
+  it("shows highlight badges (remote, urgent) for a top match when present", () => {
+    const text = formatDigestMvp([makeMatch({ locationTags: ["remote"], urgentHiring: true })], 0);
+    expect(text).toContain("\u{1F30D} Remote");
+    expect(text).toContain("⚡ Urgent hiring");
+  });
+
   it("uses threshold boundary: score exactly at STRONG_MATCH_THRESHOLD counts as strong", () => {
     // The caller (bandMatches) already split by threshold; formatDigestMvp just displays.
     // Verify that a 0.80 match appears in the strong section passed to the formatter.
@@ -111,6 +123,12 @@ describe("formatWorthReviewingMessage", () => {
     const text = formatWorthReviewingMessage([match]);
     expect(text).toContain("&lt;Script&gt;");
     expect(text).toContain("A &amp; B");
+  });
+
+  it("shows highlight badges for a worth-reviewing job when present", () => {
+    const match = makeMatch({ employmentType: "contract" });
+    const text = formatWorthReviewingMessage([match]);
+    expect(text).toContain("\u{1F4C4} Contract");
   });
 
   it("numbers multiple jobs sequentially", () => {

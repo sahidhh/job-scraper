@@ -263,6 +263,7 @@ export type Database = {
           contact_email_category: string | null
           contact_email_confidence: string | null
           description: string
+          employment_type: string | null
           fingerprint: string
           first_seen_at: string
           id: string
@@ -273,16 +274,22 @@ export type Database = {
           location_tags: Database["public"]["Enums"]["location_tag"][]
           min_years: number | null
           posted_at: string | null
+          relocation_assistance: boolean | null
           salary_confidence: string | null
           salary_currency: string | null
           salary_max: number | null
           salary_min: number | null
           salary_period: string | null
+          security_clearance: boolean
+          seniority: string | null
           source: Database["public"]["Enums"]["job_source"]
           source_job_id: string
           title: string
           updated_at: string
+          urgent_hiring: boolean
           url: string
+          visa_sponsorship: boolean | null
+          work_arrangement: string | null
         }
         Insert: {
           canonical_company_name?: string
@@ -292,6 +299,7 @@ export type Database = {
           contact_email_category?: string | null
           contact_email_confidence?: string | null
           description?: string
+          employment_type?: string | null
           fingerprint?: string
           first_seen_at?: string
           id?: string
@@ -302,16 +310,22 @@ export type Database = {
           location_tags?: Database["public"]["Enums"]["location_tag"][]
           min_years?: number | null
           posted_at?: string | null
+          relocation_assistance?: boolean | null
           salary_confidence?: string | null
           salary_currency?: string | null
           salary_max?: number | null
           salary_min?: number | null
           salary_period?: string | null
+          security_clearance?: boolean
+          seniority?: string | null
           source: Database["public"]["Enums"]["job_source"]
           source_job_id: string
           title: string
           updated_at?: string
+          urgent_hiring?: boolean
           url: string
+          visa_sponsorship?: boolean | null
+          work_arrangement?: string | null
         }
         Update: {
           canonical_company_name?: string
@@ -321,6 +335,7 @@ export type Database = {
           contact_email_category?: string | null
           contact_email_confidence?: string | null
           description?: string
+          employment_type?: string | null
           fingerprint?: string
           first_seen_at?: string
           id?: string
@@ -331,16 +346,22 @@ export type Database = {
           location_tags?: Database["public"]["Enums"]["location_tag"][]
           min_years?: number | null
           posted_at?: string | null
+          relocation_assistance?: boolean | null
           salary_confidence?: string | null
           salary_currency?: string | null
           salary_max?: number | null
           salary_min?: number | null
           salary_period?: string | null
+          security_clearance?: boolean
+          seniority?: string | null
           source?: Database["public"]["Enums"]["job_source"]
           source_job_id?: string
           title?: string
           updated_at?: string
+          urgent_hiring?: boolean
           url?: string
+          visa_sponsorship?: boolean | null
+          work_arrangement?: string | null
         }
         Relationships: [
           {

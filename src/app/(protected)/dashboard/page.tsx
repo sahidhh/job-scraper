@@ -209,7 +209,7 @@ async function JobsSection({
     maxYears: filters.maxYears ?? desiredExperience ?? undefined,
     // Muted companies (Settings → Notifications) hide jobs everywhere, not
     // just Telegram alerts -- always enforced, no per-request override.
-    excludeCompanies: notificationPreferences?.excludeCompanies,
+    excludeCompanies: notificationPreferences?.blockedCompanies,
   };
 
   const activeResume = await resumeRepository.getActive();

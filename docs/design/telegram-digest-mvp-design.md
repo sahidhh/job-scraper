@@ -1,5 +1,7 @@
 # Telegram Digest MVP — Design
 
+> **✅ Implemented and shipped** — see `docs/reports/telegram-digest-mvp.md` and `NOTIFY_MODE=digest` in `design/user-guide.md` §9. This file is retained as the original pre-implementation design, not a pending task.
+
 **Branch:** `feature/telegram-digest-mvp`  
 **Date:** 2026-06-19  
 **Status:** Pre-implementation design

@@ -72,7 +72,7 @@ Updated in this session: `design/architecture.md` (scoring/notification pipeline
 feature entries + Theme 3 skip note), `design/use-cases.md` (UC-02, UC-06b new, UC-12, UC-13), `design/
 api-reference.md` (new/extended server actions), `design/user-guide.md` (Dashboard, Ranking Preferences,
 Notification Preferences, Analytics sections), `design/limitations.md` (§3.8 new), `design/tech-stack.md`
-(`SOURCE_STALE_HOURS`), `docs/decisions.md` (AD-25). Five theme reports + this final report added under
+(`SOURCE_STALE_HOURS`), `docs/decisions.md` (AD-26). Five theme reports + this final report added under
 `docs/reviews/2026-07-04/`.
 
 ## 8. Updated Backlog
@@ -120,7 +120,7 @@ Every remaining idea surfaced during investigation, ranked:
 `npx tsc --noEmit` clean · `npx vitest run` — 626+ tests passing across all touched suites (all new tests
 listed in the per-theme reports) · `npm run build` succeeds · `npm run check:service-role-boundary` passes.
 No live Supabase project was available in this sandboxed environment, so the one new migration
-(`20260704000003_ranking_overall_score.sql`) was reviewed carefully (mirroring the exact
+(`20260704000004_ranking_overall_score.sql`) was reviewed carefully (mirroring the exact
 `CREATE OR REPLACE FUNCTION`-with-appended-defaulted-parameters pattern that's safe in Postgres) but not
 replayed against a real database — flagged as the one remaining manual-verification step, consistent with
 how prior hardening passes have handled the same environment constraint.

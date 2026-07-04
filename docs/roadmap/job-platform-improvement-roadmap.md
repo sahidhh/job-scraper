@@ -1,5 +1,7 @@
 # Job Platform Improvement Roadmap
 
+> **Superseded by [`ROADMAP.md`](../../ROADMAP.md) (root, current as of the 2026-07-04 consolidation session).** Most of this doc's 8 initiatives are now done (Token Cost Tracking, Bangalore Source Expansion, source-validation scheduling, HR/contact-email detection via a different approach, Worth Reviewing via `digest_sessions` rather than the `telegram_interactions` design proposed here). This file is retained for its detailed effort/risk/dependency analysis on the still-open items (Scoring Logic Improvements, Experience Matching, per-model cost breakdown, Telegram alert on source failure) — check `ROADMAP.md`'s Backlog section first for current status before reading further.
+
 **Document version:** 1.0  
 **Date:** 2026-06-22  
 **Owner:** Platform / Engineering  

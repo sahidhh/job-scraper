@@ -80,6 +80,15 @@ parsing, no AI" extraction standard than `extractSalary`/`extractContactEmail`. 
 | Contact email extraction | `extractContactEmail` categorizes the best contact email per job (recruiter/hr/hiring_manager/company_contact + confidence), stored on `jobs.contact_email*`. Plain-text/regex only -- mailto:-only addresses not in visible text are not extracted (AD-21) |
 | Salary extraction | `extractSalary` normalizes currency/min/max/period/confidence from title+description (₹/$/S$/Rs symbols, USD/INR/SGD/AED codes, India-specific LPA/lakh units, yearly/monthly/hourly periods), stored on `jobs.salary_*`. Deterministic regex only, no AI (AD-22) |
 
+### P1.9 — Job Attributes & Personal Intelligence (shipped, v1.2)
+
+| Feature | Description |
+|---|---|
+| Job attribute extraction | `extractJobAttributes` deterministically tags employment type (internship/contract/freelance/temporary/part_time/full_time), seniority (executive/principal/lead/senior/entry/mid), work arrangement (hybrid/onsite), visa sponsorship, relocation assistance, security clearance, and urgent hiring from title+description at ingest, stored on `jobs.employment_type` etc. Regex-only, no AI |
+| Notification exclude filters | `NotificationPreferences.blockedCompanies` / `excludeEmploymentTypes` -- companies or employment types the user never wants alerted, ANDed with the existing include filters |
+| Notification preferences UI | `/settings` "Notification filters" card -- the P1.5 filters (previously only settable via direct `app_settings` write) plus the new exclude filters are now editable end-to-end |
+| Telegram "why this job" highlights | `buildJobHighlights` renders remote/urgent/salary/employment-type badges on both the individual-match and digest message formats, derived from data already computed at ingest (no extra AI calls) |
+
 ### P1.8 — AI Cost Optimization (in progress)
 
 | Feature | Description |
@@ -137,6 +146,9 @@ P0.5 — Source Health (shipped)
 
 P1 — Insights (current priority)
  └── Skill gaps, Skill demand
+
+P1.9 — Job Attributes & Personal Intelligence (v1.2, shipped)
+ └── Deterministic job attribute extraction, notification exclude filters, notification preferences UI, Telegram highlight badges
 
 P2 — Preferences
  └── Desired experience, App settings

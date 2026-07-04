@@ -1,5 +1,7 @@
 # Role Packs — Phase 1
 
+> **✅ Implemented and shipped.** See `design/use-cases.md` UC-06a and `docs/decisions.md`. This file is retained as the original pre-implementation design rationale, not a pending task.
+
 ## Problem
 
 The platform only allowed selecting a single primary role at a time. Users who search under multiple related titles (e.g. "Full Stack Developer", "Software Engineer", "React Developer") had to rely on the AI expansion step to cover related terms. This expansion is non-deterministic and requires an OpenRouter API call on every cache miss.

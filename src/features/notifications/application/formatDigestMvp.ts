@@ -1,6 +1,7 @@
 import type { JobMatch } from "@/features/notifications/domain/types";
 import { DIGEST_DISPLAY_LIMIT } from "@/features/notifications/domain/types";
 import { capitalizeFirst, escapeHtml } from "@/shared/infrastructure/text";
+import { buildJobHighlights } from "./buildJobHighlights";
 
 // Formats the primary digest message shown with inline Apply buttons.
 // Displays the counts for both bands, then lists top-N strong matches.
@@ -28,6 +29,10 @@ export function formatDigestMvp(
       lines.push("");
       lines.push(`${i + 1}. <b>${escapeHtml(match.title)}</b>`);
       lines.push(`   ${meta}`);
+      const highlights = buildJobHighlights(match);
+      if (highlights.length > 0) {
+        lines.push(`   ${escapeHtml(highlights.join(" · "))}`);
+      }
     });
   } else {
     lines.push("");
@@ -53,6 +58,10 @@ export function formatWorthReviewingMessage(worthReviewing: JobMatch[]): string 
       .join(" · ");
     lines.push(`${i + 1}. <b>${escapeHtml(match.title)}</b>`);
     lines.push(`   ${meta}`);
+    const highlights = buildJobHighlights(match);
+    if (highlights.length > 0) {
+      lines.push(`   ${escapeHtml(highlights.join(" · "))}`);
+    }
     lines.push("");
   });
 

@@ -17,7 +17,8 @@ function passesAllFilters(match: JobMatch, prefs: NotificationPreferences): bool
   if (!passesLocationFilter(match, prefs)) return false;
   if (!passesExperienceFilter(match, prefs)) return false;
   if (!passesSourceFilter(match, prefs)) return false;
-  if (!passesExcludedCompanyFilter(match, prefs)) return false;
+  if (!passesBlockedCompanyFilter(match, prefs)) return false;
+  if (!passesEmploymentTypeFilter(match, prefs)) return false;
   if (!passesExcludedKeywordFilter(match, prefs)) return false;
   return true;
 }
@@ -41,7 +42,10 @@ function resolveSkillToCanonical(skill: string, dictionary: readonly SkillDictio
 
 function passesSkillFilter(match: JobMatch, prefs: NotificationPreferences): boolean {
   if (!prefs.skills || prefs.skills.length === 0) return true;
-  const jobSkills = extractSkills(match.description, SKILLS_DICTIONARY);
+  // Must match scoreJob.ts's text source (title+description) -- a job that
+  // scores highly on a title-only skill mention (e.g. "React Developer")
+  // would otherwise be silently filtered out here despite matching scoring.
+  const jobSkills = extractSkills(`${match.title}\n${match.description}`, SKILLS_DICTIONARY);
   const jobSkillsLower = new Set(jobSkills.map((s) => s.toLowerCase()));
   return prefs.skills.some((skill) => {
     const canonical = resolveSkillToCanonical(skill, SKILLS_DICTIONARY);
@@ -67,10 +71,19 @@ function passesSourceFilter(match: JobMatch, prefs: NotificationPreferences): bo
   return prefs.sources.includes(match.source);
 }
 
-function passesExcludedCompanyFilter(match: JobMatch, prefs: NotificationPreferences): boolean {
-  if (!prefs.excludeCompanies || prefs.excludeCompanies.length === 0) return true;
+function passesBlockedCompanyFilter(match: JobMatch, prefs: NotificationPreferences): boolean {
+  if (!prefs.blockedCompanies || prefs.blockedCompanies.length === 0) return true;
   const companyLower = match.companyName.toLowerCase();
-  return !prefs.excludeCompanies.some((company) => companyLower.includes(company.toLowerCase()));
+  return !prefs.blockedCompanies.some((blocked) => companyLower.includes(blocked.toLowerCase()));
+}
+
+// null employmentType (unrecognized/unstated) always passes -- excluding by
+// a type we couldn't determine would silently hide jobs the user never
+// asked to exclude.
+function passesEmploymentTypeFilter(match: JobMatch, prefs: NotificationPreferences): boolean {
+  if (!prefs.excludeEmploymentTypes || prefs.excludeEmploymentTypes.length === 0) return true;
+  if (match.employmentType === null) return true;
+  return !prefs.excludeEmploymentTypes.includes(match.employmentType);
 }
 
 function passesExcludedKeywordFilter(match: JobMatch, prefs: NotificationPreferences): boolean {
