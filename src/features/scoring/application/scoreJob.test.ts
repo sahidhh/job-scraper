@@ -31,6 +31,16 @@ function makeJob(overrides: Partial<Job> = {}): Job {
     isActive: true,
     inactiveReason: null,
     minYears: null,
+    canonicalCompanyName: "Acme",
+    fingerprint: "test-fingerprint",
+    contactEmail: null,
+    contactEmailCategory: null,
+    contactEmailConfidence: null,
+    salaryCurrency: null,
+    salaryMin: null,
+    salaryMax: null,
+    salaryPeriod: null,
+    salaryConfidence: null,
     ...overrides,
   };
 }
@@ -52,6 +62,7 @@ function makeScoreRepository(): ScoreRepository {
   return {
     insertScore: vi.fn().mockResolvedValue(undefined),
     hasScore: vi.fn().mockResolvedValue(false) as ScoreRepository["hasScore"],
+    findAwaitingAi: vi.fn().mockResolvedValue([]),
   };
 }
 

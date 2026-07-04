@@ -25,6 +25,7 @@ function makeNotificationRepository(matches: JobMatch[] = []): NotificationRepos
   return {
     findUnnotifiedMatches: vi.fn().mockResolvedValue(matches),
     markNotified: vi.fn().mockResolvedValue(undefined),
+    markManyNotified: vi.fn().mockResolvedValue(undefined),
     listRecent: vi.fn().mockResolvedValue([]),
   };
 }
@@ -51,8 +52,7 @@ describe("sendDigest", () => {
 
     expect(count).toBe(2);
     expect(telegramSender.sendMessage).toHaveBeenCalledTimes(1);
-    expect(notificationRepository.markNotified).toHaveBeenCalledWith("job-1");
-    expect(notificationRepository.markNotified).toHaveBeenCalledWith("job-2");
+    expect(notificationRepository.markManyNotified).toHaveBeenCalledWith(["job-1", "job-2"]);
   });
 
   it("returns 0 and sends nothing when there are no unnotified matches", async () => {
@@ -68,7 +68,7 @@ describe("sendDigest", () => {
 
     expect(count).toBe(0);
     expect(telegramSender.sendMessage).not.toHaveBeenCalled();
-    expect(notificationRepository.markNotified).not.toHaveBeenCalled();
+    expect(notificationRepository.markManyNotified).not.toHaveBeenCalled();
   });
 
   it("throws DomainValidationError for an out-of-range notifyThreshold", async () => {
@@ -99,8 +99,7 @@ describe("sendDigest", () => {
     });
 
     expect(count).toBe(1);
-    expect(notificationRepository.markNotified).toHaveBeenCalledWith("job-1");
-    expect(notificationRepository.markNotified).not.toHaveBeenCalledWith("job-2");
+    expect(notificationRepository.markManyNotified).toHaveBeenCalledWith(["job-1"]);
   });
 
   it("sends all matches when preferences is null (no filtering)", async () => {
@@ -136,7 +135,7 @@ describe("sendDigest", () => {
       }),
     ).rejects.toThrow("Telegram error");
 
-    expect(notificationRepository.markNotified).not.toHaveBeenCalled();
+    expect(notificationRepository.markManyNotified).not.toHaveBeenCalled();
   });
 
   it("sends multiple Telegram messages when the digest exceeds the character limit", async () => {
@@ -163,6 +162,6 @@ describe("sendDigest", () => {
     expect(count).toBe(60);
     const callCount = (telegramSender.sendMessage as ReturnType<typeof vi.fn>).mock.calls.length;
     expect(callCount).toBeGreaterThan(1);
-    expect(notificationRepository.markNotified).toHaveBeenCalledTimes(60);
+    expect(notificationRepository.markManyNotified).toHaveBeenCalledWith(matches.map((m) => m.jobId));
   });
 });

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SupabaseDigestSessionRepository } from "@/features/notifications/infrastructure/SupabaseDigestSessionRepository";
-import { STRONG_MATCH_THRESHOLD } from "@/features/notifications/domain/types";
 import { createSupabaseServiceClient } from "@/shared/infrastructure/supabaseClient";
+import { PAGE_SIZE, buildButtons, formatPage, isValidSecret } from "./helpers";
 
 // Telegram webhook endpoint — handles callback_query updates from inline keyboard buttons.
 //
@@ -10,8 +10,6 @@ import { createSupabaseServiceClient } from "@/shared/infrastructure/supabaseCli
 //
 // Supported callback_data:
 //   "wr:N" — show page N (0-indexed, PAGE_SIZE jobs each) of the worth-reviewing list
-
-const PAGE_SIZE = 5;
 
 interface TelegramCallbackQuery {
   id: string;
@@ -34,7 +32,7 @@ interface JobRow {
 export async function POST(req: NextRequest): Promise<NextResponse> {
   const secret = process.env.TELEGRAM_CALLBACK_SECRET;
   const header = req.headers.get("x-telegram-bot-api-secret-token");
-  if (!secret || !header || header !== secret) {
+  if (!isValidSecret(secret, header)) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
 
@@ -138,40 +136,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
 
   return new NextResponse("OK", { status: 200 });
-}
-
-function formatPage(
-  jobs: { title: string; companyName: string; url: string; aiScore: number }[],
-  page: number,
-  totalPages: number,
-  total: number,
-): string {
-  const header = `📋 <b>Worth Reviewing</b> — Page ${page + 1}/${totalPages} (${total} total)\n`;
-  const lines = jobs.map(
-    (j, i) =>
-      `\n${page * PAGE_SIZE + i + 1}. <b>${escHtml(j.title)}</b> — ${escHtml(j.companyName)}\n` +
-      `   Score: ${Math.round(j.aiScore * 100)}% | <a href="${j.url}">Apply</a>`,
-  );
-  return header + lines.join("");
-}
-
-function buildButtons(
-  page: number,
-  totalPages: number,
-): { text: string; callback_data?: string; url?: string }[][] {
-  const appUrl = process.env.APP_URL?.replace(/\/$/, "");
-  const navRow: { text: string; callback_data: string }[] = [];
-  if (page > 0) navRow.push({ text: "← Prev", callback_data: `wr:${page - 1}` });
-  if (page < totalPages - 1) navRow.push({ text: "Next →", callback_data: `wr:${page + 1}` });
-
-  const rows: { text: string; callback_data?: string; url?: string }[][] = [];
-  if (navRow.length > 0) rows.push(navRow);
-  if (appUrl) rows.push([{ text: "📊 Dashboard", url: `${appUrl}/dashboard?minScore=${STRONG_MATCH_THRESHOLD}` }]);
-  return rows;
-}
-
-function escHtml(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
 async function answerCallbackQuery(id: string, text?: string): Promise<void> {

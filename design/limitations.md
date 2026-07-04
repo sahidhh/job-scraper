@@ -24,6 +24,18 @@ Only jobs seen after the platform was set up are stored. There is no backfill of
 ### 1.6 Job Expiration
 Jobs not seen in recent scrapes are soft-deactivated after `JOB_EXPIRATION_DAYS` (default 14). Inactive jobs are excluded from the dashboard, scoring, and notifications but are never deleted. Jobs may reactivate automatically if they reappear on the source board (upsert sets `is_active = true` and refreshes `last_seen_at`).
 
+### 1.7 Cross-Source Duplicate Detection Scope
+Fingerprint-based dedup (`docs/decisions.md` AD-16) only checks a new job against rows already persisted in the DB — it does not dedupe two postings that collide on fingerprint within the *same* scrape batch (same source, same run). This is rare in practice (would require one source listing the same title/company/location twice in one run) and is left unhandled rather than adding logic to resolve IDs for rows not yet inserted. Existing jobs ingested before the fingerprint migration have `fingerprint = ''` until `npm run backfill:fingerprints` is run once; until then they are not matched against by the cross-source check (fails safe — no false merges, just temporarily un-deduped). Title normalization also deliberately strips seniority modifiers (senior/sr/junior/jr/lead/staff/principal), so a Senior and non-senior posting for the same title/company/location are treated as the same logical job — acceptable for the stated use case, but worth knowing if it ever needs to change.
+
+### 1.8 Career Page Discovery Coverage
+Only board-token companies (greenhouse/lever/ashby) get a `company_career_pages` entry (deterministic, from `source`+`board_token`). Aggregator-sourced companies (wellfound/remoteok/mycareersfuture — see §1.1, these carry the bulk of job volume) have no career page discovered; guessing a company's domain from its name alone was deliberately not attempted this pass (`docs/decisions.md` AD-20) because it can't be verified reliably without a search API or live network validation against real companies.
+
+### 1.9 Contact Email Extraction Coverage
+`extractContactEmail` (`docs/decisions.md` AD-21) only sees the plain text left after each scraper's `stripHtml()` runs — an email address that exists only inside a `mailto:` href with non-email link text (e.g. `<a href="mailto:jane@co.com">Apply now</a>`) is invisible to it and `contact_email` stays null for that job, even though a real contact address exists. Categorization (recruiter/hr/hiring_manager/company_contact) is a local-part keyword match only, not text-proximity or NLP — most personal-name addresses (the common case) fall back to `company_contact`/`low` confidence rather than a more specific guess. The extraction regex's local-part character class is ASCII-only, so an address with an accented/non-Latin local part (e.g. `josé@company.com`) is not matched at all.
+
+### 1.10 Salary Extraction Coverage
+`extractSalary` (`docs/decisions.md` AD-22) only recognizes a fixed set of formats (₹/$/S$/Rs symbols; USD/INR/SGD/AED codes; India-specific LPA/lakh units; `/year`, `/month`, `/hour`-style periods). Postings that state salary in an unrecognized format (spelled-out numbers, other currencies/regions, a link to a separate compensation page) are not extracted — `jobs.salary_*` stays null, indistinguishable from "no salary mentioned at all." This is a deliberate false-negative-over-false-positive tradeoff (a bare number is never guessed as a salary without a currency/unit/period signal attached), not a bug. A range that repeats a currency *code* as a prefix on both bounds (e.g. "INR 800000 - INR 1200000 per annum") also collapses to a single figure (the first number only, `medium` confidence, no period) — the equivalent case for a repeated currency *symbol* ("$50,000 - $70,000 per year") is handled correctly; see the comment above `PATTERNS` in `extractSalary.ts`.
+
 ---
 
 ## 2. Resume & Skill Extraction
@@ -62,12 +74,15 @@ Scoring quality depends entirely on the configured `OPENROUTER_MODEL`. Changing 
 ### 3.5 No Score Invalidation on Resume Change
 Existing `job_scores` rows are not deleted when a new resume is activated. The new resume's skills will affect only newly scored jobs. The user must understand that old scores reflect the previous resume.
 
+### 3.7 AI Prompt Truncation
+Resume text and job descriptions are capped (`OPENROUTER_MAX_RESUME_PROMPT_CHARS`/`OPENROUTER_MAX_DESCRIPTION_PROMPT_CHARS`, defaults 4000/2000 chars) before being sent to the AI stage (`docs/decisions.md` AD-23) to control token cost. A resume or posting whose single most relevant detail appears only after the cap will lose that signal to the AI score/reasoning — a real, deliberate tradeoff, not a bug. The free keyword-gate stage (`extractSkills`) always sees the full untruncated text, so this never affects which jobs reach the AI stage, only what the AI sees once there.
+
 ---
 
 ## 4. Notifications
 
 ### 4.1 One-Time Guarantee Only
-The `notifications_log` table prevents duplicate sends for jobs already notified. However, if a Telegram send fails permanently (bot blocked, chat deleted), the job is never retried — it must be manually cleared from `notifications_log`.
+The `notifications_log` table prevents duplicate sends for jobs already notified (verified Phase 1 Task 4, `docs/decisions.md` AD-17: `markNotified`/`markManyNotified` only run after a successful Telegram send, so a failed send is retried on the next cron run rather than silently dropped). However, if the failure is permanent (bot blocked, chat deleted), every retry keeps failing the same way forever — there is no backoff or dead-letter handling, just an indefinitely-retried, indefinitely-failing job. There is also a narrow at-least-once (not exactly-once) window: if the Telegram send succeeds but the immediately-following `notifications_log` write itself throws, the job is re-sent on the next run. `sendDigest` (digest mode) has a coarser version of the same window: it sends one message per chunk but marks the *entire* batch notified only after every chunk succeeds, so a failure partway through re-sends the whole digest -- including chunks already delivered -- on the next run, rather than resuming from the failed chunk. This is a deliberate simplicity tradeoff (no per-chunk delivery tracking), not a bug.
 
 ### 4.2 Telegram Rate Limits
 The Telegram Bot API enforces rate limits (approximately 30 messages/second globally, 20 messages/minute per chat). Large batches of high-scoring jobs may experience queuing delays. The platform respects `retry_after` headers (capped at 30s).
@@ -129,3 +144,6 @@ Skill gap and skill demand insights are meaningful only when both an active resu
 | Manual wellfound feed URL configuration | Non-obvious setup step | P3 |
 | June DB migrations not yet applied | 25 broken sources, 10 should be disabled; 13 should be repaired | P0 |
 | 7 broken sources without repair/disable plan | Revolut, Grab, BrowserStack, Rippling, Deel, Freshworks, Wise — all returning 404, not in June migration scope | P1 |
+| Source-level health summary (`getSourceHealthReport`, Phase 1 Task 5/7) doesn't drive runtime behavior | Now surfaced on `/analytics` (Phase 4 Task 13), but still informational only — `scrape.ts`'s scraper-selection logic (`listActiveHealthy`) still only reads `companies.health_status`, not this summary | P2 |
+| Two independent, unreconciled source-health signals | `companies.health_status` (probe-driven, board-token sources only, drives auto-disable via `listActiveHealthy`) and the `scrape_runs`-derived summary (covers all sources, informational only) can disagree — e.g. a source can show `recommendation: "Healthy."` from recent scrape_runs while still `disabled` in `companies` if it hasn't been re-probed yet. `/analytics` now shows both tables side by side rather than merging them, so the disagreement is visible instead of hidden | P3 |
+| Scoring queue report (`getScoringQueueReport`, Phase 1 Task 6) has no alerting | Now surfaced on `/analytics` (Phase 4 Task 13) and still logged by `score.ts` every run; there's still no push alerting or auto-remediation for stuck jobs beyond the indefinite-retry behavior that already existed (AD-14) | P2 |

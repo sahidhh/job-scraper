@@ -33,6 +33,14 @@ export interface JobRepository {
    * Upsert on (source, sourceJobId). Preserves firstSeenAt on conflict,
    * bumps updatedAt. Batched internally by the implementation
    * (repositories.md §2).
+   *
+   * Before inserting a job with a (source, sourceJobId) not already in the
+   * table, its fingerprint (normalized title + canonical company +
+   * location, computeFingerprint.ts) is checked against every existing job
+   * regardless of source. A match means the same logical posting was
+   * already ingested from another source: the row is skipped (not
+   * inserted) and logged to job_duplicates for provenance instead --
+   * counted in UpsertResult.duplicates (Phase 1 Task 1).
    */
   upsertMany(jobs: NormalizedJob[]): Promise<UpsertResult>;
 

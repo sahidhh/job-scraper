@@ -11,6 +11,8 @@ import type {
   UpdateStatusInput,
   UpsertResult,
 } from "@/features/jobs/domain/types";
+import { computeFingerprint } from "@/features/jobs/application/computeFingerprint";
+import { normalizeCompanyName } from "@/features/companies/domain/normalizeCompanyName";
 import type { JobSource } from "@/shared/domain/enums";
 import { buildRoleFilter } from "@/shared/infrastructure/roleFilter";
 import type { TypedSupabaseClient } from "@/shared/infrastructure/supabaseClient";
@@ -20,6 +22,7 @@ import type { Database } from "../../../../supabase/database.types";
 type JobRow = Database["public"]["Tables"]["jobs"]["Row"];
 type JobInsertRow = Database["public"]["Tables"]["jobs"]["Insert"];
 type JobStatusRow = Database["public"]["Tables"]["job_statuses"]["Row"];
+type JobDuplicateInsertRow = Database["public"]["Tables"]["job_duplicates"]["Insert"];
 
 const ARCHIVED_STATUS_LABEL = "Archived";
 
@@ -58,6 +61,16 @@ function toJob(row: JobRow): Job {
     isActive: row.is_active,
     inactiveReason: row.inactive_reason,
     minYears: row.min_years ?? null,
+    canonicalCompanyName: row.canonical_company_name,
+    fingerprint: row.fingerprint,
+    contactEmail: row.contact_email,
+    contactEmailCategory: row.contact_email_category as Job["contactEmailCategory"],
+    contactEmailConfidence: row.contact_email_confidence as Job["contactEmailConfidence"],
+    salaryCurrency: row.salary_currency,
+    salaryMin: row.salary_min,
+    salaryMax: row.salary_max,
+    salaryPeriod: row.salary_period as Job["salaryPeriod"],
+    salaryConfidence: row.salary_confidence as Job["salaryConfidence"],
   };
 }
 
@@ -98,13 +111,14 @@ function toJobStatus(row: Pick<JobStatusRow, "id" | "label" | "color" | "sort_or
 // `first_seen_at` column default on insert) is preserved on conflict.
 // `last_seen_at` IS always written -- it stamps the current scrape run on
 // every touch (new or existing job), which is what the expiration sweep reads.
-function toUpsertRow(job: NormalizedJob): JobInsertRow {
+function toUpsertRow(job: NormalizedJob, fingerprint: string): JobInsertRow {
   const now = new Date().toISOString();
   return {
     source: job.source,
     source_job_id: job.sourceJobId,
     company_id: job.companyId,
     company_name: job.companyName,
+    canonical_company_name: normalizeCompanyName(job.companyName),
     title: job.title,
     location_raw: job.locationRaw,
     location_tags: job.locationTags,
@@ -115,11 +129,31 @@ function toUpsertRow(job: NormalizedJob): JobInsertRow {
     last_seen_at: now,
     is_active: true,
     min_years: job.minYears ?? null,
+    fingerprint,
+    contact_email: job.contactEmail ?? null,
+    contact_email_category: job.contactEmailCategory ?? null,
+    contact_email_confidence: job.contactEmailConfidence ?? null,
+    salary_currency: job.salaryCurrency ?? null,
+    salary_min: job.salaryMin ?? null,
+    salary_max: job.salaryMax ?? null,
+    salary_period: job.salaryPeriod ?? null,
+    salary_confidence: job.salaryConfidence ?? null,
   };
 }
 
 function jobKey(source: JobSource, sourceJobId: string): string {
   return `${source}:${sourceJobId}`;
+}
+
+function toDuplicateRow(job: NormalizedJob, canonicalJobId: string): JobDuplicateInsertRow {
+  const now = new Date().toISOString();
+  return {
+    canonical_job_id: canonicalJobId,
+    source: job.source,
+    source_job_id: job.sourceJobId,
+    url: job.url,
+    last_seen_at: now,
+  };
 }
 
 // repositories.md §2.
@@ -129,26 +163,110 @@ export class SupabaseJobRepository implements JobRepository {
   async upsertMany(jobs: NormalizedJob[]): Promise<UpsertResult> {
     let inserted = 0;
     let updated = 0;
+    let duplicates = 0;
 
     for (let i = 0; i < jobs.length; i += UPSERT_BATCH_SIZE) {
       const batch = jobs.slice(i, i + UPSERT_BATCH_SIZE);
       const existingKeys = await this.findExistingKeys(batch);
 
-      const { error } = await this.client
-        .from("jobs")
-        .upsert(batch.map(toUpsertRow), { onConflict: "source,source_job_id" });
-      if (error) throw toAppError(error);
+      // Fingerprint computed once per job and reused below (partitioning,
+      // duplicate lookup, upsert payload) instead of recomputing it per step.
+      const withFingerprint = batch.map((job) => ({ job, fingerprint: computeFingerprint(job) }));
 
-      for (const job of batch) {
+      // Jobs not already keyed by (source, source_job_id) are candidates for
+      // a fresh insert. Before inserting, check whether their fingerprint
+      // (normalized title + canonical company + location) already matches a
+      // job from a DIFFERENT source -- if so, it's the same logical posting
+      // rediscovered elsewhere, not a new job (Phase 1 Task 1). That job is
+      // skipped from the upsert and recorded as provenance in job_duplicates
+      // instead.
+      const candidateNew = withFingerprint.filter(({ job }) => !existingKeys.has(jobKey(job.source, job.sourceJobId)));
+      const canonicalByFingerprint = await this.findCanonicalByFingerprint(candidateNew.map((c) => c.fingerprint));
+
+      const toUpsert: { job: NormalizedJob; fingerprint: string }[] = [];
+      const duplicateRows: JobDuplicateInsertRow[] = [];
+      const canonicalJobIdsSeen = new Set<string>();
+
+      for (const entry of withFingerprint) {
+        const { job, fingerprint } = entry;
+        if (existingKeys.has(jobKey(job.source, job.sourceJobId))) {
+          toUpsert.push(entry);
+          continue;
+        }
+
+        const canonicalJobId = canonicalByFingerprint.get(fingerprint);
+        if (canonicalJobId) {
+          duplicateRows.push(toDuplicateRow(job, canonicalJobId));
+          canonicalJobIdsSeen.add(canonicalJobId);
+        } else {
+          toUpsert.push(entry);
+        }
+      }
+
+      if (toUpsert.length > 0) {
+        const { error } = await this.client
+          .from("jobs")
+          .upsert(
+            toUpsert.map(({ job, fingerprint }) => toUpsertRow(job, fingerprint)),
+            { onConflict: "source,source_job_id" },
+          );
+        if (error) throw toAppError(error);
+      }
+
+      if (duplicateRows.length > 0) {
+        await this.recordDuplicates(duplicateRows, canonicalJobIdsSeen);
+      }
+
+      for (const { job } of toUpsert) {
         if (existingKeys.has(jobKey(job.source, job.sourceJobId))) {
           updated += 1;
         } else {
           inserted += 1;
         }
       }
+      duplicates += duplicateRows.length;
     }
 
-    return { inserted, updated };
+    return { inserted, updated, duplicates };
+  }
+
+  // Fingerprints that already belong to a persisted job, regardless of
+  // source or active status -- the cross-source duplicate check. Returns a
+  // fingerprint -> canonical job id map. Cheap: one indexed IN-list query,
+  // no per-row comparison (avoid expensive comparisons, Phase 1 Task 1).
+  // Deliberately matches inactive (expired) jobs too -- recordDuplicates
+  // reactivates the canonical row, since a source rediscovering it means
+  // the posting is objectively still live.
+  private async findCanonicalByFingerprint(fingerprints: string[]): Promise<Map<string, string>> {
+    const result = new Map<string, string>();
+    const uniqueFingerprints = [...new Set(fingerprints)];
+    if (uniqueFingerprints.length === 0) return result;
+
+    const { data, error } = await this.client.from("jobs").select("id, fingerprint").in("fingerprint", uniqueFingerprints);
+    if (error) throw toAppError(error);
+
+    for (const row of data ?? []) {
+      if (!result.has(row.fingerprint)) result.set(row.fingerprint, row.id);
+    }
+    return result;
+  }
+
+  // Persists provenance for duplicate rows and reactivates the canonical
+  // job (last_seen_at refreshed, is_active restored) so a job that had
+  // expired under its original source doesn't stay hidden from the
+  // dashboard/scoring forever while still being listed elsewhere under a
+  // different source (Phase 1 Task 1).
+  private async recordDuplicates(duplicateRows: JobDuplicateInsertRow[], canonicalJobIds: Set<string>): Promise<void> {
+    const { error: duplicateError } = await this.client
+      .from("job_duplicates")
+      .upsert(duplicateRows, { onConflict: "source,source_job_id" });
+    if (duplicateError) throw toAppError(duplicateError);
+
+    const { error: touchError } = await this.client
+      .from("jobs")
+      .update({ last_seen_at: new Date().toISOString(), is_active: true, inactive_reason: null })
+      .in("id", [...canonicalJobIds]);
+    if (touchError) throw toAppError(touchError);
   }
 
   // (source, source_job_id) pairs already in `jobs`, queried one source at

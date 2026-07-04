@@ -116,12 +116,24 @@ flowchart LR
         F["Role Filter\n(expanded_roles)"]
         T["tagLocations()\n→ location_tags"]
         D["Drop\n(empty tags)"]
+        FP{"Fingerprint match?\n(cross-source dedup)"}
+        SKIP["Skip insert\n→ job_duplicates (provenance)"]
         U["Upsert jobs\n(source + source_job_id)"]
-        L["Log scrape_run\n(timing + counts)"]
+        L["Log scrape_run\n(timing + counts + duplicates)"]
     end
 
-    sources --> N --> F --> T --> D --> U --> L
+    sources --> N --> F --> T --> D --> FP
+    FP -- "yes, different source" --> SKIP --> L
+    FP -- "no" --> U --> L
 ```
+
+Cross-source duplicate detection (Phase 1 Task 1-3, `computeFingerprint.ts`): before a job with a
+new `(source, source_job_id)` is inserted, its fingerprint (normalized title + canonical company +
+sorted location tags) is checked against every existing job regardless of source. A match means the
+same logical posting was already ingested elsewhere -- it is recorded in `job_duplicates` for
+provenance instead of becoming a second `jobs` row, so scoring and notifications run once per
+logical job. Jobs already known by `(source, source_job_id)` always go through the normal
+update path, unaffected by the fingerprint check.
 
 ---
 
@@ -146,6 +158,30 @@ The three health states:
 | `unhealthy` | Consecutive failures below threshold | Included in scrape runs |
 | `disabled` | Failures ≥ SOURCE_DISABLE_THRESHOLD | Excluded from scrape runs |
 
+### 5.1 Source-Level Health Summary (Phase 1 Task 5/7)
+
+The probe-based tracking above only covers board-token sources (greenhouse/lever/ashby) via their
+`companies` rows, and only reacts to the separate `validate-sources.ts` cron -- a company whose
+*actual scrape* fails is invisible to it until the next probe run (AD-13/AD-16 follow-up). A second,
+independent signal now covers every source uniformly, including the feed-based ones with no
+`companies` row (wellfound/remoteok/mycareersfuture):
+
+```
+scrape.ts catch/success path
+  → classifyScrapeFailure(error) or 'empty_feed' (found_count === 0 on success)
+  → scrape_runs.failure_category
+  → computeSourceHealthSummary(source, recent scrape_runs)
+  → { successRate, avgLatencyMs, consecutiveFailures, lastSuccessAt/lastFailureAt,
+      recoveryDetected, topFailureCategory, recommendation }
+  → getSourceHealthReport(): one summary per registered source
+```
+
+Failure categories (`classifyScrapeFailure.ts`, deterministic keyword/status heuristics, no AI):
+`timeout | parsing | selector | captcha | blocked | authentication | rate_limited | not_found |
+empty_feed | unknown`. `selector`/`captcha` are extension points -- no current adapter does
+HTML/DOM scraping or hits a CAPTCHA wall. `getSourceHealthReport()` is surfaced on `/analytics`
+(Phase 4 Task 13).
+
 ---
 
 ## 6. Scoring Pipeline
@@ -166,6 +202,15 @@ flowchart TD
     SAVE_KW2 --> NEXT
     NEXT["Next job"] --> EACH
 ```
+
+Every save goes through the `upsert_job_score` RPC (erd.md), which atomically increments `retry_count`
+whenever the write leaves `ai_score` null. After each `score.ts` run, `getScoringQueueReport()` (Phase 1
+Task 6) queries `ScoreRepository.findAwaitingAi` (keyword gate passed, `ai_score IS NULL`, ordered
+oldest `scored_at` first) and computes `{ awaitingAiCount, oldestPendingAgeHours, stuckJobs,
+maxRetryCount, avgRetryCount }` via the pure `computeScoringQueueSummary`. "Stuck" jobs (waiting past
+`SCORING_STUCK_THRESHOLD_HOURS`, default 48h) are logged as a warning -- AD-14 already retries
+indefinitely, so this is visibility, not a new retry mechanism. `getScoringQueueReport()` is
+surfaced on `/analytics` (Phase 4 Task 13).
 
 ---
 

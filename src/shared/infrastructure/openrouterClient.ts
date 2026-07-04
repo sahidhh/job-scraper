@@ -24,6 +24,11 @@ export class OpenRouterError extends Error {
   constructor(
     message: string,
     readonly reason: AiFailureReason,
+    // Present when OpenRouter returned a 2xx with token usage but the body
+    // was otherwise unusable (missing/invalid content) -- those tokens were
+    // still billed, so callers can count them in cost tracking even though
+    // the call itself failed.
+    readonly usage?: TokenUsage,
   ) {
     super(message);
     this.name = "OpenRouterError";
@@ -76,27 +81,27 @@ export async function callOpenRouterJson(request: OpenRouterJsonRequest): Promis
   const model = requireEnv("OPENROUTER_MODEL");
   const maxTokens = Number(optionalEnv("OPENROUTER_MAX_TOKENS", String(DEFAULT_MAX_TOKENS)));
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-
   try {
-    const response = await fetchWithRetry(OPENROUTER_API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model,
-        messages: request.messages,
-        max_tokens: maxTokens,
-        response_format: {
-          type: "json_schema",
-          json_schema: { name: request.schemaName, strict: true, schema: request.schema },
+    const response = await fetchWithRetry(
+      OPENROUTER_API_URL,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
         },
-      }),
-      signal: controller.signal,
-    });
+        body: JSON.stringify({
+          model,
+          messages: request.messages,
+          max_tokens: maxTokens,
+          response_format: {
+            type: "json_schema",
+            json_schema: { name: request.schemaName, strict: true, schema: request.schema },
+          },
+        }),
+      },
+      { timeoutMs: REQUEST_TIMEOUT_MS },
+    );
 
     if (!response.ok) {
       const body = await response.text().catch(() => "");
@@ -109,24 +114,27 @@ export async function callOpenRouterJson(request: OpenRouterJsonRequest): Promis
     }
 
     const body = (await response.json()) as OpenRouterChatResponse;
-    const content = body.choices?.[0]?.message?.content;
-    if (!content) {
-      console.warn(`[openrouter] model=${model} max_tokens=${maxTokens} status=200 reason=malformed_response`);
-      throw new OpenRouterError("OpenRouter response missing message content", "malformed_response");
-    }
-
     const usage: TokenUsage = {
       promptTokens: body.usage?.prompt_tokens ?? null,
       completionTokens: body.usage?.completion_tokens ?? null,
     };
 
-    return { payload: JSON.parse(content) as unknown, usage };
+    const content = body.choices?.[0]?.message?.content;
+    if (!content) {
+      console.warn(`[openrouter] model=${model} max_tokens=${maxTokens} status=200 reason=malformed_response`);
+      throw new OpenRouterError("OpenRouter response missing message content", "malformed_response", usage);
+    }
+
+    try {
+      return { payload: JSON.parse(content) as unknown, usage };
+    } catch {
+      console.warn(`[openrouter] model=${model} max_tokens=${maxTokens} status=200 reason=malformed_response`);
+      throw new OpenRouterError("OpenRouter response content is not valid JSON", "malformed_response", usage);
+    }
   } catch (err) {
     if (err instanceof OpenRouterError) throw err;
     const reason: AiFailureReason = err instanceof Error && err.name === "AbortError" ? "timeout" : "unknown";
     console.warn(`[openrouter] model=${model} max_tokens=${maxTokens} reason=${reason}`);
     throw new OpenRouterError(err instanceof Error ? err.message : String(err), reason);
-  } finally {
-    clearTimeout(timeout);
   }
 }

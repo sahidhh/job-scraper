@@ -13,6 +13,25 @@ export interface LocationRow {
   locationTags: string[];
 }
 
+export interface CompanyNameRow {
+  companyName: string;
+}
+
+export interface SalaryRow {
+  currency: string | null;
+  min: number | null;
+  max: number | null;
+}
+
+// One row per scrape_runs entry, any status -- unlike ScrapeRunDataPoint
+// (success-only, feeds jobs-over-time/by-source charts), this feeds
+// pipeline-level failure/duplicate/latency stats (Phase 4 Task 13).
+export interface ScrapeRunStatRow {
+  status: string;
+  durationMs: number | null;
+  duplicateCount: number | null;
+}
+
 // A job that matches the active role selection, reduced to the fields the
 // insights use-cases need: text to extract skills from, and the AI score
 // (for optional weighting / "high-confidence demand" views).
@@ -56,4 +75,15 @@ export interface MatchedJobsRepository {
 
   /** Count of distinct AI-scored jobs per source for the given role selection. */
   getScoredJobsBySource(roleSelectionId: string): Promise<JobsBySourceEntry[]>;
+
+  // Phase 4 Task 13 analytics aggregations
+
+  /** company_name for all active jobs. Used for the jobs-by-company chart. */
+  getJobsCompanyData(): Promise<CompanyNameRow[]>;
+
+  /** salary_currency/min/max for all jobs. Used for the salary stats cards. */
+  getJobsSalaryData(): Promise<SalaryRow[]>;
+
+  /** status/duration_ms/duplicate_count for every scrape_runs row, any status. Used for pipeline stats. */
+  getScrapeRunStats(): Promise<ScrapeRunStatRow[]>;
 }

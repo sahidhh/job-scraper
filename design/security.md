@@ -40,6 +40,9 @@ WITH CHECK (true);
 | notifications_log | authenticated full access | authenticated |
 | scrape_runs | authenticated full access | authenticated |
 | app_settings | authenticated full access | authenticated |
+| job_duplicates | authenticated read-only (writes are service-role only, via scripts/scrape.ts) | authenticated |
+| company_career_pages | authenticated read-only (writes are service-role only, via scripts/discover-career-pages.ts) | authenticated |
+| digest_sessions | authenticated full access | authenticated |
 
 Anonymous or unauthenticated requests receive zero rows / permission denied.
 
@@ -134,7 +137,12 @@ This is a personal tool with a single user account. The security model is simple
 - No RBAC or permission tiers
 - No public signup — user account created manually in Supabase Auth dashboard
 - No API keys issued to third parties
-- No webhooks received from external services (outbound-only integrations)
+- One inbound webhook: `src/app/api/telegram/webhook/route.ts` receives Telegram
+  `callback_query` updates (inline-keyboard pagination on the "Worth Reviewing"
+  digest message). Gated on `X-Telegram-Bot-Api-Secret-Token` matching
+  `TELEGRAM_CALLBACK_SECRET`, not on Supabase auth -- `middleware.ts` excludes
+  `/api` from its auth-redirect matcher for this reason, and the route uses the
+  service-role client internally
 
 ---
 

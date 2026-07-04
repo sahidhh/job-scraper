@@ -1,4 +1,12 @@
-import type { ExperienceRow, LocationRow, MatchedJob, MatchedJobsRepository } from "@/features/insights/domain/MatchedJobsRepository";
+import type {
+  CompanyNameRow,
+  ExperienceRow,
+  LocationRow,
+  MatchedJob,
+  MatchedJobsRepository,
+  SalaryRow,
+  ScrapeRunStatRow,
+} from "@/features/insights/domain/MatchedJobsRepository";
 import type { JobsBySourceEntry, ScrapeRunDataPoint, StatusBreakdownEntry, TokenUsageStats } from "@/features/insights/domain/types";
 import { buildRoleFilter } from "@/shared/infrastructure/roleFilter";
 import type { TypedSupabaseClient } from "@/shared/infrastructure/supabaseClient";
@@ -30,6 +38,22 @@ interface MinYearsRow {
 
 interface LocationTagsRow {
   location_tags: string[] | null;
+}
+
+interface CompanyNameDbRow {
+  company_name: string;
+}
+
+interface SalaryDbRow {
+  salary_currency: string | null;
+  salary_min: number | null;
+  salary_max: number | null;
+}
+
+interface ScrapeRunStatDbRow {
+  status: string;
+  duration_ms: number | null;
+  duplicate_count: number | null;
 }
 
 export class SupabaseMatchedJobsRepository implements MatchedJobsRepository {
@@ -170,5 +194,44 @@ export class SupabaseMatchedJobsRepository implements MatchedJobsRepository {
     return Array.from(counts.entries())
       .map(([source, count]) => ({ source, count }))
       .sort((a, b) => b.count - a.count);
+  }
+
+  async getJobsCompanyData(): Promise<CompanyNameRow[]> {
+    const { data, error } = await this.client
+      .from("jobs")
+      .select("company_name")
+      .eq("is_active", true)
+      .returns<CompanyNameDbRow[]>();
+    if (error) throw toAppError(error);
+
+    return (data ?? []).map((row) => ({ companyName: row.company_name }));
+  }
+
+  async getJobsSalaryData(): Promise<SalaryRow[]> {
+    const { data, error } = await this.client
+      .from("jobs")
+      .select("salary_currency, salary_min, salary_max")
+      .returns<SalaryDbRow[]>();
+    if (error) throw toAppError(error);
+
+    return (data ?? []).map((row) => ({
+      currency: row.salary_currency,
+      min: row.salary_min,
+      max: row.salary_max,
+    }));
+  }
+
+  async getScrapeRunStats(): Promise<ScrapeRunStatRow[]> {
+    const { data, error } = await this.client
+      .from("scrape_runs")
+      .select("status, duration_ms, duplicate_count")
+      .returns<ScrapeRunStatDbRow[]>();
+    if (error) throw toAppError(error);
+
+    return (data ?? []).map((row) => ({
+      status: row.status,
+      durationMs: row.duration_ms,
+      duplicateCount: row.duplicate_count,
+    }));
   }
 }

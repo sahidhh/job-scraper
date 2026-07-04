@@ -9,11 +9,14 @@
     "start": "next start",
     "test": "vitest run",
     "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
     "scrape": "tsx scripts/scrape.ts",
     "score": "tsx scripts/score.ts",
     "notify": "tsx scripts/notify.ts",
     "check:service-role-boundary": "tsx scripts/checkServiceRoleBoundary.ts",
     "validate-sources": "tsx scripts/validate-sources.ts",
+    "backfill:fingerprints": "tsx scripts/backfill-fingerprints.ts",
+    "discover:career-pages": "tsx scripts/discover-career-pages.ts",
     "setup:webhook": "tsx scripts/setup-webhook.ts"
   },
   "dependencies": {

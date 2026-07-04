@@ -25,6 +25,7 @@ function makeNotificationRepository(matches: JobMatch[] = []): NotificationRepos
   return {
     findUnnotifiedMatches: vi.fn().mockResolvedValue(matches),
     markNotified: vi.fn().mockResolvedValue(undefined),
+    markManyNotified: vi.fn().mockResolvedValue(undefined),
     listRecent: vi.fn().mockResolvedValue([]),
   };
 }

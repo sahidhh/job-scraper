@@ -17,12 +17,23 @@ erDiagram
         timestamptz last_failure_at "nullable; set on failed probe"
     }
 
+    COMPANY_CAREER_PAGES {
+        uuid id PK
+        text canonical_company_name UK "normalizeCompanyName() output -- not FK'd to COMPANIES.id"
+        text career_page_url
+        text website_url "nullable"
+        text discovery_method "ats_board | domain_guess"
+        text confidence "high | medium | low"
+        timestamptz discovered_at
+    }
+
     JOBS {
         uuid id PK
         text source "greenhouse | lever | ashby | wellfound | remoteok | mycareersfuture"
         text source_job_id
         uuid company_id FK "nullable"
         text company_name
+        text canonical_company_name "normalizeCompanyName(company_name); legal/regional suffixes stripped"
         text title
         text location_raw
         text[] location_tags "india | singapore | uae | remote"
@@ -35,6 +46,25 @@ erDiagram
         integer min_years "nullable; CHECK 0-20; parsed at ingest + seniority-label fallback"
         boolean is_active "false when not seen for JOB_EXPIRATION_DAYS"
         text inactive_reason "nullable; 'expired' when set by sweep"
+        text fingerprint "sha256(normalized title + canonical company + location tags); cross-source dedup key"
+        text contact_email "nullable; best-effort, extractContactEmail.ts"
+        text contact_email_category "nullable; recruiter | hr | hiring_manager | company_contact"
+        text contact_email_confidence "nullable; high | medium | low"
+        text salary_currency "nullable; INR | USD | SGD | AED, extractSalary.ts"
+        numeric salary_min "nullable"
+        numeric salary_max "nullable"
+        text salary_period "nullable; yearly | monthly | hourly"
+        text salary_confidence "nullable; high | medium | low"
+    }
+
+    JOB_DUPLICATES {
+        uuid id PK
+        uuid canonical_job_id FK "-> JOBS; the one row kept for this logical job"
+        text source "the OTHER source that also carries this posting"
+        text source_job_id
+        text url
+        timestamptz first_seen_at
+        timestamptz last_seen_at "refreshed each time this source re-scrapes the duplicate"
     }
 
     JOB_SCORES {
@@ -50,6 +80,7 @@ erDiagram
         integer tokens_output "completion tokens from OpenRouter usage; null if no AI call"
         numeric estimated_cost_usd "cost estimate (tokens/1k * OPENROUTER_COST_PER_1K_TOKENS); null if env unset"
         timestamptz scored_at
+        integer retry_count "incremented by upsert_job_score() whenever a write leaves ai_score null; never reset"
     }
 
     JOB_STATUSES {
@@ -126,6 +157,8 @@ erDiagram
         integer kept_count "nullable; after location filter"
         integer inserted_count "nullable; net-new rows"
         integer updated_count "nullable; refreshed rows"
+        integer duplicate_count "nullable; cross-source fingerprint duplicates skipped (job_duplicates)"
+        text failure_category "nullable; classifyScrapeFailure.ts taxonomy, or 'empty_feed' on a successful zero-job run"
         integer failed_count "sub-run errors; 0 when source failed entirely"
         timestamptz started_at "nullable"
         timestamptz completed_at "nullable"
@@ -149,6 +182,7 @@ erDiagram
     JOB_STATUSES ||--o{ JOB_STATE : "assigned to"
     JOBS ||--o| NOTIFICATIONS_LOG : "notified once"
     ROLE_SELECTIONS ||--o{ DIGEST_SESSIONS : "scopes"
+    JOBS ||--o{ JOB_DUPLICATES : "rediscovered as"
 ```
 
 ---
@@ -159,8 +193,14 @@ erDiagram
 |---|---|---|
 | `jobs` | `UNIQUE (source, source_job_id)` | Dedup on every ingest run |
 | `jobs` | `GIN INDEX (location_tags)` | Fast array containment queries |
+| `jobs` | `INDEX (fingerprint)` | Cross-source duplicate lookup on insert (not unique -- app-level check-then-skip, see `SupabaseJobRepository.upsertMany`) |
+| `job_duplicates` | `UNIQUE (source, source_job_id)` | One provenance row per (other-source, id) rediscovery |
+| `company_career_pages` | `UNIQUE (canonical_company_name)` | One career page per canonicalized company name, upserted on rediscovery |
 | `job_scores` | `UNIQUE (job_id, role_selection_id, resume_version)` | One score per job+role+resume-version triple; prior-version rows preserved |
 | `job_scores` | `INDEX (ai_score DESC NULLS LAST)` | Dashboard sorted by relevance |
+| `job_scores` | `INDEX (role_selection_id, resume_version, scored_at) WHERE ai_score IS NULL` | `findAwaitingAi`'s unscored-queue shape |
+| `jobs` | `INDEX (is_active)` | Active-jobs filter shared by `findUnscored`/`countMatchingExpandedRoles`/`countJobStats`/`markExpiredJobs` (created in `20260618000001_expired_job_detection.sql`, not repeated by the 2026-07-04 hardening migration) |
+| `scrape_runs` | `INDEX (source, run_at DESC)` | `listRecentBySource` (per-source health report, called once per source per `/analytics` load) |
 | `resumes` | `UNIQUE (is_active) WHERE is_active = true` | Enforce single active resume |
 | `role_selections` | `UNIQUE (is_active) WHERE is_active = true` | Enforce single active role |
 | `notifications_log` | `UNIQUE (job_id)` | Guarantee at-most-one Telegram send |
@@ -191,6 +231,16 @@ erDiagram
 ```
 
 Both functions run in a single transaction, ensuring exactly one active record at all times.
+
+### `upsert_job_score(p_job_id, p_role_selection_id, p_resume_version, p_keyword_score, p_ai_score, p_ai_reasoning, p_model, p_tokens_input, p_tokens_output, p_estimated_cost_usd)`
+
+```
+1. INSERT INTO job_scores (…) ON CONFLICT (job_id, role_selection_id, resume_version)
+   DO UPDATE SET keyword_score/ai_score/ai_reasoning/model/tokens_*/estimated_cost_usd = excluded.*,
+                 retry_count = job_scores.retry_count + (1 if excluded.ai_score IS NULL else 0)
+```
+
+Atomic single-round-trip write + conditional counter increment (Phase 1 Task 6) -- a plain client-side `.upsert()` can't express "increment only when this write leaves ai_score null" without a read-modify-write per job.
 
 ---
 

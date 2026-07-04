@@ -31,6 +31,16 @@ const job: Job = {
   isActive: true,
   inactiveReason: null,
   minYears: null,
+  canonicalCompanyName: "Acme",
+  fingerprint: "test-fingerprint",
+  contactEmail: null,
+  contactEmailCategory: null,
+  contactEmailConfidence: null,
+  salaryCurrency: null,
+  salaryMin: null,
+  salaryMax: null,
+  salaryPeriod: null,
+  salaryConfidence: null,
 };
 
 const resume: Resume = {
@@ -141,6 +151,42 @@ describe("OpenRouterAiScoreProvider", () => {
     expect(stats.failuresByReason.malformed_response).toBe(1);
   });
 
+  it("still counts billed tokens when the response shape is malformed", async () => {
+    // Regression test: tokens were previously discarded on a shape-mismatch
+    // failure even though OpenRouter had already billed for them.
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(chatResponse({ score: "not-a-number" }, { prompt_tokens: 900, completion_tokens: 40 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const provider = new OpenRouterAiScoreProvider();
+    await provider.score({ job, resume });
+
+    const stats = provider.getStats();
+    expect(stats.totalTokensInput).toBe(900);
+    expect(stats.totalTokensOutput).toBe(40);
+  });
+
+  it("still counts billed tokens when the response has no usable content", async () => {
+    // Regression test: callOpenRouterJson throws before returning usage when
+    // content is missing/invalid -- those tokens were silently dropped.
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({ choices: [{ message: {} }], usage: { prompt_tokens: 700, completion_tokens: 0 } }),
+        { status: 200 },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const provider = new OpenRouterAiScoreProvider();
+    await provider.score({ job, resume });
+
+    const stats = provider.getStats();
+    expect(stats.failuresByReason.malformed_response).toBe(1);
+    expect(stats.totalTokensInput).toBe(700);
+    expect(stats.totalTokensOutput).toBe(0);
+  });
+
   it("getStats returns a snapshot that does not mutate with subsequent calls", async () => {
     const fetchMock = vi
       .fn()
@@ -245,5 +291,47 @@ describe("OpenRouterAiScoreProvider", () => {
     const body = JSON.parse((fetchMock.mock.calls[0]![1] as RequestInit).body as string);
     expect(body.messages[0].content).not.toContain("Candidate skills:");
     expect(body.messages[0].content).toContain(resume.parsedText);
+  });
+
+  it("truncates a resume longer than OPENROUTER_MAX_RESUME_PROMPT_CHARS (Phase 3 Task 11-12)", async () => {
+    process.env.OPENROUTER_MAX_RESUME_PROMPT_CHARS = "20";
+    const fetchMock = vi.fn().mockResolvedValue(chatResponse({ score: 0.8, reasoning: "ok" }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const longResume: Resume = { ...resume, parsedText: "a".repeat(100) };
+    const provider = new OpenRouterAiScoreProvider();
+    await provider.score({ job, resume: longResume });
+
+    const body = JSON.parse((fetchMock.mock.calls[0]![1] as RequestInit).body as string);
+    expect(body.messages[0].content).toContain(`${"a".repeat(20)}... [truncated]`);
+    expect(body.messages[0].content).not.toContain("a".repeat(21));
+    delete process.env.OPENROUTER_MAX_RESUME_PROMPT_CHARS;
+  });
+
+  it("truncates a job description longer than OPENROUTER_MAX_DESCRIPTION_PROMPT_CHARS (Phase 3 Task 11-12)", async () => {
+    process.env.OPENROUTER_MAX_DESCRIPTION_PROMPT_CHARS = "20";
+    const fetchMock = vi.fn().mockResolvedValue(chatResponse({ score: 0.8, reasoning: "ok" }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const longDescriptionJob: Job = { ...job, description: "b".repeat(100) };
+    const provider = new OpenRouterAiScoreProvider();
+    await provider.score({ job: longDescriptionJob, resume });
+
+    const body = JSON.parse((fetchMock.mock.calls[0]![1] as RequestInit).body as string);
+    expect(body.messages[1].content).toContain(`${"b".repeat(20)}... [truncated]`);
+    expect(body.messages[1].content).not.toContain("b".repeat(21));
+    delete process.env.OPENROUTER_MAX_DESCRIPTION_PROMPT_CHARS;
+  });
+
+  it("does not truncate text within the default caps", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(chatResponse({ score: 0.8, reasoning: "ok" }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const provider = new OpenRouterAiScoreProvider();
+    await provider.score({ job, resume });
+
+    const body = JSON.parse((fetchMock.mock.calls[0]![1] as RequestInit).body as string);
+    expect(body.messages[0].content).not.toContain("[truncated]");
+    expect(body.messages[1].content).not.toContain("[truncated]");
   });
 });

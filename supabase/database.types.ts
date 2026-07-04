@@ -71,6 +71,36 @@ export type Database = {
         }
         Relationships: []
       }
+      company_career_pages: {
+        Row: {
+          canonical_company_name: string
+          career_page_url: string
+          confidence: string
+          discovered_at: string
+          discovery_method: string
+          id: string
+          website_url: string | null
+        }
+        Insert: {
+          canonical_company_name: string
+          career_page_url: string
+          confidence: string
+          discovered_at?: string
+          discovery_method: string
+          id?: string
+          website_url?: string | null
+        }
+        Update: {
+          canonical_company_name?: string
+          career_page_url?: string
+          confidence?: string
+          discovered_at?: string
+          discovery_method?: string
+          id?: string
+          website_url?: string | null
+        }
+        Relationships: []
+      }
       digest_sessions: {
         Row: {
           id: string
@@ -108,6 +138,7 @@ export type Database = {
           keyword_score: number
           model: string | null
           resume_version: number
+          retry_count: number
           role_selection_id: string
           scored_at: string
           tokens_input: number | null
@@ -122,6 +153,7 @@ export type Database = {
           keyword_score: number
           model?: string | null
           resume_version: number
+          retry_count?: number
           role_selection_id: string
           scored_at?: string
           tokens_input?: number | null
@@ -136,6 +168,7 @@ export type Database = {
           keyword_score?: number
           model?: string | null
           resume_version?: number
+          retry_count?: number
           role_selection_id?: string
           scored_at?: string
           tokens_input?: number | null
@@ -217,9 +250,14 @@ export type Database = {
       }
       jobs: {
         Row: {
+          canonical_company_name: string
           company_id: string | null
           company_name: string
+          contact_email: string | null
+          contact_email_category: string | null
+          contact_email_confidence: string | null
           description: string
+          fingerprint: string
           first_seen_at: string
           id: string
           inactive_reason: string | null
@@ -229,6 +267,11 @@ export type Database = {
           location_tags: Database["public"]["Enums"]["location_tag"][]
           min_years: number | null
           posted_at: string | null
+          salary_confidence: string | null
+          salary_currency: string | null
+          salary_max: number | null
+          salary_min: number | null
+          salary_period: string | null
           source: Database["public"]["Enums"]["job_source"]
           source_job_id: string
           title: string
@@ -236,9 +279,14 @@ export type Database = {
           url: string
         }
         Insert: {
+          canonical_company_name?: string
           company_id?: string | null
           company_name: string
+          contact_email?: string | null
+          contact_email_category?: string | null
+          contact_email_confidence?: string | null
           description?: string
+          fingerprint?: string
           first_seen_at?: string
           id?: string
           inactive_reason?: string | null
@@ -248,6 +296,11 @@ export type Database = {
           location_tags?: Database["public"]["Enums"]["location_tag"][]
           min_years?: number | null
           posted_at?: string | null
+          salary_confidence?: string | null
+          salary_currency?: string | null
+          salary_max?: number | null
+          salary_min?: number | null
+          salary_period?: string | null
           source: Database["public"]["Enums"]["job_source"]
           source_job_id: string
           title: string
@@ -255,9 +308,14 @@ export type Database = {
           url: string
         }
         Update: {
+          canonical_company_name?: string
           company_id?: string | null
           company_name?: string
+          contact_email?: string | null
+          contact_email_category?: string | null
+          contact_email_confidence?: string | null
           description?: string
+          fingerprint?: string
           first_seen_at?: string
           id?: string
           inactive_reason?: string | null
@@ -267,6 +325,11 @@ export type Database = {
           location_tags?: Database["public"]["Enums"]["location_tag"][]
           min_years?: number | null
           posted_at?: string | null
+          salary_confidence?: string | null
+          salary_currency?: string | null
+          salary_max?: number | null
+          salary_min?: number | null
+          salary_period?: string | null
           source?: Database["public"]["Enums"]["job_source"]
           source_job_id?: string
           title?: string
@@ -279,6 +342,44 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      job_duplicates: {
+        Row: {
+          canonical_job_id: string
+          first_seen_at: string
+          id: string
+          last_seen_at: string
+          source: Database["public"]["Enums"]["job_source"]
+          source_job_id: string
+          url: string
+        }
+        Insert: {
+          canonical_job_id: string
+          first_seen_at?: string
+          id?: string
+          last_seen_at?: string
+          source: Database["public"]["Enums"]["job_source"]
+          source_job_id: string
+          url: string
+        }
+        Update: {
+          canonical_job_id?: string
+          first_seen_at?: string
+          id?: string
+          last_seen_at?: string
+          source?: Database["public"]["Enums"]["job_source"]
+          source_job_id?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_duplicates_canonical_job_id_fkey"
+            columns: ["canonical_job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
             referencedColumns: ["id"]
           },
         ]
@@ -437,9 +538,11 @@ export type Database = {
       scrape_runs: {
         Row: {
           completed_at: string | null
+          duplicate_count: number | null
           duration_ms: number | null
           error: string | null
           failed_count: number
+          failure_category: string | null
           found_count: number
           id: string
           inserted_count: number | null
@@ -453,9 +556,11 @@ export type Database = {
         }
         Insert: {
           completed_at?: string | null
+          duplicate_count?: number | null
           duration_ms?: number | null
           error?: string | null
           failed_count?: number
+          failure_category?: string | null
           found_count?: number
           id?: string
           inserted_count?: number | null
@@ -469,9 +574,11 @@ export type Database = {
         }
         Update: {
           completed_at?: string | null
+          duplicate_count?: number | null
           duration_ms?: number | null
           error?: string | null
           failed_count?: number
+          failure_category?: string | null
           found_count?: number
           id?: string
           inserted_count?: number | null
@@ -523,6 +630,21 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      upsert_job_score: {
+        Args: {
+          p_ai_reasoning: string | null
+          p_ai_score: number | null
+          p_estimated_cost_usd: number | null
+          p_job_id: string
+          p_keyword_score: number
+          p_model: string | null
+          p_resume_version: number
+          p_role_selection_id: string
+          p_tokens_input: number | null
+          p_tokens_output: number | null
+        }
+        Returns: undefined
       }
     }
     Enums: {

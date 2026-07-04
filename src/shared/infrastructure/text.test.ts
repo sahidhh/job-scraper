@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { extractRecruiterEmail, normalizeWhitespace, stripHtml } from "./text";
+import { normalizeWhitespace, stripHtml, truncateText } from "./text";
 
 describe("stripHtml", () => {
   it("converts block-level tags to line breaks", () => {
@@ -35,51 +35,18 @@ describe("normalizeWhitespace", () => {
   });
 });
 
-describe("extractRecruiterEmail", () => {
-  it("returns null when no email present", () => {
-    expect(extractRecruiterEmail("Apply via our website.")).toBeNull();
+describe("truncateText", () => {
+  it("returns text unchanged when at or under the limit", () => {
+    expect(truncateText("hello", 5)).toBe("hello");
+    expect(truncateText("hello", 10)).toBe("hello");
   });
 
-  it("extracts a plain recruiter email", () => {
-    expect(extractRecruiterEmail("Send CV to john.doe@techcorp.sg")).toBe("john.doe@techcorp.sg");
+  it("slices and appends a truncation marker when over the limit", () => {
+    expect(truncateText("hello world", 5)).toBe("hello... [truncated]");
   });
 
-  it("extracts email embedded in longer description", () => {
-    const text = "We are looking for a senior engineer.\nContact us at hiring@startup.io for more info.";
-    expect(extractRecruiterEmail(text)).toBe("hiring@startup.io");
-  });
-
-  it("skips noreply@ and returns null when no other email", () => {
-    expect(extractRecruiterEmail("Sent from noreply@ats.com")).toBeNull();
-  });
-
-  it("skips support@ and returns null when no other email", () => {
-    expect(extractRecruiterEmail("Questions? support@company.com")).toBeNull();
-  });
-
-  it("skips excluded prefix and returns next valid email", () => {
-    const text = "noreply@ats.com is automated. Reach recruiter at jane@company.com";
-    expect(extractRecruiterEmail(text)).toBe("jane@company.com");
-  });
-
-  it("skips all excluded prefixes: info, privacy, unsubscribe, careers, hello, contact", () => {
-    const excluded = [
-      "info@co.com",
-      "privacy@co.com",
-      "unsubscribe@co.com",
-      "careers@co.com",
-      "hello@co.com",
-      "contact@co.com",
-      "do-not-reply@co.com",
-      "donotreply@co.com",
-      "no-reply@co.com",
-    ];
-    for (const email of excluded) {
-      expect(extractRecruiterEmail(email)).toBeNull();
-    }
-  });
-
-  it("returns null for empty string", () => {
-    expect(extractRecruiterEmail("")).toBeNull();
+  it("handles empty string", () => {
+    expect(truncateText("", 10)).toBe("");
   });
 });
+

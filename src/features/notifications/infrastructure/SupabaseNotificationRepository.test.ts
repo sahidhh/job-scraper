@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mockSupabaseClient } from "@/shared/infrastructure/testing/supabaseQueryMock";
+import { mockSupabaseClient, queuedSupabaseClient } from "@/shared/infrastructure/testing/supabaseQueryMock";
 import { SupabaseNotificationRepository } from "./SupabaseNotificationRepository";
 
 describe("SupabaseNotificationRepository", () => {
@@ -87,6 +87,27 @@ describe("SupabaseNotificationRepository", () => {
     await repo.markNotified("job-1");
 
     expect(builder.upsert).toHaveBeenCalledWith({ job_id: "job-1" }, { onConflict: "job_id", ignoreDuplicates: true });
+  });
+
+  it("markManyNotified upserts all ids in a single call, onConflict 'job_id' ignoring duplicates", async () => {
+    const { client, builder } = mockSupabaseClient({ data: null, error: null });
+    const repo = new SupabaseNotificationRepository(client);
+
+    await repo.markManyNotified(["job-1", "job-2"]);
+
+    expect(builder.upsert).toHaveBeenCalledWith(
+      [{ job_id: "job-1" }, { job_id: "job-2" }],
+      { onConflict: "job_id", ignoreDuplicates: true },
+    );
+  });
+
+  it("markManyNotified does not query for an empty array", async () => {
+    const { client, builders } = queuedSupabaseClient([]);
+    const repo = new SupabaseNotificationRepository(client);
+
+    await repo.markManyNotified([]);
+
+    expect(builders).toHaveLength(0);
   });
 
   it("listRecent orders by sent_at desc, maps rows, and skips entries with no matching job", async () => {

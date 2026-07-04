@@ -126,6 +126,41 @@ describe("callOpenRouterJson", () => {
     expect((err as OpenRouterError).reason).toBe("malformed_response");
   });
 
+  it("throws OpenRouterError with reason malformed_response (not unknown) when content is not valid JSON", async () => {
+    // Regression test: a JSON.parse failure used to fall through to the
+    // generic catch block and get classified as "unknown" instead of
+    // "malformed_response".
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({ choices: [{ message: { content: "not json {" } }], usage: { prompt_tokens: 100, completion_tokens: 20 } }),
+        { status: 200 },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const err = await callOpenRouterJson({ messages: [], schemaName: "x", schema: {} }).catch((e) => e);
+
+    expect(err).toBeInstanceOf(OpenRouterError);
+    expect((err as OpenRouterError).reason).toBe("malformed_response");
+  });
+
+  it("attaches already-billed token usage to the thrown error when content is missing or invalid", async () => {
+    // Regression test: usage was computed before the malformed-response
+    // throw but discarded, undercounting real (billed) token spend.
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({ choices: [{ message: {} }], usage: { prompt_tokens: 500, completion_tokens: 0 } }),
+        { status: 200 },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const err = await callOpenRouterJson({ messages: [], schemaName: "x", schema: {} }).catch((e) => e);
+
+    expect(err).toBeInstanceOf(OpenRouterError);
+    expect((err as OpenRouterError).usage).toEqual({ promptTokens: 500, completionTokens: 0 });
+  });
+
   it("retries once on a 5xx response and succeeds on the second attempt", async () => {
     const fetchMock = vi
       .fn()

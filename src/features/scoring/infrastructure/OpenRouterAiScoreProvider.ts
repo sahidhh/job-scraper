@@ -1,8 +1,21 @@
 import type { Job } from "@/features/jobs/domain/types";
 import type { Resume } from "@/features/resume/domain/types";
 import type { AiScoreProvider, AiScoreResult } from "@/features/scoring/domain/AiScoreProvider";
-import { requireEnv } from "@/shared/infrastructure/env";
+import { optionalEnv, requireEnv } from "@/shared/infrastructure/env";
 import { type AiFailureReason, OpenRouterError, callOpenRouterJson } from "@/shared/infrastructure/openrouterClient";
+import { truncateText } from "@/shared/infrastructure/text";
+
+// Prompt-cost control (Phase 3 Task 11-12): the AI call is the expensive
+// part of scoring, so both inputs are capped before being sent. Resumes and
+// job descriptions carry their strongest matching signal in their first
+// portion (skills/summary up top, requirements early) -- truncating the
+// tail trades a small amount of recall on unusually long postings/resumes
+// for a real, direct reduction in prompt tokens on every single AI call.
+// Read per-call (not module-level), matching OPENROUTER_MAX_TOKENS's
+// pattern in openrouterClient.ts, so an env change takes effect immediately.
+function maxPromptChars(envVar: string, defaultValue: string): number {
+  return Number(optionalEnv(envVar, defaultValue));
+}
 
 const SCHEMA = {
   type: "object",
@@ -40,7 +53,7 @@ function buildSystemPrompt(resume: Resume): string {
   return [
     "You are an assistant that scores how well a job posting matches a candidate's resume.",
     "Candidate resume:",
-    resume.parsedText,
+    truncateText(resume.parsedText, maxPromptChars("OPENROUTER_MAX_RESUME_PROMPT_CHARS", "4000")),
     "Respond with score (a number from 0 to 1) and reasoning (1-3 sentences explaining the score).",
   ].join("\n");
 }
@@ -61,7 +74,7 @@ function buildJobPrompt(job: Job): string {
     lines.push(`Experience required: ${job.minYears}+ years`);
   }
 
-  lines.push("Description:", job.description);
+  lines.push("Description:", truncateText(job.description, maxPromptChars("OPENROUTER_MAX_DESCRIPTION_PROMPT_CHARS", "2000")));
   return lines.join("\n");
 }
 
@@ -102,6 +115,10 @@ export class OpenRouterAiScoreProvider implements AiScoreProvider {
       if (typeof result.score !== "number" || typeof result.reasoning !== "string") {
         this.failed += 1;
         this.failuresByReason.malformed_response += 1;
+        // OpenRouter already billed for these tokens even though the shape
+        // was unusable -- count them so cost tracking isn't an undercount.
+        this.totalTokensInput += usage.promptTokens ?? 0;
+        this.totalTokensOutput += usage.completionTokens ?? 0;
         console.warn(`[ai-score] job ${input.job.id}: failure_reason=malformed_response`);
         return null;
       }
@@ -121,6 +138,12 @@ export class OpenRouterAiScoreProvider implements AiScoreProvider {
       const reason: AiFailureReason = err instanceof OpenRouterError ? err.reason : "unknown";
       this.failed += 1;
       this.failuresByReason[reason] += 1;
+      if (err instanceof OpenRouterError && err.usage) {
+        // Already-billed tokens on a request that failed after the HTTP
+        // response came back (e.g. missing/invalid content).
+        this.totalTokensInput += err.usage.promptTokens ?? 0;
+        this.totalTokensOutput += err.usage.completionTokens ?? 0;
+      }
       console.warn(`[ai-score] job ${input.job.id}: failure_reason=${reason}`);
       return null;
     }

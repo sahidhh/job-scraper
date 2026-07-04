@@ -58,3 +58,35 @@ export interface TokenUsageStats {
   totalCostUsd: number;
   jobsScoredByAi: number;
 }
+
+// Phase 4 Task 13 analytics types
+
+export interface JobsByCompanyEntry {
+  company: string;
+  count: number;
+}
+
+// One entry per currency actually present in salary_currency -- job
+// postings quote pay in different currencies, so a single blended average
+// would be meaningless.
+export interface SalaryStatsEntry {
+  currency: string;
+  count: number;
+  avgMin: number;
+  avgMax: number;
+}
+
+export interface RemoteStats {
+  remoteCount: number;
+  totalCount: number;
+  remotePercentage: number; // 0-100, 0 when totalCount is 0
+}
+
+// Aggregated from scrape_runs across all statuses (unlike getScrapeRuns,
+// which is success-only for the jobs-over-time/by-source charts).
+export interface PipelineStats {
+  totalRuns: number;
+  failedRuns: number;
+  totalDuplicates: number;
+  avgDurationMs: number | null;
+}

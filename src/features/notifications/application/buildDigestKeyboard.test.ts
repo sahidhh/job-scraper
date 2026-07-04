@@ -39,14 +39,13 @@ describe("buildDigestKeyboard", () => {
     expect(rows[2]![0]).toEqual({ text: "Apply #3", url: "https://c.com" });
   });
 
-  it("adds 📧 Contact button when description contains a recruiter email", () => {
+  it("does not add a Contact button even when description contains a recruiter email (mailto: rejected by Telegram, BUTTON_URL_INVALID)", () => {
     const matches = [
       makeMatch({ url: "https://a.com", description: "Contact jane@startup.io for details." }),
     ];
     const rows = buildDigestKeyboard(matches, 0, {});
-    expect(rows[0]).toHaveLength(2);
+    expect(rows[0]).toHaveLength(1);
     expect(rows[0]![0]).toEqual({ text: "Apply #1", url: "https://a.com" });
-    expect(rows[0]![1]).toEqual({ text: "📧 Contact", url: "mailto:jane@startup.io" });
   });
 
   it("omits 📧 Contact button when description has no email", () => {
@@ -62,14 +61,14 @@ describe("buildDigestKeyboard", () => {
     expect(rows[0]).toHaveLength(1);
   });
 
-  it("mixes rows — contact button only on matches with recruiter email", () => {
+  it("every row is a single Apply button regardless of description content", () => {
     const matches = [
       makeMatch({ jobId: "a", url: "https://a.com", description: "reach alice@corp.com" }),
       makeMatch({ jobId: "b", url: "https://b.com", description: "" }),
     ];
     const rows = buildDigestKeyboard(matches, 0, {});
-    expect(rows[0]).toHaveLength(2); // has email
-    expect(rows[1]).toHaveLength(1); // no email
+    expect(rows[0]).toHaveLength(1);
+    expect(rows[1]).toHaveLength(1);
   });
 
   it("respects displayLimit — does not generate Apply buttons beyond it", () => {
