@@ -17,20 +17,32 @@ const NO_FIGURE_PATTERN = /\b(negotiable|competitive|doe|depends on experience|d
 const NUMBER = String.raw`[\d][\d,]*(?:\.\d+)?`;
 const RANGE_SEP = String.raw`(?:\s*(?:-|–|—|to)\s*)`;
 const PERIOD_WORD = String.raw`(?:year|yr|annum|pa|month|mo|hour|hr)`;
+const CURRENCY_SYMBOL = String.raw`(?:₹|S\$|\$|\bRs\.?)`;
+const CURRENCY_CODE = String.raw`(?:USD|INR|SGD|AED|LPA|lakhs?)`;
 
 // Tried in priority order -- each requires a currency symbol, currency
 // code, LPA/lakh unit, or explicit period phrase directly attached to the
 // number(s), so a bare number elsewhere in the description (e.g. "5+ years
-// of experience") is never mistaken for a salary figure.
+// of experience") is never mistaken for a salary figure. Pattern A's
+// optional non-capturing currency repeat before the second number handles
+// ranges that repeat the SYMBOL as a prefix on both bounds (e.g.
+// "$50,000 - $70,000") -- without it, RANGE_SEP stops right before the
+// repeated symbol and the second number is silently dropped, along with
+// any period word after it. Pattern B has no equivalent handling for a
+// repeated currency CODE (e.g. "INR 800000 - INR 1200000 per annum"):
+// its trailing-code shape means the first "INR" gets consumed as the
+// (mandatory) trailing code for the first number, and the range collapses
+// to a single figure -- this is a known limitation, not worth the added
+// pattern complexity for what's a rarer phrasing in practice.
 const PATTERNS: RegExp[] = [
-  // ₹18-24 LPA, $120k/year, S$8,000-10,000/month, Rs. 50,000/month
+  // ₹18-24 LPA, $120k/year, S$8,000-10,000/month, Rs. 50,000/month, $50,000 - $70,000/year
   new RegExp(
-    String.raw`(₹|S\$|\$|\bRs\.?)\s*(${NUMBER})${RANGE_SEP}?(${NUMBER})?\s*(k|lpa|lakhs?)?\s*(?:\/\s*|per\s*)?(${PERIOD_WORD})?`,
+    String.raw`(${CURRENCY_SYMBOL})\s*(${NUMBER})${RANGE_SEP}?(?:${CURRENCY_SYMBOL}\s*)?(${NUMBER})?\s*(k|lpa|lakhs?)?\s*(?:\/\s*|per\s*)?(${PERIOD_WORD})?`,
     "i",
   ),
   // 20 LPA, 35 USD/hour, 120,000 INR per month, 8-10 lakhs
   new RegExp(
-    String.raw`(${NUMBER})${RANGE_SEP}?(${NUMBER})?\s*(USD|INR|SGD|AED|LPA|lakhs?)\s*(?:\/\s*|per\s*)?(${PERIOD_WORD})?`,
+    String.raw`(${NUMBER})${RANGE_SEP}?(${NUMBER})?\s*(${CURRENCY_CODE})\s*(?:\/\s*|per\s*)?(${PERIOD_WORD})?`,
     "i",
   ),
   // 5000-7000 per month (period given, no currency at all -- ambiguous currency)

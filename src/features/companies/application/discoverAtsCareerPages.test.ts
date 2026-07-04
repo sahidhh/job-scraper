@@ -45,4 +45,19 @@ describe("discoverAtsCareerPages", () => {
     const result = discoverAtsCareerPages(companies);
     expect(result.map((p) => p.canonicalCompanyName)).toEqual(["Acme", "Gamma"]);
   });
+
+  it("de-duplicates by canonicalCompanyName when two companies share one (e.g. the same company on two ATS boards)", () => {
+    // Regression test: CareerPageRepository.upsertMany does a single batched
+    // upsert keyed on canonicalCompanyName -- Postgres rejects a multi-row
+    // upsert that targets the same conflict key twice, so this must never
+    // return two entries with the same canonicalCompanyName.
+    const companies = [
+      makeCompany({ id: "c1", name: "Acme Corp", source: "greenhouse", boardToken: "acme-gh" }),
+      makeCompany({ id: "c2", name: "Acme Inc", source: "lever", boardToken: "acme-lever" }),
+    ];
+    const result = discoverAtsCareerPages(companies);
+    expect(result).toHaveLength(1);
+    expect(result[0]!.canonicalCompanyName).toBe("Acme");
+    expect(result[0]!.careerPageUrl).toBe("https://jobs.lever.co/acme-lever");
+  });
 });

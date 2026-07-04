@@ -114,6 +114,33 @@ describe("extractSalary", () => {
     });
   });
 
+  it("parses a range with the currency symbol repeated on both bounds", () => {
+    // Regression test: RANGE_SEP used to stop right before the repeated "$",
+    // silently dropping the second number and the trailing period.
+    expect(extractSalary("Salary: $50,000 - $70,000 per year")).toEqual({
+      currency: "USD",
+      min: 50_000,
+      max: 70_000,
+      period: "yearly",
+      confidence: "high",
+    });
+  });
+
+  it("collapses to a single figure for a currency code repeated as a prefix on both bounds (known limitation)", () => {
+    // Pattern B's trailing-code shape consumes the first "INR" as the
+    // mandatory trailing code for the first number, so the range collapses
+    // to a single figure and the period word after the second number is
+    // never reached. Documented here as current behavior, not an
+    // aspiration -- see the comment above PATTERNS in extractSalary.ts.
+    expect(extractSalary("Salary: INR 800000 - INR 1200000 per annum")).toEqual({
+      currency: "INR",
+      min: 800_000,
+      max: 800_000,
+      period: null,
+      confidence: "medium",
+    });
+  });
+
   it("parses an Rs.-prefixed figure with an explicit period", () => {
     expect(extractSalary("Salary: Rs. 50,000/month")).toEqual({
       currency: "INR",

@@ -136,8 +136,33 @@ describe("SupabaseJobRepository", () => {
       ]);
       expect(duplicateUpsertCall[1]).toEqual({ onConflict: "source,source_job_id" });
 
-      expect(touchBuilder.update).toHaveBeenCalledWith({ last_seen_at: expect.any(String) });
+      expect(touchBuilder.update).toHaveBeenCalledWith({
+        last_seen_at: expect.any(String),
+        is_active: true,
+        inactive_reason: null,
+      });
       expect(touchBuilder.in).toHaveBeenCalledWith("id", ["job-1"]);
+    });
+
+    it("reactivates an expired canonical job when a duplicate is rediscovered under another source", async () => {
+      // Regression test: findCanonicalByFingerprint matches jobs regardless
+      // of is_active, so an expired job can be "the canonical" -- it must be
+      // reactivated, not left permanently hidden from the dashboard/scoring.
+      const duplicateJob = makeJob({ source: "wellfound", sourceJobId: "42", url: "https://wellfound.com/jobs/42" });
+      const { client, builders } = queuedSupabaseClient([
+        { data: [], error: null },
+        { data: [{ id: "expired-job", fingerprint: computeFingerprint(duplicateJob) }], error: null },
+        { data: null, error: null },
+        { data: null, error: null },
+      ]);
+      const repo = new SupabaseJobRepository(client);
+
+      await repo.upsertMany([duplicateJob]);
+
+      const touchBuilder = builders[3] as Record<string, ReturnType<typeof vi.fn>>;
+      expect(touchBuilder.update).toHaveBeenCalledWith(
+        expect.objectContaining({ is_active: true, inactive_reason: null }),
+      );
     });
   });
 
