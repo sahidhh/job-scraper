@@ -27,6 +27,23 @@ interface CompanyRepository {
 
 **Transaction boundaries:** none — every operation is a single-row write with no dependent side effects.
 
+## 1b. CareerPageRepository (`features/companies`, Phase 2 Task 8)
+
+```ts
+interface CareerPageRepository {
+  upsertMany(pages: NewCareerPage[]): Promise<void>;
+  list(): Promise<CareerPage[]>;
+}
+```
+
+**Responsibilities:** persists discovered careers-page URLs, keyed by `canonical_company_name` rather than `companies.id` so an entry can exist for a company with no board-token row at all.
+
+**Query patterns:**
+- `upsertMany(pages)` → `insert into company_career_pages (...) values (...) on conflict (canonical_company_name) do update set ...`. No-op (no query) for an empty array.
+- `list()` → `select * from company_career_pages`.
+
+**Transaction boundaries:** none. Written only by `scripts/discover-career-pages.ts` (not the scrape/score/notify cron).
+
 ## 2. JobRepository (`features/jobs`)
 
 ```ts

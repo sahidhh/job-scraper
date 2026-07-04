@@ -71,6 +71,36 @@ export type Database = {
         }
         Relationships: []
       }
+      company_career_pages: {
+        Row: {
+          canonical_company_name: string
+          career_page_url: string
+          confidence: string
+          discovered_at: string
+          discovery_method: string
+          id: string
+          website_url: string | null
+        }
+        Insert: {
+          canonical_company_name: string
+          career_page_url: string
+          confidence: string
+          discovered_at?: string
+          discovery_method: string
+          id?: string
+          website_url?: string | null
+        }
+        Update: {
+          canonical_company_name?: string
+          career_page_url?: string
+          confidence?: string
+          discovered_at?: string
+          discovery_method?: string
+          id?: string
+          website_url?: string | null
+        }
+        Relationships: []
+      }
       digest_sessions: {
         Row: {
           id: string

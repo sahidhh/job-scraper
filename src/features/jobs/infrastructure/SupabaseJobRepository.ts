@@ -12,7 +12,7 @@ import type {
   UpsertResult,
 } from "@/features/jobs/domain/types";
 import { computeFingerprint } from "@/features/jobs/application/computeFingerprint";
-import { normalizeCompanyName } from "@/features/jobs/application/normalizeCompanyName";
+import { normalizeCompanyName } from "@/features/companies/domain/normalizeCompanyName";
 import type { JobSource } from "@/shared/domain/enums";
 import { buildRoleFilter } from "@/shared/infrastructure/roleFilter";
 import type { TypedSupabaseClient } from "@/shared/infrastructure/supabaseClient";

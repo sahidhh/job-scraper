@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import type { LocationTag } from "@/shared/domain/enums";
 import { normalizeTitle } from "./normalizeTitle";
-import { normalizeCompanyName } from "./normalizeCompanyName";
+import { normalizeCompanyName } from "@/features/companies/domain/normalizeCompanyName";
 
 export interface FingerprintInput {
   title: string;

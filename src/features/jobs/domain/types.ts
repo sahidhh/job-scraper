@@ -9,7 +9,7 @@ export interface Job {
   companyName: string;
   // Deterministic normalization of companyName (legal suffix/regional
   // qualifier stripped, e.g. "Google LLC" -> "Google"). Computed at write
-  // time by the repository -- see normalizeCompanyName.ts.
+  // time by the repository -- see companies/domain/normalizeCompanyName.ts.
   canonicalCompanyName: string;
   title: string;
   locationRaw: string;

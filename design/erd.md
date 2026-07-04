@@ -17,6 +17,16 @@ erDiagram
         timestamptz last_failure_at "nullable; set on failed probe"
     }
 
+    COMPANY_CAREER_PAGES {
+        uuid id PK
+        text canonical_company_name UK "normalizeCompanyName() output -- not FK'd to COMPANIES.id"
+        text career_page_url
+        text website_url "nullable"
+        text discovery_method "ats_board | domain_guess"
+        text confidence "high | medium | low"
+        timestamptz discovered_at
+    }
+
     JOBS {
         uuid id PK
         text source "greenhouse | lever | ashby | wellfound | remoteok | mycareersfuture"
@@ -177,6 +187,7 @@ erDiagram
 | `jobs` | `GIN INDEX (location_tags)` | Fast array containment queries |
 | `jobs` | `INDEX (fingerprint)` | Cross-source duplicate lookup on insert (not unique -- app-level check-then-skip, see `SupabaseJobRepository.upsertMany`) |
 | `job_duplicates` | `UNIQUE (source, source_job_id)` | One provenance row per (other-source, id) rediscovery |
+| `company_career_pages` | `UNIQUE (canonical_company_name)` | One career page per canonicalized company name, upserted on rediscovery |
 | `job_scores` | `UNIQUE (job_id, role_selection_id, resume_version)` | One score per job+role+resume-version triple; prior-version rows preserved |
 | `job_scores` | `INDEX (ai_score DESC NULLS LAST)` | Dashboard sorted by relevance |
 | `resumes` | `UNIQUE (is_active) WHERE is_active = true` | Enforce single active resume |

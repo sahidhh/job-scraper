@@ -1,5 +1,5 @@
 import { computeFingerprint } from "@/features/jobs/application/computeFingerprint";
-import { normalizeCompanyName } from "@/features/jobs/application/normalizeCompanyName";
+import { normalizeCompanyName } from "@/features/companies/domain/normalizeCompanyName";
 import { createSupabaseServiceClient } from "@/shared/infrastructure/supabaseClient";
 
 const PAGE_SIZE = 500;

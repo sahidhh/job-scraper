@@ -54,6 +54,12 @@ A single technical professional (software engineer, data scientist, or similar) 
 | Scrape failure classification | `classifyScrapeFailure.ts` tags every failed/empty scrape_runs row with a deterministic category (timeout/parsing/selector/captcha/blocked/authentication/rate_limited/not_found/empty_feed) |
 | Pending-scoring queue monitoring | `getScoringQueueReport`/`computeScoringQueueSummary` surface AI-retry queue depth, oldest-pending age, stuck jobs, and retry counts (`job_scores.retry_count`, `upsert_job_score` RPC); logged by `score.ts` each run. Backend-only; no dashboard UI yet (Phase 4) |
 
+### P1.7 — Enrichment (in progress)
+
+| Feature | Description |
+|---|---|
+| Career page discovery | `discoverAtsCareerPages`/`company_career_pages` -- deterministic careers-page URL for every ATS-registry (greenhouse/lever/ashby) company, keyed by canonical company name. Aggregator-sourced companies (wellfound/remoteok/mycareersfuture) not yet covered -- see `docs/decisions.md` AD-20 |
+
 ### P2 — Medium Priority
 
 | Feature | Description |
