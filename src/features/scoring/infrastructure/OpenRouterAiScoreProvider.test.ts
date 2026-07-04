@@ -151,6 +151,42 @@ describe("OpenRouterAiScoreProvider", () => {
     expect(stats.failuresByReason.malformed_response).toBe(1);
   });
 
+  it("still counts billed tokens when the response shape is malformed", async () => {
+    // Regression test: tokens were previously discarded on a shape-mismatch
+    // failure even though OpenRouter had already billed for them.
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(chatResponse({ score: "not-a-number" }, { prompt_tokens: 900, completion_tokens: 40 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const provider = new OpenRouterAiScoreProvider();
+    await provider.score({ job, resume });
+
+    const stats = provider.getStats();
+    expect(stats.totalTokensInput).toBe(900);
+    expect(stats.totalTokensOutput).toBe(40);
+  });
+
+  it("still counts billed tokens when the response has no usable content", async () => {
+    // Regression test: callOpenRouterJson throws before returning usage when
+    // content is missing/invalid -- those tokens were silently dropped.
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({ choices: [{ message: {} }], usage: { prompt_tokens: 700, completion_tokens: 0 } }),
+        { status: 200 },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const provider = new OpenRouterAiScoreProvider();
+    await provider.score({ job, resume });
+
+    const stats = provider.getStats();
+    expect(stats.failuresByReason.malformed_response).toBe(1);
+    expect(stats.totalTokensInput).toBe(700);
+    expect(stats.totalTokensOutput).toBe(0);
+  });
+
   it("getStats returns a snapshot that does not mutate with subsequent calls", async () => {
     const fetchMock = vi
       .fn()

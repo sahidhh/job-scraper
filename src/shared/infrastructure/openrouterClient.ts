@@ -24,6 +24,11 @@ export class OpenRouterError extends Error {
   constructor(
     message: string,
     readonly reason: AiFailureReason,
+    // Present when OpenRouter returned a 2xx with token usage but the body
+    // was otherwise unusable (missing/invalid content) -- those tokens were
+    // still billed, so callers can count them in cost tracking even though
+    // the call itself failed.
+    readonly usage?: TokenUsage,
   ) {
     super(message);
     this.name = "OpenRouterError";
@@ -109,18 +114,23 @@ export async function callOpenRouterJson(request: OpenRouterJsonRequest): Promis
     }
 
     const body = (await response.json()) as OpenRouterChatResponse;
-    const content = body.choices?.[0]?.message?.content;
-    if (!content) {
-      console.warn(`[openrouter] model=${model} max_tokens=${maxTokens} status=200 reason=malformed_response`);
-      throw new OpenRouterError("OpenRouter response missing message content", "malformed_response");
-    }
-
     const usage: TokenUsage = {
       promptTokens: body.usage?.prompt_tokens ?? null,
       completionTokens: body.usage?.completion_tokens ?? null,
     };
 
-    return { payload: JSON.parse(content) as unknown, usage };
+    const content = body.choices?.[0]?.message?.content;
+    if (!content) {
+      console.warn(`[openrouter] model=${model} max_tokens=${maxTokens} status=200 reason=malformed_response`);
+      throw new OpenRouterError("OpenRouter response missing message content", "malformed_response", usage);
+    }
+
+    try {
+      return { payload: JSON.parse(content) as unknown, usage };
+    } catch {
+      console.warn(`[openrouter] model=${model} max_tokens=${maxTokens} status=200 reason=malformed_response`);
+      throw new OpenRouterError("OpenRouter response content is not valid JSON", "malformed_response", usage);
+    }
   } catch (err) {
     if (err instanceof OpenRouterError) throw err;
     const reason: AiFailureReason = err instanceof Error && err.name === "AbortError" ? "timeout" : "unknown";

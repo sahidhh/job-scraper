@@ -115,6 +115,10 @@ export class OpenRouterAiScoreProvider implements AiScoreProvider {
       if (typeof result.score !== "number" || typeof result.reasoning !== "string") {
         this.failed += 1;
         this.failuresByReason.malformed_response += 1;
+        // OpenRouter already billed for these tokens even though the shape
+        // was unusable -- count them so cost tracking isn't an undercount.
+        this.totalTokensInput += usage.promptTokens ?? 0;
+        this.totalTokensOutput += usage.completionTokens ?? 0;
         console.warn(`[ai-score] job ${input.job.id}: failure_reason=malformed_response`);
         return null;
       }
@@ -134,6 +138,12 @@ export class OpenRouterAiScoreProvider implements AiScoreProvider {
       const reason: AiFailureReason = err instanceof OpenRouterError ? err.reason : "unknown";
       this.failed += 1;
       this.failuresByReason[reason] += 1;
+      if (err instanceof OpenRouterError && err.usage) {
+        // Already-billed tokens on a request that failed after the HTTP
+        // response came back (e.g. missing/invalid content).
+        this.totalTokensInput += err.usage.promptTokens ?? 0;
+        this.totalTokensOutput += err.usage.completionTokens ?? 0;
+      }
       console.warn(`[ai-score] job ${input.job.id}: failure_reason=${reason}`);
       return null;
     }
