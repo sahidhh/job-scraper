@@ -43,7 +43,7 @@ A single technical professional (software engineer, data scientist, or similar) 
 | Feature | Description |
 |---|---|
 | Notification preferences | Configurable include filters: role, skill, location, experience, source — applied before Telegram delivery; editable via `/settings` → Notifications (continuous-improvement pass -- the backend action predated this UI) |
-| Company/keyword mute | `excludeCompanies`/`excludeKeywords` on `NotificationPreferences` mute Telegram alerts; `excludeCompanies` is also enforced on the dashboard job list (`JobFilters.excludeCompanies`), so a mute is a genuine "never show me this," not just a quieter alert |
+| Company/employment-type/keyword mute | `excludeCompanies`/`excludeEmploymentTypes`/`excludeKeywords` on `NotificationPreferences` mute Telegram alerts; all three are also enforced on the dashboard job list (`JobFilters.excludeCompanies`/`excludeEmploymentTypes`/`excludeKeywords`), so a mute is a genuine "never show me this," not just a quieter alert |
 
 ### P1.9 — Ranking & Search (continuous-improvement pass, shipped)
 
@@ -80,7 +80,7 @@ parsing, no AI" extraction standard than `extractSalary`/`extractContactEmail`. 
 | Contact email extraction | `extractContactEmail` categorizes the best contact email per job (recruiter/hr/hiring_manager/company_contact + confidence), stored on `jobs.contact_email*`. Plain-text/regex only -- mailto:-only addresses not in visible text are not extracted (AD-21) |
 | Salary extraction | `extractSalary` normalizes currency/min/max/period/confidence from title+description (₹/$/S$/Rs symbols, USD/INR/SGD/AED codes, India-specific LPA/lakh units, yearly/monthly/hourly periods), stored on `jobs.salary_*`. Deterministic regex only, no AI (AD-22) |
 
-### P1.9 — Job Attributes & Personal Intelligence (shipped, v1.2)
+### P1.11 — Job Attributes & Personal Intelligence (shipped, v1.2)
 
 | Feature | Description |
 |---|---|

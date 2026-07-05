@@ -207,9 +207,12 @@ async function JobsSection({
   const effectiveFilters: JobFilters = {
     ...filters,
     maxYears: filters.maxYears ?? desiredExperience ?? undefined,
-    // Muted companies (Settings → Notifications) hide jobs everywhere, not
-    // just Telegram alerts -- always enforced, no per-request override.
+    // Muted companies/employment-types/keywords (Settings → Notifications)
+    // hide jobs everywhere, not just Telegram alerts -- always enforced, no
+    // per-request override.
     excludeCompanies: notificationPreferences?.blockedCompanies,
+    excludeEmploymentTypes: notificationPreferences?.excludeEmploymentTypes,
+    excludeKeywords: notificationPreferences?.excludeKeywords,
   };
 
   const activeResume = await resumeRepository.getActive();

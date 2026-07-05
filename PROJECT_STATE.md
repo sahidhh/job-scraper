@@ -74,7 +74,7 @@ See §3 above and `design/user-guide.md` §9. Two live delivery modes (`individu
 
 ## 8. Operational Scripts
 
-See `OPERATIONS.md` for the full command reference and troubleshooting. Quick orientation: `npm run scrape/score/notify` (pipeline stages, also runnable manually), `npm run doctor` (env/connectivity preflight), `npm run health`/`diagnose`/`analytics`/`report:sources` (source-quality visibility), `npm run verify` (typecheck+test+build in one command), `npm run verify:production`/`diagnostics` (v1.4 production verification framework — 25 infrastructure/application/external/data-quality checks, health score, Ready/Needs Attention/Not Ready verdict; see `docs/operations/production-verification.md`), `npm run backfill:fingerprints`/`backfill:min-years` (one-off migrations-adjacent backfills), `npm run discover:career-pages`, `npm run setup:webhook`.
+See `OPERATIONS.md` for the full command reference and troubleshooting. Quick orientation: `npm run scrape/score/notify` (pipeline stages, also runnable manually), `npm run doctor` (env/connectivity preflight), `npm run health`/`diagnose`/`analytics`/`report:sources` (source-quality visibility), `npm run verify` (typecheck+test+build in one command), `npm run verify:production`/`diagnostics` (v1.4 production verification framework — 26 infrastructure/application/external/data-quality checks, health score, Ready/Needs Attention/Not Ready verdict; see `docs/operations/production-verification.md`), `npm run backfill:fingerprints`/`backfill:min-years` (one-off migrations-adjacent backfills), `npm run discover:career-pages`, `npm run setup:webhook`.
 
 ## 9. Deployment Flow
 

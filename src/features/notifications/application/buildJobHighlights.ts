@@ -17,7 +17,16 @@ const EMPLOYMENT_TYPE_LABEL: Record<EmploymentType, string> = {
   full_time: "Full-time",
 };
 
-function formatSalaryHighlight(match: JobMatch): string | null {
+// Only the signals this module actually reads -- narrower than JobMatch so
+// callers that don't have a full match (e.g. the webhook's own DB query,
+// which fetches a different column set) can build a compatible object
+// instead of needing every JobMatch field.
+export type JobHighlightSignals = Pick<
+  JobMatch,
+  "locationTags" | "urgentHiring" | "salaryMin" | "salaryMax" | "salaryCurrency" | "salaryPeriod" | "employmentType"
+>;
+
+function formatSalaryHighlight(match: JobHighlightSignals): string | null {
   if (match.salaryMin === null) return null;
 
   const currency = match.salaryCurrency ?? "";
@@ -38,7 +47,7 @@ function formatSalaryHighlight(match: JobMatch): string | null {
  * Full-time is the assumed default and is not called out as a badge; only
  * signals worth a second look are surfaced.
  */
-export function buildJobHighlights(match: JobMatch): string[] {
+export function buildJobHighlights(match: JobHighlightSignals): string[] {
   const highlights: string[] = [];
 
   if (match.locationTags.includes("remote")) highlights.push("\u{1F30D} Remote");

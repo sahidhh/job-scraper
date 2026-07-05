@@ -228,7 +228,7 @@ A single grouped Telegram message per cron run containing:
 - **Top 5 strong match listings** with company, location, and experience
 - **Inline keyboard buttons:**
   - One `Apply #N` button per listed strong match (up to 5), linking directly to the application URL
-  - `✓ Worth Reviewing (N)` button — tapping it sends a follow-up Telegram message listing the worth-reviewing jobs, with a `📊 Dashboard` button appended
+  - `✓ Worth Reviewing (N)` button — tapping it sends (or, on subsequent taps/page changes, edits in place) a paginated Telegram message listing the worth-reviewing jobs (5 per page, `←`/`→` buttons to page through), with a `📊 Dashboard` button appended
   - `📊 Dashboard` button — opens `APP_URL/dashboard?minScore=0.80`
 
 The Worth Reviewing and Dashboard buttons require `APP_URL` and `TELEGRAM_CALLBACK_SECRET` to be set. When either is absent those buttons are omitted silently.
@@ -250,14 +250,16 @@ Narrow which matched jobs actually trigger a Telegram alert, without changing `N
 | Sources | Only notify from these sources (`greenhouse`, `lever`, `ashby`, `wellfound`, `remoteok`, `mycareersfuture`) |
 | Min / Max experience | Only notify for jobs whose parsed `min_years` falls in this range (unknown experience always passes) |
 | Blocked companies | Never notify if the company name contains one of these — use this to silence staffing agencies or specific recruiters. Also hides matching jobs from the dashboard job list entirely, not just the alert |
-| Exclude employment types | Never notify for these employment types (`internship`, `contract`, `freelance`, `temporary`, `part_time`, `full_time`) — jobs whose type couldn't be determined are never excluded |
-| Muted keywords | Never notify if the job title contains one of these (e.g. "intern", "staffing") |
+| Exclude employment types | Never notify for these employment types (`internship`, `contract`, `freelance`, `temporary`, `part_time`, `full_time`) — jobs whose type couldn't be determined are never excluded. Also hides matching jobs from the dashboard job list |
+| Muted keywords | Never notify if the job title contains one of these (e.g. "intern", "staffing"). Also hides matching jobs from the dashboard job list |
+
+All three mute/exclude filters above (blocked companies, exclude employment types, muted keywords) are enforced everywhere — the dashboard job list as well as Telegram alerts — so muting something is a genuine "never show me this," not just a quieter notification stream.
 
 Click "Clear all" to remove every preference and revert to notify-all.
 
 ### "Why This Job" Highlights
 
-Every Telegram message (individual and digest modes) now includes a short highlight line when applicable, derived from data already extracted at ingest — no extra AI calls:
+Every Telegram message — individual mode, the digest's strong-match listing, and the paginated Worth Reviewing list reached via the button above — includes a short highlight line when applicable, derived from data already extracted at ingest — no extra AI calls:
 - 🌍 Remote
 - ⚡ Urgent hiring
 - 💰 Salary range (e.g. `USD120,000–150,000/yr`), when a salary was parsed from the posting

@@ -479,6 +479,22 @@ export class SupabaseJobRepository implements JobRepository {
         }
       }
     }
+    if (filters.excludeKeywords && filters.excludeKeywords.length > 0) {
+      for (const keyword of filters.excludeKeywords) {
+        const term = sanitizeRoleForFilter(keyword);
+        if (term.length > 0) {
+          query = query.not("title", "ilike", `%${term}%`);
+        }
+      }
+    }
+    if (filters.excludeEmploymentTypes && filters.excludeEmploymentTypes.length > 0) {
+      // Soft, same pattern as maxYears above: NULL employment_type ("unknown")
+      // always passes -- `.not(...in...)` alone would drop it, since SQL's
+      // NOT (NULL IN (...)) is NULL, not true, and WHERE treats NULL as false.
+      query = query.or(
+        `employment_type.is.null,employment_type.not.in.(${filters.excludeEmploymentTypes.join(",")})`,
+      );
+    }
     if (statusScope.restrictToIds) {
       query = query.in("id", statusScope.restrictToIds);
     }

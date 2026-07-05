@@ -41,7 +41,8 @@
 2. Jobs displayed in table sorted by overall_score descending (ai_score + configurable ranking
    bonuses, see UC-06b), then posted_at descending as tiebreaker
 3. User can filter by location, source, status, min/max score, max experience, and a free-text
-   search over title/company; muted companies (UC-13) are always excluded
+   search over title/company; muted companies, employment types, and keywords (UC-13) are always
+   excluded
 4. Pagination loads next page on demand
 
 **Postcondition:** User sees paginated, filtered job list with scores, ranking-bonus reasons, and statuses
@@ -235,9 +236,9 @@
 2. Client validates enum fields (locations/sources/employment types) against the known vocab before submitting
 3. `setNotificationPreferencesAction(prefs)` validates the shape server-side (`validateNotificationPreferences`) and upserts
 4. Preferences stored as JSON in `app_settings` under key `notification_preferences`
-5. Next notify cron run applies filters before sending; `blockedCompanies` is also applied to the dashboard job list (UC-02) via the same stored setting
+5. Next notify cron run applies filters before sending; `blockedCompanies`/`excludeEmploymentTypes`/`excludeKeywords` are also applied to the dashboard job list (UC-02) via the same stored setting
 
-**Alternate Flow (clear):** Clearing every field and saving calls `setNotificationPreferencesAction(null)`, which removes the row; cron reverts to notify-all and the dashboard stops muting any companies
+**Alternate Flow (clear):** Clearing every field and saving calls `setNotificationPreferencesAction(null)`, which removes the row; cron reverts to notify-all and the dashboard stops muting any companies/employment types/keywords
 
 ---
 

@@ -540,6 +540,40 @@ describe("SupabaseJobRepository", () => {
       expect(builder.not).toHaveBeenCalledWith("company_name", "ilike", "%Globex%");
     });
 
+    it("excludes jobs whose title matches any muted keyword via chained .not() ilike filters", async () => {
+      // Regression: excludeKeywords (Settings -> Notifications "Muted
+      // keywords") previously only suppressed Telegram alerts -- muted jobs
+      // still showed up on the dashboard, inconsistent with excludeCompanies
+      // which already hides muted-company jobs everywhere.
+      const { client, builder } = mockSupabaseClient({
+        data: [{ ...jobRow, job_scores: [] }],
+        error: null,
+      });
+      const repo = new SupabaseJobRepository(client);
+
+      await repo.findForDashboard("role-selection-1", { excludeKeywords: ["intern", "staffing"] }, 50, 1);
+
+      expect(builder.not).toHaveBeenCalledWith("title", "ilike", "%intern%");
+      expect(builder.not).toHaveBeenCalledWith("title", "ilike", "%staffing%");
+    });
+
+    it("excludes jobs whose employment_type is muted, without excluding unknown-type jobs", async () => {
+      // Regression: excludeEmploymentTypes previously only suppressed
+      // Telegram alerts. The dashboard filter must keep the same "unknown
+      // type is never excluded" rule NotificationPreferences already uses --
+      // a naive `.not(...in...)` would drop NULL rows too (SQL three-valued
+      // logic: NOT (NULL IN (...)) is NULL, not true).
+      const { client, builder } = mockSupabaseClient({
+        data: [{ ...jobRow, job_scores: [] }],
+        error: null,
+      });
+      const repo = new SupabaseJobRepository(client);
+
+      await repo.findForDashboard("role-selection-1", { excludeEmploymentTypes: ["internship", "contract"] }, 50, 1);
+
+      expect(builder.or).toHaveBeenCalledWith("employment_type.is.null,employment_type.not.in.(internship,contract)");
+    });
+
     it("maps the joined status and excludes Archived jobs by default", async () => {
       const { client, builders } = queuedSupabaseClient([
         { data: { id: "status-archived" }, error: null }, // statusIdByLabel(Archived)

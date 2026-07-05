@@ -158,6 +158,15 @@ export interface JobFilters {
   // company" mute is enforced consistently everywhere, not just in Telegram
   // alerts.
   excludeCompanies?: string[];
+  // Hide jobs whose employment_type is one of these -- muted employment
+  // types, sourced from notification preferences' excludeEmploymentTypes,
+  // same "enforce everywhere, not just alerts" rationale as excludeCompanies.
+  // A job with no determinable employment_type always passes (mirrors
+  // NotificationPreferences' own "unknown type is never excluded" rule).
+  excludeEmploymentTypes?: EmploymentType[];
+  // Hide jobs whose title contains any of these (case-insensitive substring)
+  // -- muted keywords, sourced from notification preferences' excludeKeywords.
+  excludeKeywords?: string[];
 }
 
 // Job joined with its score for the active role_selection. Omits
