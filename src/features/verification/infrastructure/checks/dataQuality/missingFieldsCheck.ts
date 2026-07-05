@@ -1,5 +1,6 @@
 import type { TypedSupabaseClient } from "@/shared/infrastructure/supabaseClient";
 import type { Check, CheckOutcome } from "@/features/verification/domain/types";
+import { SKIPPED_NO_SUPABASE_CLIENT } from "../skipOutcomes";
 
 const REQUIRED_FIELDS = ["title", "url", "company_name", "source_job_id"] as const;
 
@@ -10,7 +11,7 @@ export function missingRequiredFieldsCheck(client: TypedSupabaseClient | null): 
     category: "data-quality",
     severity: "high",
     async run(): Promise<CheckOutcome> {
-      if (!client) return { status: "warning", summary: "Skipped — Supabase client unavailable" };
+      if (!client) return SKIPPED_NO_SUPABASE_CLIENT;
 
       const details: string[] = [];
       let total = 0;
@@ -20,7 +21,13 @@ export function missingRequiredFieldsCheck(client: TypedSupabaseClient | null): 
           .select("id", { count: "exact", head: true })
           .eq("is_active", true)
           .eq(field, "");
-        if (error) return { status: "fail", summary: `Query failed on ${field}: ${error.message}` };
+        if (error) {
+          return {
+            status: "fail",
+            summary: `Query failed on ${field}: ${error.message}`,
+            affectedSubsystem: "Scraping pipeline (job ingest)",
+          };
+        }
         if ((count ?? 0) > 0) {
           details.push(`${field}: ${count} empty`);
           total += count ?? 0;
@@ -32,7 +39,10 @@ export function missingRequiredFieldsCheck(client: TypedSupabaseClient | null): 
           status: "fail",
           summary: `${total} active job row(s) missing a required field`,
           details,
-          recommendation: "Investigate the ingest path for the affected source(s) — required fields should never be empty.",
+          probableCause: "An ATS adapter returned a posting with a missing field that normalize()/ingestJobs.ts didn't reject, or an upstream API response shape changed.",
+          suggestedFix: "Check `npm run report:sources` for which source(s) recently ingested rows, then inspect that adapter's normalize step.",
+          affectedSubsystem: "Scraping pipeline (job ingest)",
+          docReference: "design/architecture.md §4",
         };
       }
       return { status: "pass", summary: "No active jobs missing a required field" };

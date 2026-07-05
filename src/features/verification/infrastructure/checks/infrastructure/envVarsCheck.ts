@@ -21,7 +21,7 @@ export function envVarsCheck(requiredVars: readonly string[], optionalVars: read
       const required = requiredVars.map(checkRequiredVar);
       const optional = optionalVars.map((v) => checkOptionalVar(v.name, v.fallback));
       const missing = required.filter((r) => r.status === "fail");
-      const missingOptional = optional.filter((r) => r.status === "warn");
+      const missingOptional = optional.filter((r) => r.status === "warning");
       const details = [...required, ...optional].map((r) => `${r.label}: ${r.detail}`);
 
       if (missing.length > 0) {
@@ -29,7 +29,10 @@ export function envVarsCheck(requiredVars: readonly string[], optionalVars: read
           status: "fail",
           summary: `${missing.length} required environment variable(s) missing: ${missing.map((m) => m.label).join(", ")}`,
           details,
-          recommendation: "Set the missing required environment variables (design/tech-stack.md §3) before deploying.",
+          probableCause: "A required secret/config var was never set, or was set under a different name in this environment.",
+          suggestedFix: `Set: ${missing.map((m) => m.label).join(", ")}.`,
+          affectedSubsystem: "Whichever pipeline stage owns the missing var (cron scrape/score/notify, or the web app)",
+          docReference: "design/tech-stack.md §3",
         };
       }
       if (missingOptional.length > 0) {
@@ -37,6 +40,10 @@ export function envVarsCheck(requiredVars: readonly string[], optionalVars: read
           status: "warning",
           summary: `All required environment variables set; ${missingOptional.length} optional var(s) relying on defaults`,
           details,
+          // Relying on a documented default is expected, not a defect -- see
+          // skipOutcomes.ts for the same "downstream, not a new finding"
+          // rationale applied to unavailable-client skips.
+          severityOverride: "low",
         };
       }
       return { status: "pass", summary: "All required and optional environment variables are set", details };

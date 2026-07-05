@@ -66,11 +66,21 @@ describe("computeHealthScore", () => {
 
   it("collects recommendations only from non-pass results", () => {
     const health = computeHealthScore([
-      makeResult({ status: "pass", recommendation: "should not appear" }),
-      makeResult({ id: "b", status: "warning", summary: "w", recommendation: "fix warning" }),
-      makeResult({ id: "c", status: "fail", severity: "low", summary: "f", recommendation: "fix fail" }),
+      makeResult({ status: "pass", suggestedFix: "should not appear" }),
+      makeResult({ id: "b", status: "warning", summary: "w", suggestedFix: "fix warning" }),
+      makeResult({ id: "c", status: "fail", severity: "low", summary: "f", suggestedFix: "fix fail" }),
     ]);
 
     expect(health.recommendations).toEqual(["fix warning", "fix fail"]);
+  });
+
+  it("deduplicates identical suggestedFix text across multiple checks sharing one root cause", () => {
+    const health = computeHealthScore([
+      makeResult({ id: "a", status: "warning", summary: "a", suggestedFix: "shared root cause fix" }),
+      makeResult({ id: "b", status: "warning", summary: "b", suggestedFix: "shared root cause fix" }),
+      makeResult({ id: "c", status: "warning", summary: "c", suggestedFix: "a different fix" }),
+    ]);
+
+    expect(health.recommendations).toEqual(["shared root cause fix", "a different fix"]);
   });
 });

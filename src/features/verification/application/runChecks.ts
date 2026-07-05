@@ -17,12 +17,12 @@ export async function runChecks(checks: readonly Check[], now: () => Date = () =
   for (const check of checks) {
     const start = Date.now();
     try {
-      const outcome = await check.run();
+      const { severityOverride, ...outcome } = await check.run();
       results.push({
         id: check.id,
         name: check.name,
         category: check.category,
-        severity: check.severity,
+        severity: severityOverride ?? check.severity,
         durationMs: Date.now() - start,
         ...outcome,
       });

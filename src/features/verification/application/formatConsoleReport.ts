@@ -31,8 +31,13 @@ export function formatConsoleReport(run: VerificationRun, health: HealthScore): 
     if (results.length === 0) continue;
     lines.push(`\n${CATEGORY_LABEL[category]}`);
     for (const r of results) {
-      lines.push(`  ${STATUS_ICON[r.status]} ${r.name} (${r.durationMs}ms) — ${r.summary}`);
-      if (r.recommendation) lines.push(`      → ${r.recommendation}`);
+      lines.push(`  ${STATUS_ICON[r.status]} ${r.name} [${r.severity}] (${r.durationMs}ms) — ${r.summary}`);
+      if (r.status !== "pass") {
+        if (r.affectedSubsystem) lines.push(`      subsystem: ${r.affectedSubsystem}`);
+        if (r.probableCause) lines.push(`      cause: ${r.probableCause}`);
+        if (r.suggestedFix) lines.push(`      fix: ${r.suggestedFix}`);
+        if (r.docReference) lines.push(`      docs: ${r.docReference}`);
+      }
     }
   }
 

@@ -1,5 +1,6 @@
 import type { TypedSupabaseClient } from "@/shared/infrastructure/supabaseClient";
 import type { Check, CheckOutcome } from "@/features/verification/domain/types";
+import { SKIPPED_NO_SUPABASE_CLIENT } from "../skipOutcomes";
 
 const HTTP_URL_PATTERN = /^https?:\/\//i;
 
@@ -18,10 +19,16 @@ export function brokenCareerUrlsCheck(client: TypedSupabaseClient | null): Check
     category: "data-quality",
     severity: "low",
     async run(): Promise<CheckOutcome> {
-      if (!client) return { status: "warning", summary: "Skipped — Supabase client unavailable" };
+      if (!client) return SKIPPED_NO_SUPABASE_CLIENT;
 
       const { data, error } = await client.from("company_career_pages").select("canonical_company_name, career_page_url");
-      if (error) return { status: "fail", summary: `Query failed: ${error.message}` };
+      if (error) {
+        return {
+          status: "fail",
+          summary: `Query failed: ${error.message}`,
+          affectedSubsystem: "Career page discovery",
+        };
+      }
 
       const invalid = (data ?? []).filter((r) => !HTTP_URL_PATTERN.test(r.career_page_url));
       if (invalid.length > 0) {
@@ -29,7 +36,10 @@ export function brokenCareerUrlsCheck(client: TypedSupabaseClient | null): Check
           status: "warning",
           summary: `${invalid.length} career page URL(s) are not well-formed http(s) URLs`,
           details: invalid.map((r) => r.canonical_company_name),
-          recommendation: "This check validates URL format only, not reachability, to avoid unbounded outbound requests.",
+          probableCause: "discoverAtsCareerPages.ts derived a URL from a board_token/company name in an unexpected way.",
+          suggestedFix: "This check validates URL format only, not reachability, to avoid unbounded outbound requests. Manually spot-check the listed companies' career_page_url.",
+          affectedSubsystem: "Career page discovery",
+          docReference: "design/limitations.md §1.8",
         };
       }
       return { status: "pass", summary: "All discovered career page URLs are well-formed" };

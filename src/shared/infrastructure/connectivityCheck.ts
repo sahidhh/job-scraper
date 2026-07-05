@@ -16,7 +16,7 @@ export async function checkSupabaseConnectivity(client: TypedSupabaseClient): Pr
 
 export async function checkTelegramToken(): Promise<EnvCheckResult> {
   const token = process.env.TELEGRAM_BOT_TOKEN;
-  if (!token) return { status: "warn", label: "Telegram bot token", detail: "TELEGRAM_BOT_TOKEN not set — skipped" };
+  if (!token) return { status: "warning", label: "Telegram bot token", detail: "TELEGRAM_BOT_TOKEN not set — skipped" };
 
   try {
     const response = await fetch(`https://api.telegram.org/bot${token}/getMe`, {

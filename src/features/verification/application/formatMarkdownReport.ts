@@ -46,18 +46,27 @@ export function formatMarkdownReport(run: VerificationRun, health: HealthScore):
     lines.push("");
     lines.push(`## ${CATEGORY_LABEL[category]}`);
     lines.push("");
-    lines.push("| Status | Check | Summary | Duration |");
-    lines.push("|---|---|---|---|");
+    lines.push("| Status | Check | Severity | Summary | Duration |");
+    lines.push("|---|---|---|---|---|");
     for (const r of results) {
-      lines.push(`| ${STATUS_LABEL[r.status]} | ${r.name} | ${r.summary} | ${r.durationMs}ms |`);
+      lines.push(`| ${STATUS_LABEL[r.status]} | ${r.name} | ${r.severity} | ${r.summary} | ${r.durationMs}ms |`);
     }
 
-    const withDetails = results.filter((r) => r.details && r.details.length > 0);
-    for (const r of withDetails) {
+    const needsDiagnostics = results.filter(
+      (r) => r.status !== "pass" && (r.probableCause || r.suggestedFix || r.affectedSubsystem || r.docReference || (r.details && r.details.length > 0)),
+    );
+    for (const r of needsDiagnostics) {
       lines.push("");
-      lines.push(`<details><summary>${r.name} — details</summary>`);
+      lines.push(`<details><summary>${r.name} — diagnostics</summary>`);
       lines.push("");
-      for (const line of r.details ?? []) lines.push(`- ${line}`);
+      if (r.affectedSubsystem) lines.push(`- **Affected subsystem:** ${r.affectedSubsystem}`);
+      if (r.probableCause) lines.push(`- **Probable cause:** ${r.probableCause}`);
+      if (r.suggestedFix) lines.push(`- **Suggested fix:** ${r.suggestedFix}`);
+      if (r.docReference) lines.push(`- **Docs:** ${r.docReference}`);
+      if (r.details && r.details.length > 0) {
+        lines.push("- **Details:**");
+        for (const line of r.details) lines.push(`  - ${line}`);
+      }
       lines.push("");
       lines.push("</details>");
     }

@@ -1,5 +1,6 @@
 import type { TypedSupabaseClient } from "@/shared/infrastructure/supabaseClient";
 import type { Check, CheckOutcome } from "@/features/verification/domain/types";
+import { SKIPPED_NO_SUPABASE_CLIENT } from "../skipOutcomes";
 
 const CORE_TABLES = ["jobs", "job_scores", "scrape_runs", "role_selections", "resumes"] as const;
 
@@ -11,7 +12,7 @@ export function dashboardReachabilityCheck(client: TypedSupabaseClient | null): 
     category: "application",
     severity: "high",
     async run(): Promise<CheckOutcome> {
-      if (!client) return { status: "warning", summary: "Skipped — Supabase client unavailable" };
+      if (!client) return SKIPPED_NO_SUPABASE_CLIENT;
 
       const failures: string[] = [];
       for (const table of CORE_TABLES) {
@@ -24,7 +25,10 @@ export function dashboardReachabilityCheck(client: TypedSupabaseClient | null): 
           status: "fail",
           summary: `${failures.length} table(s) unreachable`,
           details: failures,
-          recommendation: "Verify migrations are applied and RLS/service-role permissions are correct.",
+          probableCause: "A migration hasn't been applied, RLS/service-role permissions changed, or the table was renamed/dropped.",
+          suggestedFix: "Check the Database migrations check above; if that passes, verify RLS policies for the affected table(s).",
+          affectedSubsystem: "Dashboard / analytics web app",
+          docReference: "design/security.md §2",
         };
       }
       return { status: "pass", summary: "All dashboard/analytics tables reachable" };

@@ -56,4 +56,24 @@ describe("runChecks", () => {
 
     expect(run.generatedAt).toBe(fixedNow.toISOString());
   });
+
+  it("resolves severity from the outcome's severityOverride instead of the check's default", async () => {
+    const check = makeCheck({
+      severity: "critical",
+      run: async () => ({ status: "warning", summary: "downstream of an already-reported root cause", severityOverride: "low" }),
+    });
+
+    const run = await runChecks([check]);
+
+    expect(run.results[0]).toMatchObject({ severity: "low", status: "warning" });
+    expect(run.results[0]).not.toHaveProperty("severityOverride");
+  });
+
+  it("falls back to the check's own severity when no override is given", async () => {
+    const check = makeCheck({ severity: "high", run: async () => ({ status: "fail", summary: "no override" }) });
+
+    const run = await runChecks([check]);
+
+    expect(run.results[0]).toMatchObject({ severity: "high" });
+  });
 });

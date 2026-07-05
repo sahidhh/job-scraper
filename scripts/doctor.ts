@@ -7,7 +7,7 @@ import { checkSupabaseConnectivity, checkTelegramToken } from "@/shared/infrastr
 // missing/misconfigured var locally instead of via a failed GitHub Actions
 // run. Read-only: makes one lightweight Supabase query and one Telegram
 // getMe call, never touches job data.
-const ICON: Record<EnvCheckResult["status"], string> = { pass: "✓", warn: "⚠", fail: "✗" };
+const ICON: Record<EnvCheckResult["status"], string> = { pass: "✓", warning: "⚠", fail: "✗" };
 
 function printResults(section: string, results: EnvCheckResult[]): void {
   console.log(`\n${section}`);
@@ -46,14 +46,14 @@ async function main(): Promise<void> {
   if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
     connectivity.push(await checkSupabaseConnectivity(createSupabaseServiceClient()));
   } else {
-    connectivity.push({ status: "warn", label: "Supabase connectivity", detail: "skipped — required vars missing above" });
+    connectivity.push({ status: "warning", label: "Supabase connectivity", detail: "skipped — required vars missing above" });
   }
   connectivity.push(await checkTelegramToken());
   printResults("Connectivity", connectivity);
 
   const all = [...cronRequired, ...webRequired, ...optional, ...connectivity];
   const failCount = all.filter((r) => r.status === "fail").length;
-  const warnCount = all.filter((r) => r.status === "warn").length;
+  const warnCount = all.filter((r) => r.status === "warning").length;
 
   console.log(`\n${"=".repeat(70)}`);
   console.log(`${failCount} failing, ${warnCount} warning(s).`);

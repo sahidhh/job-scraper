@@ -1,4 +1,5 @@
 import type { Check, CheckOutcome } from "@/features/verification/domain/types";
+import { skippedMissingCredential } from "../skipOutcomes";
 
 /**
  * Lightweight OpenRouter reachability check -- hits the public /models
@@ -14,7 +15,7 @@ export function openRouterConnectivityCheck(): Check {
     severity: "high",
     async run(): Promise<CheckOutcome> {
       const apiKey = process.env.OPENROUTER_API_KEY;
-      if (!apiKey) return { status: "warning", summary: "Skipped — OPENROUTER_API_KEY not set" };
+      if (!apiKey) return skippedMissingCredential("OPENROUTER_API_KEY", "AI scoring / role expansion");
 
       try {
         const response = await fetch("https://openrouter.ai/api/v1/models", {
@@ -25,19 +26,31 @@ export function openRouterConnectivityCheck(): Check {
           return {
             status: "fail",
             summary: `OpenRouter returned HTTP ${response.status}`,
-            recommendation: "Verify OPENROUTER_API_KEY is valid and OpenRouter is not experiencing an outage.",
+            probableCause: response.status === 401 || response.status === 403
+              ? "OPENROUTER_API_KEY is invalid, revoked, or has been rotated."
+              : "OpenRouter is experiencing an outage or rate-limiting this key.",
+            suggestedFix: "Verify OPENROUTER_API_KEY in the OpenRouter dashboard and check https://status.openrouter.ai.",
+            affectedSubsystem: "AI scoring / role expansion",
           };
         }
         const body = (await response.json()) as { data?: unknown[] };
         if (!Array.isArray(body.data)) {
-          return { status: "fail", summary: "OpenRouter response did not include the expected `data` array" };
+          return {
+            status: "fail",
+            summary: "OpenRouter response did not include the expected `data` array",
+            probableCause: "OpenRouter changed its /models response shape.",
+            suggestedFix: "Check the OpenRouter API changelog; this check's assumption about the response shape may need updating.",
+            affectedSubsystem: "AI scoring / role expansion",
+          };
         }
         return { status: "pass", summary: `OpenRouter reachable (${body.data.length} models listed)` };
       } catch (err) {
         return {
           status: "fail",
           summary: `OpenRouter unreachable: ${err instanceof Error ? err.message : String(err)}`,
-          recommendation: "Check network access and https://status.openrouter.ai.",
+          probableCause: "Network access to openrouter.ai is blocked, or the request timed out after 8s.",
+          suggestedFix: "Check network access and https://status.openrouter.ai.",
+          affectedSubsystem: "AI scoring / role expansion",
         };
       }
     },

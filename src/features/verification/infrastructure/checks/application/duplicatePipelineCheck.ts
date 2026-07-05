@@ -1,5 +1,6 @@
 import type { TypedSupabaseClient } from "@/shared/infrastructure/supabaseClient";
 import type { Check, CheckOutcome } from "@/features/verification/domain/types";
+import { SKIPPED_NO_SUPABASE_CLIENT } from "../skipOutcomes";
 
 /**
  * Operational check: is the cross-source dedup pipeline (design/erd.md
@@ -15,20 +16,31 @@ export function duplicatePipelineCheck(client: TypedSupabaseClient | null): Chec
     category: "application",
     severity: "low",
     async run(): Promise<CheckOutcome> {
-      if (!client) return { status: "warning", summary: "Skipped — Supabase client unavailable" };
+      if (!client) return SKIPPED_NO_SUPABASE_CLIENT;
 
       const { count, error } = await client
         .from("jobs")
         .select("id", { count: "exact", head: true })
         .eq("is_active", true)
         .eq("fingerprint", "");
-      if (error) return { status: "fail", summary: `Query failed: ${error.message}` };
+      if (error) {
+        return {
+          status: "fail",
+          summary: `Query failed: ${error.message}`,
+          probableCause: "The `jobs` table is unreachable or the `fingerprint` column is missing.",
+          suggestedFix: "Check the Supabase connectivity and migrations checks above.",
+          affectedSubsystem: "Duplicate detection",
+        };
+      }
 
       if ((count ?? 0) > 0) {
         return {
           status: "warning",
           summary: `${count} active job(s) missing a fingerprint (pre-dedup rows)`,
-          recommendation: "Run `npm run backfill:fingerprints`.",
+          probableCause: "These rows were inserted before cross-source dedup (AD-16) shipped and have never been backfilled.",
+          suggestedFix: "Run `npm run backfill:fingerprints` once.",
+          affectedSubsystem: "Duplicate detection",
+          docReference: "design/limitations.md §1.7",
         };
       }
       return { status: "pass", summary: "All active jobs have a fingerprint" };

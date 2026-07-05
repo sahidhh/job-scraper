@@ -38,6 +38,10 @@ export function sourceFallbackConfigCheck(): Check {
         status,
         summary: status === "pass" ? "Source fallback configuration is consistent" : "Source fallback configuration has a contradiction",
         details,
+        probableCause: status === "warning" ? "WELLFOUND_FEED_URL and WELLFOUND_DISABLED were set independently, likely by different people/sessions, without checking for a conflict." : undefined,
+        suggestedFix: status === "warning" ? "Either unset WELLFOUND_DISABLED to actually use the configured feed, or remove WELLFOUND_FEED_URL if Wellfound is meant to stay off." : undefined,
+        affectedSubsystem: status === "warning" ? "Scraping pipeline (Wellfound source)" : undefined,
+        docReference: status === "warning" ? "docs/sources/wellfound.md" : undefined,
       };
     },
   };

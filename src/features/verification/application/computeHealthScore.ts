@@ -27,7 +27,11 @@ const SEVERITY_WEIGHT: Record<CheckResult["severity"], number> = {
  */
 export function computeHealthScore(results: readonly CheckResult[]): HealthScore {
   const totals: Record<CheckStatus, number> = { pass: 0, warning: 0, fail: 0 };
-  const recommendations: string[] = [];
+  // Dedup by exact text -- several checks legitimately share one root cause
+  // (e.g. every "Supabase client unavailable" skip points at the same fix),
+  // and repeating that advice a dozen times in the summary is noise, not
+  // diagnostics (operational-excellence pass, Phase 1).
+  const recommendations = new Set<string>();
   let score = 100;
   let criticalFailures = 0;
 
@@ -41,8 +45,8 @@ export function computeHealthScore(results: readonly CheckResult[]): HealthScore
       score -= SEVERITY_WEIGHT[result.severity] / 2;
     }
 
-    if (result.status !== "pass" && result.recommendation) {
-      recommendations.push(result.recommendation);
+    if (result.status !== "pass" && result.suggestedFix) {
+      recommendations.add(result.suggestedFix);
     }
   }
 
@@ -51,5 +55,5 @@ export function computeHealthScore(results: readonly CheckResult[]): HealthScore
   const verdict: Verdict =
     criticalFailures > 0 ? "not_ready" : totals.fail > 0 || totals.warning > 0 ? "needs_attention" : "ready";
 
-  return { score, verdict, totals, criticalFailures, recommendations };
+  return { score, verdict, totals, criticalFailures, recommendations: [...recommendations] };
 }

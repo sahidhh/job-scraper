@@ -133,7 +133,7 @@ These are explicitly banned by the project rules (CLAUDE.md):
 | `notify` | `tsx scripts/notify.ts` | Manual notification run |
 | `doctor` | `tsx scripts/doctor.ts` | (v1.2) Checks required/optional env vars are set and does a live Supabase + Telegram connectivity check; exit 1 if anything required is missing or unreachable |
 | `verify:production` | `tsx scripts/verify-production.ts --format=all` | (v1.4) Runs the 24-check production verification framework; writes `verification-reports/latest.{md,json}` + console; exit 1 only on a critical-severity ("not ready") failure |
-| `diagnostics` | `tsx scripts/verify-production.ts --format=console` | (v1.4) Same 24 checks, console-only, no files written -- quick ad-hoc health check |
+| `diagnostics` | `tsx scripts/verify-production.ts --format=console` | (v1.4) Same 26 checks, console-only, no files written -- quick ad-hoc health check |
 | `health` | `tsx scripts/validate-sources.ts` | (v1.2) Alias of `validate-sources` under the name used elsewhere in the mission's dev-experience vocabulary |
 | `diagnose` | `tsx scripts/report-sources.ts && tsx scripts/filter-analysis.ts` | (v1.2) Combined pipeline diagnostic: recent-run/failure report + fetch→location-filter→ingest funnel |
 | `analytics` | `tsx scripts/source-analytics.ts` | (v1.2) 30-day per-source quality report (keep rate, low performers) |

@@ -33,7 +33,10 @@ export function evaluateExtractionServices(text: string): CheckOutcome {
       status: "fail",
       summary: "One or more deterministic extractors returned unexpected output for a known sample",
       details: problems,
-      recommendation: "Review recent changes to extractSalary/extractContactEmail/extractJobAttributes for regressions.",
+      probableCause: "A recent change to extractSalary.ts/extractContactEmail.ts/extractJobAttributes.ts altered their regex patterns or output shape.",
+      suggestedFix: "Check recent diffs to the three extractor files against the sample text in EXTRACTION_SAMPLE_TEXT; run `npx vitest run` for their existing unit tests.",
+      affectedSubsystem: "Job ingest enrichment (salary/contact-email/job-attribute extraction)",
+      docReference: "docs/decisions.md AD-21/AD-22/AD-25",
     };
   }
   return { status: "pass", summary: "All deterministic extractors produced expected output for the smoke-test sample" };

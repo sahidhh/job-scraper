@@ -9,12 +9,22 @@ export function telegramConnectivityCheck(): Check {
     severity: "high",
     async run(): Promise<CheckOutcome> {
       const result = await checkTelegramToken();
-      if (result.status === "warn") return { status: "warning", summary: result.detail };
+      if (result.status === "warning") {
+        return {
+          status: "warning",
+          summary: result.detail,
+          suggestedFix: "See the \"Environment variables\" check; set TELEGRAM_BOT_TOKEN to enable this check.",
+          affectedSubsystem: "Telegram notifications",
+          severityOverride: "low",
+        };
+      }
       if (result.status === "fail") {
         return {
           status: "fail",
           summary: result.detail,
-          recommendation: "Verify TELEGRAM_BOT_TOKEN is valid and the bot has not been blocked/deleted.",
+          probableCause: "TELEGRAM_BOT_TOKEN is invalid, or the bot was blocked/deleted by @BotFather.",
+          suggestedFix: "Verify the token with @BotFather and confirm the bot still exists.",
+          affectedSubsystem: "Telegram notifications",
         };
       }
       return { status: "pass", summary: result.detail };

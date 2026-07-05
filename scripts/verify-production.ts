@@ -25,6 +25,7 @@ import { activeSingletonsCheck } from "@/features/verification/infrastructure/ch
 
 import { openRouterConnectivityCheck } from "@/features/verification/infrastructure/checks/external/openRouterCheck";
 import { telegramConnectivityCheck } from "@/features/verification/infrastructure/checks/external/telegramCheck";
+import { telegramWebhookCheck } from "@/features/verification/infrastructure/checks/external/telegramWebhookCheck";
 import { sourceFallbackConfigCheck } from "@/features/verification/infrastructure/checks/external/sourceFallbackConfigCheck";
 
 import { duplicateFingerprintsCheck } from "@/features/verification/infrastructure/checks/dataQuality/duplicateFingerprintsCheck";
@@ -45,6 +46,7 @@ import { SupabaseResumeRepository } from "@/features/resume/infrastructure/Supab
 import { getSourceHealthReport } from "@/features/sources/application/getSourceHealthReport";
 import { getScoringQueueReport } from "@/features/scoring/application/getScoringQueueReport";
 import type { ScoringQueueSummary } from "@/features/scoring/application/computeScoringQueueSummary";
+import type { SourceHealthSummary } from "@/features/sources/application/computeSourceHealthSummary";
 
 // Production Verification Framework composition root (v1.4 mission). Wires
 // existing repositories/report functions into the generic Check[] the
@@ -74,7 +76,21 @@ function buildClient(): TypedSupabaseClient | null {
   }
 }
 
-function buildQueueFetcher(client: TypedSupabaseClient): () => Promise<ScoringQueueSummary | null> {
+// Both fetchers resolve to null when there's no client, rather than being
+// conditionally omitted from buildChecks() -- keeps these checks appearing
+// in every report as a consistent low-severity skip, the same as every
+// other client-dependent check (operational-excellence pass, Phase 1: a
+// prior version silently dropped these three checks entirely when
+// credentials were missing, which was the one inconsistency in an
+// otherwise uniform "always show up, skip gracefully" contract).
+function buildHealthReportFetcher(client: TypedSupabaseClient | null): () => Promise<SourceHealthSummary[] | null> {
+  if (!client) return () => Promise.resolve(null);
+  const scrapeRunRepository = new SupabaseScrapeRunRepository(client);
+  return memoize(() => getSourceHealthReport(scrapeRunRepository));
+}
+
+function buildQueueFetcher(client: TypedSupabaseClient | null): () => Promise<ScoringQueueSummary | null> {
+  if (!client) return () => Promise.resolve(null);
   const scoreRepository = new SupabaseScoreRepository(client);
   const roleRepository = new SupabaseRoleRepository(client);
   const resumeRepository = new SupabaseResumeRepository(client);
@@ -133,6 +149,7 @@ function buildChecks(client: TypedSupabaseClient | null): Check[] {
 
     openRouterConnectivityCheck(),
     telegramConnectivityCheck(),
+    telegramWebhookCheck(),
     sourceFallbackConfigCheck(),
 
     duplicateFingerprintsCheck(client),
@@ -143,14 +160,10 @@ function buildChecks(client: TypedSupabaseClient | null): Check[] {
     inconsistentAiScoresCheck(client),
     staleJobsCheck(client),
     queueIntegrityCheck(client),
-  ];
 
-  if (client) {
-    const scrapeRunRepository = new SupabaseScrapeRunRepository(client);
-    const getHealthReport = memoize(() => getSourceHealthReport(scrapeRunRepository));
-    checks.push(...createSourceHealthChecks(getHealthReport));
-    checks.push(createScoringQueueCheck(buildQueueFetcher(client)));
-  }
+    ...createSourceHealthChecks(buildHealthReportFetcher(client)),
+    createScoringQueueCheck(buildQueueFetcher(client)),
+  ];
 
   return checks;
 }

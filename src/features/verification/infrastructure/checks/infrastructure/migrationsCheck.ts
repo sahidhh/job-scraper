@@ -1,5 +1,6 @@
 import type { TypedSupabaseClient } from "@/shared/infrastructure/supabaseClient";
 import type { Check, CheckOutcome } from "@/features/verification/domain/types";
+import { SKIPPED_NO_SUPABASE_CLIENT } from "../skipOutcomes";
 
 // A representative column from each of the more recent migrations
 // (design/erd.md) -- if PostgREST rejects the select, the column (and
@@ -19,7 +20,7 @@ export function migrationsCheck(client: TypedSupabaseClient | null): Check {
     category: "infrastructure",
     severity: "high",
     async run(): Promise<CheckOutcome> {
-      if (!client) return { status: "warning", summary: "Skipped — Supabase client unavailable" };
+      if (!client) return SKIPPED_NO_SUPABASE_CLIENT;
 
       const missing: string[] = [];
       for (const expectation of EXPECTATIONS) {
@@ -32,7 +33,10 @@ export function migrationsCheck(client: TypedSupabaseClient | null): Check {
           status: "fail",
           summary: `${missing.length} expected schema change(s) not detected`,
           details: missing,
-          recommendation: "Run `supabase db push` (or the migrate.yml workflow) to apply pending migrations.",
+          probableCause: "One or more forward-only migrations under supabase/migrations/ haven't been applied to this Supabase project yet.",
+          suggestedFix: "Run `supabase db push` locally, or trigger the `migrate.yml` GitHub Actions workflow.",
+          affectedSubsystem: "Supabase database schema",
+          docReference: "design/erd.md",
         };
       }
       return { status: "pass", summary: "All expected schema columns from recent migrations are present" };

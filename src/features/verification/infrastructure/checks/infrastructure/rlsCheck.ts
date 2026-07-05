@@ -15,7 +15,14 @@ export function rlsCheck(): Check {
     severity: "critical",
     async run(): Promise<CheckOutcome> {
       if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-        return { status: "warning", summary: "Skipped — NEXT_PUBLIC_SUPABASE_URL/NEXT_PUBLIC_SUPABASE_ANON_KEY not set" };
+        // Already a critical fail on infra.env-vars -- don't double-count it here.
+        return {
+          status: "warning",
+          summary: "Skipped — NEXT_PUBLIC_SUPABASE_URL/NEXT_PUBLIC_SUPABASE_ANON_KEY not set",
+          suggestedFix: "See the \"Environment variables\" check for the underlying cause.",
+          affectedSubsystem: "Web app authentication/RLS",
+          severityOverride: "low",
+        };
       }
 
       try {
@@ -30,12 +37,21 @@ export function rlsCheck(): Check {
           return {
             status: "fail",
             summary: "Unauthenticated request returned row(s) from `jobs` — RLS may be disabled or misconfigured",
-            recommendation: "Verify RLS is enabled with authenticated-only policies on every table (design/security.md §2).",
+            probableCause: "RLS is disabled on the `jobs` table, or its policy grants access beyond the `authenticated` role.",
+            suggestedFix: "Re-enable RLS and the authenticated-only policy on every table.",
+            affectedSubsystem: "Web app authentication/RLS",
+            docReference: "design/security.md §2",
           };
         }
         return { status: "pass", summary: "Unauthenticated request returned zero rows" };
       } catch (err) {
-        return { status: "warning", summary: `Could not verify RLS: ${err instanceof Error ? err.message : String(err)}` };
+        return {
+          status: "warning",
+          summary: `Could not verify RLS: ${err instanceof Error ? err.message : String(err)}`,
+          probableCause: "The anon-key client failed to construct or the probe query threw an unexpected network/auth error.",
+          suggestedFix: "Re-run this check; if it persists, verify NEXT_PUBLIC_SUPABASE_URL/NEXT_PUBLIC_SUPABASE_ANON_KEY are valid.",
+          affectedSubsystem: "Web app authentication/RLS",
+        };
       }
     },
   };
