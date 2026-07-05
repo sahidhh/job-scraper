@@ -315,3 +315,38 @@ flowchart LR
     Features --> DICT
     Features --> RMAP
 ```
+
+---
+
+## 11. Production Verification Framework (v1.4)
+
+```mermaid
+flowchart TB
+    subgraph domain ["src/features/verification/domain"]
+        TYPES["Check / CheckResult / CheckOutcome\n(zero project-specific logic)"]
+    end
+    subgraph application ["src/features/verification/application"]
+        RUN["runChecks()\nsequential, timed, never aborts on throw"]
+        SCORE["computeHealthScore()\nseverity-weighted, rule-based verdict"]
+        FMT["formatConsoleReport / formatMarkdownReport / formatJsonReport\n(pure)"]
+    end
+    subgraph infra ["src/features/verification/infrastructure/checks/"]
+        INFRA_C["infrastructure/ (6)\nenv vars · Supabase · migrations · RLS · storage · workflow config"]
+        APP_C["application/ (7)\nsource health · stale sources · scoring queue · duplicate pipeline ·\nnotification pipeline · dashboard reachability · extraction smoke-test · active singletons"]
+        EXT_C["external/ (3)\nOpenRouter · Telegram · source fallback config"]
+        DQ_C["dataQuality/ (8)\nduplicate fingerprints · missing fields · invalid salary/emails ·\nbroken career URLs · inconsistent scores · stale jobs · queue integrity"]
+    end
+    SCRIPT["scripts/verify-production.ts\n(composition root)"]
+
+    SCRIPT --> INFRA_C & APP_C & EXT_C & DQ_C
+    INFRA_C & APP_C & EXT_C & DQ_C -.implements.-> TYPES
+    SCRIPT --> RUN --> SCORE --> FMT
+```
+
+Same clean-architecture shape as every other feature (§1): domain has zero dependencies, application
+is pure orchestration (no I/O), infrastructure implements the `Check` interface, and the script is the
+composition root. Checks reuse existing reports rather than re-deriving them —
+`app.source-health`/`app.stale-sources` wrap `getSourceHealthReport()`, `app.scoring-queue` wraps
+`getScoringQueueReport()` — mirroring AD-24's "surface, don't merge" precedent. Exposed as
+`npm run verify:production` / `npm run diagnostics`; see `docs/operations/production-verification.md`
+for the full check catalog and `docs/decisions.md` AD-27 for the design rationale.

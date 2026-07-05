@@ -1,6 +1,6 @@
 # Project State
 
-Snapshot of what this repository is and does, as of the v1.2 consolidation pass (2026-07-04). This is the **first document to read** for a human or AI session picking this project up cold — it summarizes and cross-references the deeper docs rather than duplicating them. For a faster, terser AI-specific version, see `AI_HANDOFF.md`.
+Snapshot of what this repository is and does, updated through the v1.4 production-verification-framework build and its v1.x operational-excellence follow-up pass (2026-07-05). This is the **first document to read** for a human or AI session picking this project up cold — it summarizes and cross-references the deeper docs rather than duplicating them. For a faster, terser AI-specific version, see `AI_HANDOFF.md`.
 
 ## 1. What This Is
 
@@ -74,7 +74,7 @@ See §3 above and `design/user-guide.md` §9. Two live delivery modes (`individu
 
 ## 8. Operational Scripts
 
-See `OPERATIONS.md` for the full command reference and troubleshooting. Quick orientation: `npm run scrape/score/notify` (pipeline stages, also runnable manually), `npm run doctor` (env/connectivity preflight), `npm run health`/`diagnose`/`analytics`/`report:sources` (source-quality visibility), `npm run verify` (typecheck+test+build in one command), `npm run backfill:fingerprints`/`backfill:min-years` (one-off migrations-adjacent backfills), `npm run discover:career-pages`, `npm run setup:webhook`.
+See `OPERATIONS.md` for the full command reference and troubleshooting. Quick orientation: `npm run scrape/score/notify` (pipeline stages, also runnable manually), `npm run doctor` (env/connectivity preflight), `npm run health`/`diagnose`/`analytics`/`report:sources` (source-quality visibility), `npm run verify` (typecheck+test+build in one command), `npm run verify:production`/`diagnostics` (v1.4 production verification framework — 25 infrastructure/application/external/data-quality checks, health score, Ready/Needs Attention/Not Ready verdict; see `docs/operations/production-verification.md`), `npm run backfill:fingerprints`/`backfill:min-years` (one-off migrations-adjacent backfills), `npm run discover:career-pages`, `npm run setup:webhook`.
 
 ## 9. Deployment Flow
 
@@ -86,6 +86,6 @@ Vercel (Next.js web app) + Supabase (Postgres/Auth/Storage) + GitHub Actions (cr
 
 ## 11. Important Design Decisions
 
-The full numbered decision log (25 entries, AD-01 through AD-25) is `docs/decisions.md` — read it before making any architectural change; it explains *why*, not just *what*. Highest-signal ones for a new session: AD-01 (single-user, no multi-tenancy), AD-03 (repository pattern, why), AD-04 (standalone cron scripts, not API routes), AD-07/AD-14 (two-stage scoring, threshold history), AD-16 (fingerprint dedup, not fuzzy/AI), AD-11/AD-12 (forward-only migrations, RLS model).
+The full numbered decision log (28 entries, AD-01 through AD-28) is `docs/decisions.md` — read it before making any architectural change; it explains *why*, not just *what*. Highest-signal ones for a new session: AD-01 (single-user, no multi-tenancy), AD-03 (repository pattern, why), AD-04 (standalone cron scripts, not API routes), AD-07/AD-14 (two-stage scoring, threshold history), AD-16 (fingerprint dedup, not fuzzy/AI), AD-11/AD-12 (forward-only migrations, RLS model), AD-27/AD-28 (production verification framework + its severity/diagnostics refinement).
 
 **A caveat that has applied to every schema-touching phase, including v1.2:** `supabase/database.types.ts` is a generated file **manually kept in sync** in this sandboxed environment (no live Supabase project to run `supabase gen types` against). Anyone applying migrations to a real project should regenerate it and diff against the manual edits.

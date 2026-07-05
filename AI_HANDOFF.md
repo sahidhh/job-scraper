@@ -17,6 +17,8 @@ Read this first. It's the minimum needed to be productive in this repo without r
 - **New DB columns:** add a forward-only migration in `supabase/migrations/` (never edit a merged one) **and** manually update `supabase/database.types.ts` to match — there is no live Supabase project in this environment to run `supabase gen types` against, so the generated-types file is hand-maintained. Also update `design/erd.md` (the canonical schema doc — **not** `docs/database.md`, which is stale, marked as such at its own top).
 - **Verify before calling anything done:** `npm run verify` (typecheck + full test suite + production build). This is the single command; use it, don't run the three separately and forget one.
 - **`npm run doctor`** if anything env-related looks wrong locally — it checks required/optional vars and does a live Supabase+Telegram connectivity probe.
+- **`npm run diagnostics`** (or `verify:production` for a saved report) for a full operational health snapshot — 26 checks across infrastructure/application/external services/data quality, each with a probable cause and suggested fix, not just pass/fail. See `docs/operations/production-verification.md`. Not the same tool as `npm run diagnose` (older, source-quality-specific) — similar name, different purpose.
+- **Adding a new verification check?** Follow `docs/operations/production-verification.md` §1.1 exactly (shared skip outcome for missing Supabase client, structured diagnostics fields, severity rubric) — this framework was specifically reviewed for consistency across all 26 checks; a new check that doesn't follow the pattern will stand out.
 
 ## Where things actually are (not where you'd guess)
 
@@ -24,11 +26,12 @@ Read this first. It's the minimum needed to be productive in this repo without r
 |---|---|
 | The real, current architecture diagrams | `design/architecture.md` (not `docs/architecture.md` — that one's a superseded duplicate, banner points here) |
 | The real, current DB schema | `design/erd.md` (not `docs/database.md`'s inline `create table` — stale) |
-| Why a decision was made | `docs/decisions.md` — 25 numbered entries (AD-01..AD-25), each with rationale/alternatives/consequences. Read before re-litigating an existing choice |
+| Why a decision was made | `docs/decisions.md` — 28 numbered entries (AD-01..AD-28), each with rationale/alternatives/consequences. Read before re-litigating an existing choice |
 | Env var reference | `design/tech-stack.md` §3, mirrored in `.env.example` |
 | What's actually deferred vs. actually backlog vs. actually done | `ROADMAP.md` (this session's consolidation — trust this over any single older doc) |
 | Known, accepted limitations (not bugs) | `design/limitations.md` — read before "fixing" something that's a deliberate tradeoff |
 | Real, open technical debt | `TECHNICAL_DEBT.md` |
+| Production verification framework (check catalog, severity rubric, how to add a check) | `docs/operations/production-verification.md` |
 
 ## Gotchas that will burn you if you skip them
 

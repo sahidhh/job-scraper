@@ -164,6 +164,7 @@ sequenceDiagram
 | insights | `src/features/insights` | Analytics computations (skill gaps, charts) |
 | companies | `src/features/companies` | Board-token CRUD for Greenhouse/Lever/Ashby |
 | settings | `src/features/settings` | User preferences (desired experience years) |
+| verification | `src/features/verification` | Production verification framework (v1.4): generic `Check`/`CheckResult` runner + health score, 24 concrete checks reusing existing repositories/reports |
 | shared | `src/shared` | HTTP utilities, Supabase clients, domain primitives |
 
 ## 8. Error Handling Strategy

@@ -96,6 +96,17 @@ parsing, no AI" extraction standard than `extractSalary`/`extractContactEmail`. 
 | AI prompt truncation | Resume/job-description text capped (`OPENROUTER_MAX_RESUME_PROMPT_CHARS`/`OPENROUTER_MAX_DESCRIPTION_PROMPT_CHARS`) before being sent to the paid AI call, reducing token usage on every stage-2 call. Keyword-gate scoring still sees full untruncated text (AD-23) |
 | AI cost investigation | `docs/research/ai-cost-optimization-phase3.md` covers all 6 Task 12 areas; batching and adaptive (cheap-then-premium) model routing are designed but not implemented -- both are new-architecture changes needing explicit approval per CLAUDE.md |
 
+### P1.10 — Production Verification & Health Framework (v1.4, shipped)
+
+| Feature | Description |
+|---|---|
+| Generic verification framework | `src/features/verification/` -- a project-agnostic `Check`/`CheckResult` interface, `runChecks()` runner, and `computeHealthScore()` aggregator (PASS/WARNING/FAIL -> `ready`/`needs_attention`/`not_ready`). Domain/application layers have zero project-specific logic (docs/decisions.md AD-27) |
+| 26 concrete checks | Infrastructure (6): env vars, Supabase connectivity, migrations, RLS, storage, workflow config. Application (8): source health, stale sources, scoring queue, duplicate pipeline, notification pipeline, dashboard reachability, extraction-services smoke-test, active-singleton invariants. External (4): OpenRouter, Telegram, Telegram webhook registration, source fallback config. Data quality (8): duplicate fingerprints, missing fields, invalid salary/emails, broken career URLs, inconsistent scores, stale jobs, queue integrity |
+| Reporting | Markdown + JSON reports (`verification-reports/latest.{md,json}`, gitignored) plus a console summary, all from the same pure formatter functions |
+| Severity/diagnostics refinement (v1.x operational-excellence pass) | Per-outcome `severityOverride` (avoids one missing env var being penalized a dozen times across dependent checks); structured `probableCause`/`suggestedFix`/`affectedSubsystem`/`docReference` on every non-pass result instead of one ad hoc string; deduplicated recommendations list (docs/decisions.md AD-28) |
+| CLI commands | `npm run verify:production` (full run + files), `npm run diagnostics` (console-only quick check) |
+| CI readiness | `.github/workflows/verify-production.yml`, `workflow_dispatch`-only (no schedule -- Phase 9 explicitly excluded new deployment automation) |
+
 ### P2 — Medium Priority
 
 | Feature | Description |
@@ -149,6 +160,9 @@ P1 — Insights (current priority)
 
 P1.9 — Job Attributes & Personal Intelligence (v1.2, shipped)
  └── Deterministic job attribute extraction, notification exclude filters, notification preferences UI, Telegram highlight badges
+
+P1.10 — Production Verification & Health Framework (v1.4, shipped)
+ └── Generic Check[] runner, 26 infra/application/external/data-quality checks, health score + Markdown/JSON/console reports, verify:production/diagnostics CLI, CI-ready workflow_dispatch
 
 P2 — Preferences
  └── Desired experience, App settings

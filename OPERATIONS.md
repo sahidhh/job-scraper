@@ -34,6 +34,8 @@ Neither is wired into any scheduled workflow — run manually, once, after the r
 | `npm run doctor` | Required/optional env vars present; live Supabase query + Telegram `getMe` call succeed. **Run this first** whenever a cron run fails with a missing-env-var-shaped error |
 | `npm run health` (= `validate-sources`) | Every configured ATS board token is reachable |
 | `npm run verify` | typecheck + full test suite + production build — the pre-merge/pre-deploy gate |
+| `npm run verify:production` | 26-check production verification framework (v1.4) — infrastructure, application, external services, data quality; writes `verification-reports/latest.{md,json}` + console; the pre-deploy health gate. See `docs/operations/production-verification.md` |
+| `npm run diagnostics` | Same 26 checks, console-only, no files written — a quick ad-hoc health check. **Not the same tool as `npm run diagnose`** below — similar name, unrelated purpose |
 
 `/analytics` in the web app is the always-on visual health check: source health (both signals, AD-18), scoring queue depth/stuck jobs (AD-19), pipeline stats.
 
@@ -44,6 +46,7 @@ Neither is wired into any scheduled workflow — run manually, once, after the r
 | `npm run diagnose` | A source's job count looks wrong — shows recent-run/failure history + the fetch→location-filter→ingest funnel per source |
 | `npm run analytics` (= `source-analytics.ts`) | Deciding whether a source is worth keeping — 30-day keep-rate/low-performer report |
 | `npm run report:sources` | Just the recent-run/failure view, without the funnel analysis |
+| `npm run diagnostics` | A single console-only run of the full production verification framework (see §4 above) — a superset health check, not a source-specific diagnostic like the others in this table |
 
 ## 6. Recovery Procedures
 
@@ -55,13 +58,16 @@ Neither is wired into any scheduled workflow — run manually, once, after the r
 | A logically-duplicate job appears as two rows | Ingested before `backfill:fingerprints` was run, or a genuine title/company/location normalization miss | Run the backfill once if not yet done; otherwise this is a known limitation (`design/limitations.md` §1.7), not a bug to "fix" per row |
 | Telegram notifications stop arriving entirely | Bot blocked/removed from chat, or `TELEGRAM_CHAT_ID` wrong | `npm run doctor` checks the bot token (`getMe`) but **not** whether the bot can still post to the configured chat — verify manually by sending a test message; there is no backoff/dead-letter for a permanently-failing chat (`design/limitations.md` §4.1), so a bad chat ID fails silently forever until fixed |
 | Migration push fails in `migrate.yml` | A migration file has a syntax error or conflicts with prior schema state | Fix the migration file in a new PR — `migrate.yml` has no rollback; the failed push simply doesn't apply, main branch is unaffected until the corrected migration merges |
+| `npm run verify:production`/`diagnostics` reports `NOT READY` | At least one critical-severity check failed | Read the printed `cause`/`fix` lines (or `verification-reports/latest.md`) for the specific failing check(s) — every non-pass result names a probable cause and a concrete next action, not just "failed" |
+| `npm run verify:production`/`diagnostics` reports `NEEDS ATTENTION` | One or more non-critical warnings/failures | Not necessarily urgent — check the recommendations list; a fresh install with no resume/role set will always show this until first configured |
 
 ## 7. Monitoring
 
 - **Recent scrape runs / notifications:** `/settings` page (`ScrapeRunsList`, `NotificationsLogList`).
 - **Source health, scoring queue, pipeline stats:** `/analytics` page.
+- **Full operational health snapshot:** `npm run diagnostics` (or `verify:production` for a saved report) — see `docs/operations/production-verification.md`.
 - **CI status:** GitHub Actions tab, `ci.yml` badge in `README.md`.
-- **No external alerting/paging exists** — this is a personal-scale tool; monitoring is "check `/analytics` when curious," not push-based alerting. If a source silently degrades, the first signal is a lower job count on `/dashboard`, not a notification.
+- **No external alerting/paging exists** — this is a personal-scale tool; monitoring is "check `/analytics`/`npm run diagnostics` when curious," not push-based alerting. If a source silently degrades, the first signal is a lower job count on `/dashboard`, not a notification.
 
 ## 8. Troubleshooting
 
