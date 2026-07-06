@@ -248,9 +248,10 @@ flowchart LR
 
 `filterMatches()` applies `NotificationPreferences` before a match reaches formatting: role/skill/
 location/experience/source include-filters (P1.5, all ANDed), plus `excludeCompanies`/
-`excludeKeywords` mutes (continuous-improvement pass) -- muted companies are also enforced on the
-dashboard job list (`JobFilters.excludeCompanies`, shared setting), so a mute is a genuine "never
-show me this" rather than only suppressing the alert.
+`excludeEmploymentTypes`/`excludeKeywords` mutes (continuous-improvement pass) -- all three mutes are
+also enforced on the dashboard job list (`JobFilters.excludeCompanies`/`excludeEmploymentTypes`/
+`excludeKeywords`, shared settings), so a mute is a genuine "never show me this" rather than only
+suppressing the alert.
 
 ---
 

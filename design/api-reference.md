@@ -226,8 +226,8 @@ Actions **never throw** to the client. On success they call `revalidatePath()` t
 | `maxExperience` | `number` (optional) | `min_years` must be ≤ this; null `min_years` always passes |
 | `sources` | `JobSource[]` (optional) | Source must be one of these |
 | `blockedCompanies` | `string[]` (optional, v1.2) | Company name must NOT contain any of these (case-insensitive substring) -- also enforced on the dashboard job list, not just Telegram (shared via the same setting, see `JobFilters.excludeCompanies`) |
-| `excludeEmploymentTypes` | `EmploymentType[]` (optional, v1.2) | `employmentType` must NOT be one of these; null (unrecognized) always passes |
-| `excludeKeywords` | `string[]` (optional) | Title must NOT contain any of these (case-insensitive substring) |
+| `excludeEmploymentTypes` | `EmploymentType[]` (optional, v1.2) | `employmentType` must NOT be one of these; null (unrecognized) always passes -- also enforced on the dashboard job list (`JobFilters.excludeEmploymentTypes`) |
+| `excludeKeywords` | `string[]` (optional) | Title must NOT contain any of these (case-insensitive substring) -- also enforced on the dashboard job list (`JobFilters.excludeKeywords`) |
 
 **Validation:** `validateNotificationPreferences` (throws `DomainValidationError`, surfaced as `ActionResult.error`) rejects unknown `locations`/`sources`/`excludeEmploymentTypes` values and an inverted min/max experience range.
 

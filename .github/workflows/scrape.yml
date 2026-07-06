@@ -3,10 +3,13 @@ name: Scrape pipeline
 # AD-04: scrape -> score -> notify, run with the Supabase service-role key
 # (AD-12 -- bypasses RLS for cron scripts only).
 #
-# The recurring schedule is commented out pending the Phase 4 go-live
-# decision (docs/agent-workflow.md -- enabling the cron schedule has
-# cost/security implications and requires human approval). Until then this
-# workflow only runs on manual dispatch.
+# Phase 4 go-live (docs/agent-workflow.md) has happened -- the recurring
+# schedule below is live, running every 6 hours, alongside manual dispatch.
+# See PROJECT_STATE.md §3 for the go-live note; a couple of older docs
+# (design/limitations.md §1.3, docs/deployment.md §11) still describe an
+# earlier not-yet-live state and are tracked as known drift in
+# TECHNICAL_DEBT.md pending confirmation of whether 6h (vs. the originally
+# planned 2h) was a deliberate choice.
 on:
   workflow_dispatch: {}
   schedule:

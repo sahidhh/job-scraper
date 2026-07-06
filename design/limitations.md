@@ -102,7 +102,7 @@ The Telegram Bot API enforces rate limits (approximately 30 messages/second glob
 All jobs above `NOTIFY_THRESHOLD` are notified unless narrowed by `NotificationPreferences` (role/skill/location/experience/source include filters, plus `blockedCompanies`/`excludeEmploymentTypes` exclude filters as of v1.2), configurable from the `/settings` "Notification filters" card.
 
 ### 4.4 "Why This Job" Highlights Are Best-Effort
-The Telegram highlight badges (remote/urgent/salary/employment-type, v1.2) are derived entirely from `extractJobAttributes`/`extractSalary` output already computed at ingest -- they inherit all the coverage gaps documented in §1.11/§1.10 (e.g. a job with an unrecognized salary format shows no salary badge, not an approximate one). There is no "matches preferred company/tech stack" badge yet -- that would require a `preferredCompanies`/`preferredTechnologies` preference, which is not implemented (see v2.0 roadmap).
+The Telegram highlight badges (remote/urgent/salary/employment-type, v1.2) are derived entirely from `extractJobAttributes`/`extractSalary` output already computed at ingest -- they inherit all the coverage gaps documented in §1.11/§1.10 (e.g. a job with an unrecognized salary format shows no salary badge, not an approximate one). There is no "matches preferred company/tech stack" badge yet. `RankingPreferences.preferredCompanies` exists and is used to bias the dashboard's `overall_score` sort (P1.9, `computeOverallScore.ts`), but it is not wired into the digest's highlight badges, and `preferredTechnologies` was never built at all (see `ROADMAP.md`'s Deferred table).
 
 ---
 
