@@ -13,6 +13,7 @@ const row: ResumeRow = {
   uploaded_at: "2026-01-01T00:00:00Z",
   is_active: true,
   version: 1,
+  content_hash: "hash-1",
 };
 
 describe("SupabaseResumeRepository", () => {
@@ -30,6 +31,7 @@ describe("SupabaseResumeRepository", () => {
       uploadedAt: "2026-01-01T00:00:00Z",
       isActive: true,
       version: 1,
+      contentHash: "hash-1",
     });
     expect(builder.eq).toHaveBeenCalledWith("is_active", true);
     expect(builder.maybeSingle).toHaveBeenCalled();
@@ -42,6 +44,26 @@ describe("SupabaseResumeRepository", () => {
     expect(await repo.getActive()).toBeNull();
   });
 
+  it("findByContentHash returns the matching resume, mapped, ordered to the newest", async () => {
+    const { client, builder } = mockSupabaseClient({ data: row, error: null });
+    const repo = new SupabaseResumeRepository(client);
+
+    const result = await repo.findByContentHash("hash-1");
+
+    expect(result?.contentHash).toBe("hash-1");
+    expect(builder.eq).toHaveBeenCalledWith("content_hash", "hash-1");
+    expect(builder.order).toHaveBeenCalledWith("uploaded_at", { ascending: false });
+    expect(builder.limit).toHaveBeenCalledWith(1);
+    expect(builder.maybeSingle).toHaveBeenCalled();
+  });
+
+  it("findByContentHash returns null when no resume matches", async () => {
+    const { client } = mockSupabaseClient({ data: null, error: null });
+    const repo = new SupabaseResumeRepository(client);
+
+    expect(await repo.findByContentHash("no-match")).toBeNull();
+  });
+
   it("create calls set_active_resume and maps the first returned row", async () => {
     const { client } = mockSupabaseClient({ data: [row], error: null });
     const repo = new SupabaseResumeRepository(client);
@@ -50,6 +72,7 @@ describe("SupabaseResumeRepository", () => {
       filePath: "resumes/resume-1.pdf",
       parsedText: "Experienced engineer",
       skills: ["React", "Node.js"],
+      contentHash: "hash-1",
     });
 
     expect(result.id).toBe("resume-1");
@@ -57,6 +80,7 @@ describe("SupabaseResumeRepository", () => {
       p_file_path: "resumes/resume-1.pdf",
       p_parsed_text: "Experienced engineer",
       p_skills: ["React", "Node.js"],
+      p_content_hash: "hash-1",
     });
   });
 
@@ -65,7 +89,7 @@ describe("SupabaseResumeRepository", () => {
     const repo = new SupabaseResumeRepository(client);
 
     await expect(
-      repo.create({ filePath: "x", parsedText: "y", skills: [] }),
+      repo.create({ filePath: "x", parsedText: "y", skills: [], contentHash: "hash-x" }),
     ).rejects.toThrow("set_active_resume returned no row");
   });
 

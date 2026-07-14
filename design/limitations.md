@@ -48,8 +48,11 @@ Only board-token companies (greenhouse/lever/ashby) get a `company_career_pages`
 
 ## 2. Resume & Skill Extraction
 
-### 2.1 PDF Only
-Only PDF resumes are supported. DOCX, plain text, HTML, or other formats are not accepted.
+### 2.1 PDF and DOCX Only
+PDF and DOCX resumes are supported (via pdf-parse and mammoth respectively). Plain text, HTML, or other formats are not accepted. A scanned/image-only PDF (no embedded text layer) is rejected with an error rather than silently creating a resume with no extracted skills.
+
+### 2.1a Parse-Once Cache
+Re-uploading a file with identical bytes (by sha256 hash) reuses the previously parsed text instead of re-running pdf-parse/mammoth — this only skips the parse step; a new resume version row is still created on every upload.
 
 ### 2.2 Skill Dictionary Dependency
 Skills are matched against a fixed canonical dictionary (`skillsDictionary.ts`). Skills not in the dictionary are not detected, even if clearly stated in the resume. Users can manually add skills after upload.

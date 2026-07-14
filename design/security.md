@@ -76,7 +76,7 @@ The `SUPABASE_SERVICE_ROLE_KEY` bypasses RLS entirely. It is permitted only in `
 |---|---|---|
 | `resumes` | Private | `authenticated_full_access_resumes` — authenticated role only |
 
-Resume PDFs are stored with random UUIDs as path components, not predictable names. Access requires a valid Supabase session.
+Resume files are stored with their sha256 content hash as the path (`<hash>.pdf` / `<hash>.docx`), not a random UUID — this doubles as the storage-level half of the parse-once cache (decisions.md AD-30): re-uploading identical bytes overwrites the same object rather than creating a new one. A sha256 digest is preimage-resistant, so this is not more guessable than a random UUID; access still requires a valid Supabase session regardless of path.
 
 ---
 
@@ -104,7 +104,7 @@ All user input entering the system boundary is validated with **Zod** schemas be
 | Server actions (form data) | Zod parse of incoming parameters |
 | OpenRouter responses | JSON schema response format + Zod parse |
 | ATS API responses | Zod schemas on normalized `RawJob` shape |
-| PDF upload | MIME type check + pdf-parse error handling |
+| Resume upload | MIME type check (PDF/DOCX only) + pdf-parse/mammoth error handling; empty/near-empty extracted text (e.g. scanned PDF) rejected by `validateParsedText` |
 
 The TypeScript `any` type is explicitly banned (CLAUDE.md) — all data at boundaries must be typed.
 
@@ -128,7 +128,7 @@ All outbound HTTP requests are made to hardcoded URLs (OpenRouter, Telegram Bot 
 
 | Data | Sensitivity | Handling |
 |---|---|---|
-| Resume PDF | Personal | Stored in private Supabase Storage bucket; authenticated access only |
+| Resume file (PDF/DOCX) | Personal | Stored in private Supabase Storage bucket; authenticated access only |
 | Resume text / skills | Personal | Stored in Postgres under RLS; never logged to console |
 | AI scoring reasoning | Low | Stored in `job_scores.ai_reasoning`; visible to authenticated user only |
 | Telegram chat ID | Low | GitHub Actions secret; not stored in database |

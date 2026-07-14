@@ -132,6 +132,7 @@ erDiagram
         text parsed_text
         text[] skills
         integer version "monotonically increasing; set by set_active_resume"
+        text content_hash "nullable; sha256 of source file bytes -- parse-once cache key"
         timestamptz uploaded_at
         boolean is_active "UNIQUE partial index where true"
     }
@@ -213,6 +214,7 @@ erDiagram
 | `scrape_runs` | `INDEX (source, run_at DESC)` | `listRecentBySource` (per-source health report, called once per source per `/analytics` load) |
 | `jobs` | `INDEX (employment_type)` | Notification-preference `excludeEmploymentTypes` filter reads this at digest time |
 | `resumes` | `UNIQUE (is_active) WHERE is_active = true` | Enforce single active resume |
+| `resumes` | `INDEX (content_hash) WHERE content_hash IS NOT NULL` | sha256 parse-once cache lookup (`findByContentHash`); not unique -- re-uploading identical bytes still creates a new version row |
 | `role_selections` | `UNIQUE (is_active) WHERE is_active = true` | Enforce single active role |
 | `notifications_log` | `UNIQUE (job_id)` | Guarantee at-most-one Telegram send |
 | `role_pack_roles` | `INDEX (pack_id)` | Fast lookup of roles for a pack |
@@ -224,14 +226,16 @@ erDiagram
 
 ## Database Functions (RPC)
 
-### `set_active_resume(file_path, parsed_text, skills[])`
+### `set_active_resume(file_path, parsed_text, skills[], content_hash)`
 
 ```
 1. Compute next_version = MAX(version) + 1
 2. UPDATE resumes SET is_active = false   -- deactivate previous
-3. INSERT INTO resumes (…, is_active = true, version = next_version)  -- activate new
+3. INSERT INTO resumes (…, is_active = true, version = next_version, content_hash)  -- activate new
 4. RETURN new row
 ```
+
+`content_hash` (sha256 of the uploaded file's bytes) is always supplied by `uploadResume()` -- see `ResumeRepository.findByContentHash`, the parse-once cache lookup that runs before this RPC and decides whether pdf-parse/mammoth is invoked at all (decisions.md AD-30).
 
 ### `set_active_role_selection(primary_role, expanded_roles[])`
 

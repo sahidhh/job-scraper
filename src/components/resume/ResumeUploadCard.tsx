@@ -30,13 +30,19 @@ export function ResumeUploadCard() {
     <Card>
       <CardHeader>
         <CardTitle>Resume</CardTitle>
-        <CardDescription>Upload a PDF resume to extract skills for job scoring.</CardDescription>
+        <CardDescription>Upload a PDF or DOCX resume to extract skills for job scoring.</CardDescription>
       </CardHeader>
       <CardContent>
         <form ref={formRef} onSubmit={handleSubmit} className="flex flex-col gap-4 sm:flex-row sm:items-end">
           <div className="flex-1 space-y-2">
-            <Label htmlFor="file">PDF file</Label>
-            <Input id="file" name="file" type="file" accept="application/pdf" required />
+            <Label htmlFor="file">PDF or DOCX file</Label>
+            <Input
+              id="file"
+              name="file"
+              type="file"
+              accept="application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              required
+            />
           </div>
           <Button type="submit" disabled={isPending}>
             {isPending ? "Uploading..." : "Upload"}

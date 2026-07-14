@@ -67,16 +67,16 @@
 ### UC-04 — Upload Resume
 
 **Actor:** User  
-**Trigger:** User navigates to `/resume` and uploads a PDF  
+**Trigger:** User navigates to `/resume` and uploads a PDF or DOCX  
 **Main Flow:**
-1. User drags/drops or selects a PDF file
-2. `uploadResumeAction` receives the file
-3. pdf-parse extracts full text
+1. User selects a PDF or DOCX file
+2. `uploadResumeAction` receives the file, computes its sha256 content hash, and uploads it to Storage at `<hash>.<pdf|docx>`
+3. If a resume with the same content_hash already exists, its cached parsed text is reused (decisions.md AD-30); otherwise pdf-parse (PDF) or mammoth (DOCX, including table cells) extracts full text
 4. Skills matched against skills-dictionary
-5. `set_active_resume` RPC atomically saves new resume and deactivates previous
+5. `set_active_resume` RPC atomically saves new resume (with content_hash) and deactivates previous
 6. Extracted skills displayed; user can manually edit
 
-**Alternate Flow:** PDF parse fails → error message shown; no resume row created
+**Alternate Flow:** Parse fails, or extracted text is empty/near-empty (e.g. a scanned PDF) → error message shown; no resume row created
 
 ---
 

@@ -14,7 +14,7 @@
 
 1. **Deploy the app** — follow `docs/deployment.md` for the full step-by-step guide
 2. **Log in** — open the app URL and sign in with your Supabase Auth credentials
-3. **Upload your resume** — go to `/resume` and upload your PDF
+3. **Upload your resume** — go to `/resume` and upload your PDF or DOCX
 4. **Set your target role** — go to `/roles` and enter your primary role
 5. **Add company board tokens** — go to `/settings` and add Greenhouse/Lever/Ashby companies you want to monitor
 6. **Trigger a scrape** — run the GitHub Actions workflow manually via `workflow_dispatch`
@@ -28,9 +28,11 @@ After the first scrape+score+notify run, your dashboard will show scored jobs an
 **Location:** `/resume`
 
 ### Upload a Resume
-1. Click "Upload Resume" or drag and drop a PDF file onto the upload area
-2. The platform extracts text and matches skills against the built-in skills dictionary
+1. Choose a PDF or DOCX resume file and click "Upload"
+2. The platform extracts text (including table content in DOCX resumes) and matches skills against the built-in skills dictionary. Re-uploading a file you've already uploaded before reuses the cached extracted text instead of re-parsing it
 3. The extracted skills list is displayed for review
+
+> A scanned/image-only PDF (no real text layer) has no extractable text and is rejected with an error — export or re-save it as a text-based PDF, or upload a DOCX instead.
 
 ### Edit Skills
 - Click the edit icon next to any skill to remove it
@@ -325,7 +327,7 @@ Exits `1` only when the verdict is `not_ready` (a critical-severity failure) —
 | Telegram not receiving alerts | Wrong `TELEGRAM_CHAT_ID` or bot not added to chat | Verify bot token and chat ID; ensure bot is started |
 | Wellfound jobs missing | `WELLFOUND_FEED_URL` not set | Add env var in GitHub Actions secrets |
 | Company jobs not appearing | Board token incorrect or company set inactive | Check `/settings` → Company Config |
-| Resume skills look wrong | PDF parsing missed skills | Manually add/remove skills on `/resume` |
+| Resume skills look wrong | PDF/DOCX parsing missed skills | Manually add/remove skills on `/resume` |
 | Skill insights empty | No scored jobs yet | Run a full scrape → score cycle |
 | Cron script fails with "Missing required environment variable" | A required secret isn't set in this environment | Run `npm run doctor` locally to see exactly which vars are missing |
 | Expected notification didn't arrive | A notification filter (blocked company, excluded employment type, etc.) silently excluded it | Check `/settings` → "Notification filters" — clear a field to test, or check `docs/reviews` for the exclude-filter semantics |

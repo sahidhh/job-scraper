@@ -439,6 +439,7 @@ export type Database = {
       }
       resumes: {
         Row: {
+          content_hash: string | null
           file_path: string
           id: string
           is_active: boolean
@@ -448,6 +449,7 @@ export type Database = {
           version: number
         }
         Insert: {
+          content_hash?: string | null
           file_path: string
           id?: string
           is_active?: boolean
@@ -457,6 +459,7 @@ export type Database = {
           version?: number
         }
         Update: {
+          content_hash?: string | null
           file_path?: string
           id?: string
           is_active?: boolean
@@ -625,8 +628,14 @@ export type Database = {
     }
     Functions: {
       set_active_resume: {
-        Args: { p_file_path: string; p_parsed_text: string; p_skills: string[] }
+        Args: {
+          p_content_hash: string
+          p_file_path: string
+          p_parsed_text: string
+          p_skills: string[]
+        }
         Returns: {
+          content_hash: string | null
           file_path: string
           id: string
           is_active: boolean

@@ -18,7 +18,8 @@
 | Validation | Zod | v4 | Schema validation at system boundaries |
 | AI / LLM | OpenRouter API | — | Multi-model gateway; model configurable via env |
 | Notifications | Telegram Bot API | — | Simple HTTP delivery, no additional SDK |
-| PDF Parsing | pdf-parse | — | Extract text from uploaded resumes |
+| PDF Parsing | pdf-parse | — | Extract text from uploaded PDF resumes |
+| DOCX Parsing | mammoth | — | Extract text (including table content) from uploaded DOCX resumes |
 | Testing | vitest | latest | Fast, TypeScript-native test runner |
 | Script Runtime | tsx | latest | Execute TypeScript files directly (no build step) |
 | Package Manager | npm | — | Standard Node.js package manager |
@@ -101,6 +102,7 @@ These are explicitly banned by the project rules (CLAUDE.md):
     "@supabase/ssr": "^0.12",
     "zod": "^4.0",
     "pdf-parse": "^1.1",
+    "mammoth": "^1.12",
     "recharts": "^3.8.1",
     "radix-ui": "^1.5.0",
     "@tailwindcss/postcss": "^4.3.1",
@@ -120,10 +122,13 @@ These are explicitly banned by the project rules (CLAUDE.md):
     "@eslint/eslintrc": "^3",
     "@types/node": "latest",
     "@types/react": "latest",
-    "@types/react-dom": "latest"
+    "@types/react-dom": "latest",
+    "jszip": "^3.10"
   }
 }
 ```
+
+**Note on jszip:** dev-only, used to build an in-memory `.docx` fixture (a real OPC zip) in `parseDocx.test.ts` so DOCX/table extraction is tested against actual mammoth parsing rather than a mocked `mammoth` module. It's already a transitive dependency of `mammoth` itself; listed explicitly as a devDependency rather than relied on implicitly.
 
 ## 6. npm Scripts
 

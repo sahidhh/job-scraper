@@ -8,7 +8,7 @@ Job seekers waste hours manually checking multiple job boards, comparing posting
 
 A single technical professional (software engineer, data scientist, or similar) who:
 - Is actively or passively job-searching
-- Has a resume in PDF format
+- Has a resume in PDF or DOCX format
 - Wants to monitor positions in India, Singapore, UAE, or remote globally
 - Is comfortable with basic self-hosted setup (Supabase, Vercel, GitHub Actions)
 
@@ -18,7 +18,7 @@ A single technical professional (software engineer, data scientist, or similar) 
 
 | Feature | Description |
 |---|---|
-| Resume upload & skill extraction | Upload PDF, extract text, tag skills from dictionary |
+| Resume upload & skill extraction | Upload PDF or DOCX, extract text (sha256 parse-once cache), tag skills from dictionary |
 | Role selection & AI expansion | Define target role; expand to related roles via LLM or cache |
 | Role Packs | Pre-defined curated role groups; click to instantly activate without AI call |
 | Multi-source job scraping | Greenhouse, Lever, Ashby (per board_token), Wellfound, RemoteOK, MyCareersFuture |
@@ -202,6 +202,6 @@ P4 — Future
 | No real-time ATS webhooks | 2-hour scrape cadence; new jobs may be seen up to 2h late |
 | LLM cost | AI scoring gated behind keyword threshold to control OpenRouter spend |
 | Telegram rate limits | Bot API rate-limited; large notification batches may experience delay |
-| PDF-only resumes | Other formats (DOCX, plain text) not supported |
+| PDF/DOCX-only resumes | Plain text, HTML, and other formats not supported |
 | Manual company setup | Board tokens must be entered by user; no auto-discovery |
 | Source validation scope | Only Greenhouse/Lever/Ashby board tokens validated; feed-based sources (RemoteOK, Wellfound, MyCareersFuture) not probed |

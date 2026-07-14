@@ -15,6 +15,7 @@ function toResume(row: ResumeRow): Resume {
     uploadedAt: row.uploaded_at,
     isActive: row.is_active,
     version: row.version,
+    contentHash: row.content_hash,
   };
 }
 
@@ -29,6 +30,22 @@ export class SupabaseResumeRepository implements ResumeRepository {
     return data ? toResume(data) : null;
   }
 
+  // Parse-once cache lookup (decisions.md AD-30): most recent row (any
+  // version) with this content_hash. Ordered by uploaded_at so a re-upload
+  // always matches the newest parse of that content.
+  async findByContentHash(contentHash: string): Promise<Resume | null> {
+    const { data, error } = await this.client
+      .from("resumes")
+      .select("*")
+      .eq("content_hash", contentHash)
+      .order("uploaded_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) throw toAppError(error);
+    return data ? toResume(data) : null;
+  }
+
   // Atomic deactivate-previous + insert-new via set_active_resume RPC
   // (decisions.md AD-09).
   async create(input: NewResume): Promise<Resume> {
@@ -36,6 +53,7 @@ export class SupabaseResumeRepository implements ResumeRepository {
       p_file_path: input.filePath,
       p_parsed_text: input.parsedText,
       p_skills: input.skills,
+      p_content_hash: input.contentHash,
     });
 
     if (error) throw toAppError(error);

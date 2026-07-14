@@ -85,11 +85,11 @@ Actions **never throw** to the client. On success they call `revalidatePath()` t
 
 #### `uploadResumeAction(formData)`
 **File:** `src/features/resume/actions.ts`  
-**Description:** Uploads a PDF resume, extracts text and skills, and sets it as the active resume via `set_active_resume` RPC.
+**Description:** Uploads a PDF or DOCX resume, extracts text (pdf-parse / mammoth) and skills, and sets it as the active resume via `set_active_resume` RPC. The file's sha256 hash is checked against `resumes.content_hash` first (`ResumeRepository.findByContentHash`) — on a match, parsing is skipped entirely and the cached `parsed_text` is reused (decisions.md AD-30). Storage path is `<sha256>.<pdf|docx>`, so re-uploading identical bytes overwrites the same object. Empty/near-empty extracted text (e.g. a scanned PDF) is rejected with an error and no resume row is created.
 
 | Param | Type | Description |
 |---|---|---|
-| formData | FormData | Must contain `file` key with PDF blob |
+| formData | FormData | Must contain `file` key with a PDF or DOCX blob |
 
 **Returns:** `ActionResult<Resume>`
 
@@ -513,12 +513,13 @@ Buttons: `[← Prev]` `[Next →]` (conditional) · `[📊 Dashboard]`
 ### `set_active_resume`
 ```sql
 SELECT * FROM set_active_resume(
-  p_file_path   TEXT,
-  p_parsed_text TEXT,
-  p_skills      TEXT[]
+  p_file_path    TEXT,
+  p_parsed_text  TEXT,
+  p_skills       TEXT[],
+  p_content_hash TEXT
 ) RETURNS resumes
 ```
-Atomically deactivates all resumes and inserts a new active one.
+Atomically deactivates all resumes and inserts a new active one. `p_content_hash` is the sha256 of the uploaded file's bytes (parse-once cache key, decisions.md AD-30).
 
 ### `set_active_role_selection`
 ```sql

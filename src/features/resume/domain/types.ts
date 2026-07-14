@@ -7,6 +7,7 @@ export interface Resume {
   uploadedAt: string; // ISO 8601
   isActive: boolean;
   version: number; // monotonically increasing; incremented on each upload
+  contentHash: string | null; // sha256 of the source file bytes; parse-once cache key (AD-30)
 }
 
 // Input to ResumeRepository.create() -- atomically becomes the active
@@ -15,4 +16,5 @@ export interface NewResume {
   filePath: string;
   parsedText: string;
   skills: string[];
+  contentHash: string;
 }
