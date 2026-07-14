@@ -1,16 +1,20 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { applyResumeSuggestions } from "@/features/resume/application/applyResumeSuggestions";
+import { suggestResumeImprovements } from "@/features/resume/application/suggestResumeImprovements";
 import { uploadResume } from "@/features/resume/application/uploadResume";
 import { updateSkills } from "@/features/resume/application/updateSkills";
-import type { Resume } from "@/features/resume/domain/types";
+import type { Resume, ResumeSuggestionSet } from "@/features/resume/domain/types";
 import { computeContentHash } from "@/features/resume/infrastructure/contentHash";
+import { LlmResumeSuggestionProvider } from "@/features/resume/infrastructure/LlmResumeSuggestionProvider";
 import {
   parseResumeFile,
   RESUME_FILE_EXTENSION_BY_MIME_TYPE,
   type SupportedResumeMimeType,
 } from "@/features/resume/infrastructure/parseResumeFile";
 import { SupabaseResumeRepository } from "@/features/resume/infrastructure/SupabaseResumeRepository";
+import { SupabaseResumeSuggestionRepository } from "@/features/resume/infrastructure/SupabaseResumeSuggestionRepository";
 import type { ActionResult } from "@/shared/actionResult";
 import { SKILLS_DICTIONARY } from "@/shared/config/skills-dictionary";
 import { createSupabaseServerClient } from "@/shared/infrastructure/supabase/server";
@@ -74,6 +78,60 @@ export async function updateResumeSkillsAction(resumeId: string, skills: string[
     const resumeRepository = new SupabaseResumeRepository(client);
 
     const result = await updateSkills(resumeId, skills, { resumeRepository });
+    revalidatePath("/resume");
+    return { ok: true, data: result };
+  } catch (error) {
+    return { ok: false, error: errorMessage(error) };
+  }
+}
+
+// AI resume coaching (decisions.md AD-32/AD-33). Generates suggestions for
+// the currently active resume and persists them as a new versioned row --
+// this action never mutates the resume itself.
+export async function suggestResumeImprovementsAction(targetRole: string): Promise<ActionResult<ResumeSuggestionSet>> {
+  try {
+    const client = await createSupabaseServerClient();
+    const resumeRepository = new SupabaseResumeRepository(client);
+    const resume = await resumeRepository.getActive();
+    if (!resume) {
+      return { ok: false, error: "Upload a resume before requesting suggestions." };
+    }
+
+    const repository = new SupabaseResumeSuggestionRepository(client);
+    const provider = new LlmResumeSuggestionProvider();
+
+    const result = await suggestResumeImprovements(resume, targetRole, { provider, repository });
+    revalidatePath("/resume");
+    return { ok: true, data: result };
+  } catch (error) {
+    return { ok: false, error: errorMessage(error) };
+  }
+}
+
+// Applies a chosen subset of a stored suggestion set to the active resume,
+// creating a NEW resume version -- never overwrites the current one
+// (decisions.md AD-33).
+export async function applyResumeSuggestionsAction(
+  suggestionSetId: string,
+  chosenIds: string[],
+): Promise<ActionResult<Resume>> {
+  try {
+    const client = await createSupabaseServerClient();
+    const resumeRepository = new SupabaseResumeRepository(client);
+    const resume = await resumeRepository.getActive();
+    if (!resume) {
+      return { ok: false, error: "No active resume to apply suggestions to." };
+    }
+
+    const suggestionRepository = new SupabaseResumeSuggestionRepository(client);
+    const provider = new LlmResumeSuggestionProvider();
+
+    const result = await applyResumeSuggestions(resume, suggestionSetId, chosenIds, {
+      provider,
+      suggestionRepository,
+      resumeRepository,
+      skillsDictionary: SKILLS_DICTIONARY,
+    });
     revalidatePath("/resume");
     return { ok: true, data: result };
   } catch (error) {

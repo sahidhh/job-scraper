@@ -107,6 +107,14 @@ parsing, no AI" extraction standard than `extractSalary`/`extractContactEmail`. 
 | CLI commands | `npm run verify:production` (full run + files), `npm run diagnostics` (console-only quick check) |
 | CI readiness | `.github/workflows/verify-production.yml`, `workflow_dispatch`-only (no schedule -- Phase 9 explicitly excluded new deployment automation) |
 
+### P1.12 — AI Resume Suggestions (merge-workspace Phase 3, backend only)
+
+| Feature | Description |
+|---|---|
+| AI resume coaching | `suggestResumeImprovementsAction` proposes concrete, non-fabricated improvements (Impact/Skills/Keywords/Clarity/Formatting categories) for the active resume via a provider-agnostic LLM client (`gemini` default, `anthropic` optional -- `LLM_PROVIDER`). Long resumes are chunked rather than truncated (decisions.md AD-33) |
+| Apply as new version | `applyResumeSuggestionsAction` rewrites the resume with chosen suggestions and saves it as a brand NEW resume version via the existing `set_active_resume` path -- never overwrites the current version |
+| No UI yet | Domain/application/infrastructure + server actions are complete and tested; no `/resume` page UI calls them yet (`design/limitations.md` §2.5), same "backend now, UI later" shape as P1.8/P1.10's embedding_score |
+
 ### P2 — Medium Priority
 
 | Feature | Description |
@@ -135,7 +143,7 @@ parsing, no AI" extraction standard than `extractSalary`/`extractContactEmail`. 
 |---|---|
 | Multiple users / multi-tenancy | Single-user by design; no user_id columns |
 | Automated job applications | Scope is discovery and triage, not application |
-| Resume generation / editing | Platform assists skill tagging only |
+| Auto-apply / auto-send applications | AI may draft or suggest content; the user always reviews and applies manually (decisions.md AD-33; carried over from jobhunt-app's "no auto-apply" design rule) |
 | Cover letter generation | Out of scope for V1 |
 | Interview preparation | Out of scope |
 | Job board accounts (LinkedIn, Indeed) | No public API; scraping would violate ToS |

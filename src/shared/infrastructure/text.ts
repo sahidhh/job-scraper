@@ -53,3 +53,28 @@ export function truncateText(text: string, maxChars: number): string {
   if (text.length <= maxChars) return text;
   return `${text.slice(0, maxChars)}... [truncated]`;
 }
+
+// Resume-suggestions chunking (decisions.md AD-33, jobhunt bug #2):
+// jobhunt/enhance.py truncates via `text[:12000]`, silently dropping
+// everything past the cap. This splits text into <=maxChars chunks instead,
+// so a long resume gets fully processed across multiple LLM calls rather
+// than losing its tail. Breaks on the last newline before the cap when one
+// exists (keeps chunks from splitting mid-line); always makes forward
+// progress even if no newline is found.
+export function chunkText(text: string, maxChars: number): string[] {
+  if (text.length <= maxChars) return [text];
+
+  const chunks: string[] = [];
+  let start = 0;
+  while (start < text.length) {
+    let end = Math.min(start + maxChars, text.length);
+    if (end < text.length) {
+      const lastBreak = text.lastIndexOf("\n", end);
+      if (lastBreak > start) end = lastBreak;
+    }
+    const chunk = text.slice(start, end).trim();
+    if (chunk.length > 0) chunks.push(chunk);
+    start = end;
+  }
+  return chunks;
+}

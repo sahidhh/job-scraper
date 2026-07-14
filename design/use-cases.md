@@ -93,6 +93,23 @@
 
 ---
 
+### UC-05a — Get and Apply AI Resume Suggestions (decisions.md AD-32/AD-33)
+
+**Actor:** User  
+**Trigger:** `suggestResumeImprovementsAction(targetRole)` (no UI wired up yet — `design/limitations.md` §2.5)  
+**Precondition:** Active resume exists  
+**Main Flow:**
+1. Active resume's `parsedText` is chunked (not truncated — jobhunt bug #2) and each chunk is sent to the configured LLM (`LLM_PROVIDER`: `gemini` default, `anthropic` optional) asking for concrete, non-fabricated improvement suggestions
+2. Suggestions from every chunk are merged, ids renumbered, and persisted as one new `resume_suggestions` row scoped to the exact resume version they were generated against
+3. User reviews suggestions and chooses a subset, then calls `applyResumeSuggestionsAction(suggestionSetId, chosenIds)`
+4. The chosen suggestions are applied to each chunk of the resume text by the LLM (never fabricating experience) and the rewritten chunks are concatenated
+5. A brand NEW resume version is created via the existing `set_active_resume` path (`content_hash = null` — no backing uploaded file) — the prior version's text is never overwritten
+6. The suggestion set is marked applied, pointing at the new resume version
+
+**Alternate Flow:** The suggestion set doesn't exist, was generated against a resume version that has since been superseded, no suggestions were chosen, or the LLM call fails → error returned, no resume version created
+
+---
+
 ### UC-06 — Set Target Role
 
 **Actor:** User  

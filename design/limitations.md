@@ -63,6 +63,9 @@ Skill extraction uses exact or near-exact string matching against the dictionary
 ### 2.4 Single Active Resume
 Only one resume can be active at a time. Switching resumes invalidates all existing scores for the new active role (scores are role_selection-scoped, so they remain, but skill-based keyword scores become stale until the next scoring run).
 
+### 2.5 Resume Suggestions Have No UI Yet (`docs/decisions.md` AD-33)
+`suggestResumeImprovementsAction`/`applyResumeSuggestionsAction` (AI resume coaching + apply-as-new-version) are implemented end-to-end — domain, application, infrastructure, and server actions all have test coverage — but no `/resume` page UI calls them yet. Same shape as §3.9's `embedding_score` gap: the merge plan's Phase 3 checklist scoped the backend capability, not a UI pass. A suggestion set becomes unusable (never appliable) once its resume version is superseded by a newer upload or another apply — `applyResumeSuggestions` rejects a mismatched `resumeId` rather than silently applying against stale text.
+
 ---
 
 ## 3. Scoring

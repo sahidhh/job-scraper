@@ -47,6 +47,7 @@ These are explicitly banned by the project rules (CLAUDE.md):
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key (exposed to browser; RLS enforced) |
 | `OPENROUTER_API_KEY` | OpenRouter account key (server-side only) |
 | `OPENROUTER_MODEL` | Model ID e.g. `anthropic/claude-3.5-sonnet` |
+| `GEMINI_API_KEY` | Google AI Studio key for the resume-suggestions LLM client (`src/shared/infrastructure/llmClient.ts`); required unless `LLM_PROVIDER=anthropic` (decisions.md AD-32) |
 
 ### Required — Cron Scripts (GitHub Actions Secrets)
 
@@ -80,6 +81,9 @@ These are explicitly banned by the project rules (CLAUDE.md):
 | `SOURCE_STALE_HOURS` | `6` | Hours since a source's last scrape_runs row (of any status) before it's flagged `isStale` on `/analytics` -- distinct from an actively-failing source |
 | `JOB_EXPIRATION_DAYS` | `14` | Days since `last_seen_at` before `scrape.ts` soft-deactivates a job (`is_active = false`, `inactive_reason = 'expired'`) |
 | `REMOTEOK_DISABLED` | _(unset)_ | Set `true` or `1` to explicitly disable RemoteOK ingestion (set in `scrape.yml` — RemoteOK's near-zero yield made it not worth probing on every run, see `docs/remoteok-evaluation.md`) |
+| `LLM_PROVIDER` | `gemini` | Resume-suggestions LLM provider switch: `gemini` or `anthropic` (decisions.md AD-32); mirrors jobhunt/llm.py's shape but defaults to Gemini per the merge plan, not jobhunt's own `anthropic` default |
+| `LLM_MODEL` | per-provider (`gemini-2.5-flash` / `claude-haiku-4-5`) | Overrides the default model for the active `LLM_PROVIDER` |
+| `ANTHROPIC_API_KEY` | _(unset)_ | Anthropic key for the resume-suggestions LLM client; required only when `LLM_PROVIDER=anthropic` |
 
 **Note on NOTIFY_MODE:** The code default is `individual`, but the scheduled production workflow `.github/workflows/scrape.yml` overrides this to `digest` by default via `NOTIFY_MODE: ${{ vars.NOTIFY_MODE || 'digest' }}` (line 71). This is intentional—digest mode is the production-recommended setting per `docs/reviews/project-completion-audit.md`.
 

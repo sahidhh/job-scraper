@@ -108,6 +108,31 @@ Actions **never throw** to the client. On success they call `revalidatePath()` t
 
 ---
 
+#### `suggestResumeImprovementsAction(targetRole)`
+**File:** `src/features/resume/actions.ts`  
+**Description:** Generates AI coaching suggestions for the active resume (decisions.md AD-32/AD-33) via `LlmResumeSuggestionProvider` (Gemini default, Anthropic optional per `LLM_PROVIDER`). Long resumes are chunked (not truncated — jobhunt bug #2) so every part gets analyzed; suggestions from all chunks are merged and persisted as one new `resume_suggestions` row scoped to the active resume's exact version. Never mutates the resume itself. No UI wired up yet (`design/limitations.md`).
+
+| Param | Type | Description |
+|---|---|---|
+| targetRole | string | Optional context for the AI coach; pass `""` for none |
+
+**Returns:** `ActionResult<ResumeSuggestionSet>`
+
+---
+
+#### `applyResumeSuggestionsAction(suggestionSetId, chosenIds)`
+**File:** `src/features/resume/actions.ts`  
+**Description:** Rewrites the active resume applying only the chosen suggestions (chunked the same way as suggest, `AD-33`), then creates a brand NEW resume version via the existing `set_active_resume` versioning path (`ResumeRepository.create`) — **never overwrites** the current version. The new version's `content_hash` is `null` (no backing uploaded file). Fails without creating anything if the suggestion set doesn't exist, was generated against a different resume version, no ids are chosen, or the AI call fails partway through.
+
+| Param | Type | Description |
+|---|---|---|
+| suggestionSetId | string (UUID) | A `resume_suggestions` row id from a prior `suggestResumeImprovementsAction` call |
+| chosenIds | string[] | Subset of that set's suggestion `id`s to apply |
+
+**Returns:** `ActionResult<Resume>` (the new version)
+
+---
+
 ### Roles
 
 #### `expandRoleAction(primaryRole)`
@@ -350,6 +375,39 @@ All routes except `/login` and `/auth/callback` are protected by `middleware.ts`
 
 ---
 
+### 3.1b Gemini / Anthropic (resume suggestions)
+
+**File:** `src/shared/infrastructure/llmClient.ts` (decisions.md AD-32) — separate from OpenRouter above; used only by `ResumeSuggestionProvider`, never by job scoring.
+**Timeout:** 30 seconds. **Retry:** 1 retry on 5xx / 429 / timeout, 2s delay (same `fetchWithRetry` as OpenRouter).
+**Provider switch:** `LLM_PROVIDER` env var (`gemini` default, `anthropic` optional); `LLM_MODEL` overrides the per-provider default model.
+
+**Gemini** — `POST https://generativelanguage.googleapis.com/v1beta/models/<model>:generateContent`, header `x-goog-api-key: <GEMINI_API_KEY>`:
+```json
+{
+  "systemInstruction": { "parts": [{ "text": "<system prompt>" }] },
+  "contents": [{ "role": "user", "parts": [{ "text": "<user prompt>" }] }],
+  "generationConfig": {
+    "maxOutputTokens": 2000,
+    "responseMimeType": "application/json",
+    "thinkingConfig": { "thinkingBudget": 0 }
+  }
+}
+```
+`responseMimeType`/`thinkingConfig` are only sent when the caller requests JSON mode (`suggest()`, not `rewrite()`). Thinking is disabled for JSON calls because `gemini-2.5-*` are thinking models whose thinking tokens eat into `maxOutputTokens`, same reasoning as jobhunt/llm.py's `_gemini`.
+
+**Anthropic** — `POST https://api.anthropic.com/v1/messages`, headers `x-api-key: <ANTHROPIC_API_KEY>`, `anthropic-version: 2023-06-01`:
+```json
+{
+  "model": "<model>",
+  "max_tokens": 2000,
+  "system": "<system prompt>",
+  "messages": [{ "role": "user", "content": "<user prompt>" }]
+}
+```
+Anthropic has no native JSON-schema response mode; both providers' text output is parsed via `src/shared/infrastructure/lenientJson.ts` (strips markdown code fences, falls back to extracting the first balanced array/object).
+
+---
+
 ### 3.2 Telegram Bot API
 
 **Endpoint:** `POST https://api.telegram.org/bot<token>/sendMessage`  
@@ -516,10 +574,10 @@ SELECT * FROM set_active_resume(
   p_file_path    TEXT,
   p_parsed_text  TEXT,
   p_skills       TEXT[],
-  p_content_hash TEXT
+  p_content_hash TEXT  -- nullable (AD-33)
 ) RETURNS resumes
 ```
-Atomically deactivates all resumes and inserts a new active one. `p_content_hash` is the sha256 of the uploaded file's bytes (parse-once cache key, decisions.md AD-30).
+Atomically deactivates all resumes and inserts a new active one. `p_content_hash` is the sha256 of the uploaded file's bytes (parse-once cache key, decisions.md AD-30) — `NULL` when the new version has no backing uploaded file, e.g. a resume-suggestions apply (`AD-33`), so it's never accidentally picked up by the parse-once cache lookup.
 
 ### `set_active_role_selection`
 ```sql

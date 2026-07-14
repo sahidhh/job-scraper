@@ -301,6 +301,8 @@ flowchart LR
         SC["supabase/serverClient"]
         SVC["supabase/serviceClient"]
         OR["openrouterClient.ts"]
+        LLM["llmClient.ts\nGemini/Anthropic switch"]
+        LJSON["lenientJson.ts"]
         ENV["config/env.ts"]
         DICT["domain/skillsDictionary.ts"]
         RMAP["domain/roleExpansionMap.ts"]
@@ -315,7 +317,11 @@ flowchart LR
     Features --> ENV
     Features --> DICT
     Features --> RMAP
+    Features --> LLM
+    Features --> LJSON
 ```
+
+**Note on `llmClient.ts` vs `openrouterClient.ts` (decisions.md AD-32):** two separate AI-client abstractions exist deliberately. `openrouterClient.ts` backs `AiScoreProvider` (job-vs-resume scoring, scoring.md §3) through OpenRouter's multi-model gateway. `llmClient.ts` backs `ResumeSuggestionProvider` (resume coaching, `src/features/resume/`) with direct Gemini/Anthropic REST calls, switched via `LLM_PROVIDER`. They were not merged into one abstraction because they serve different call shapes (structured-JSON-schema job scoring vs. free-text/lenient-JSON resume coaching) and merging would have meant either routing resume suggestions through OpenRouter (against the merge plan's explicit "Gemini Flash default, Anthropic optional" requirement) or making `AiScoreProvider` provider-aware (a bigger, unrequested change to the existing scoring pipeline).
 
 ---
 

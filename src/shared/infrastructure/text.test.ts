@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeWhitespace, stripHtml, truncateText } from "./text";
+import { chunkText, normalizeWhitespace, stripHtml, truncateText } from "./text";
 
 describe("stripHtml", () => {
   it("converts block-level tags to line breaks", () => {
@@ -47,6 +47,35 @@ describe("truncateText", () => {
 
   it("handles empty string", () => {
     expect(truncateText("", 10)).toBe("");
+  });
+});
+
+describe("chunkText", () => {
+  it("returns a single chunk when at or under the limit", () => {
+    expect(chunkText("hello", 10)).toEqual(["hello"]);
+  });
+
+  it("splits into multiple chunks without dropping any content", () => {
+    const text = "a".repeat(25);
+    const chunks = chunkText(text, 10);
+    expect(chunks.length).toBeGreaterThan(1);
+    expect(chunks.join("")).toBe(text);
+  });
+
+  it("prefers to break at the last newline before the cap", () => {
+    const text = `${"a".repeat(8)}\n${"b".repeat(8)}`;
+    const chunks = chunkText(text, 10);
+    expect(chunks).toEqual(["aaaaaaaa", "bbbbbbbb"]);
+  });
+
+  it("still makes forward progress when no newline exists before the cap", () => {
+    const text = "a".repeat(30);
+    const chunks = chunkText(text, 10);
+    expect(chunks).toEqual(["a".repeat(10), "a".repeat(10), "a".repeat(10)]);
+  });
+
+  it("handles empty string", () => {
+    expect(chunkText("", 10)).toEqual([""]);
   });
 });
 

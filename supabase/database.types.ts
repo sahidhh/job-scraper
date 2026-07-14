@@ -470,6 +470,51 @@ export type Database = {
         }
         Relationships: []
       }
+      resume_suggestions: {
+        Row: {
+          applied_as_resume_id: string | null
+          created_at: string
+          id: string
+          model: string
+          resume_id: string
+          suggestions: Json
+          target_role: string
+        }
+        Insert: {
+          applied_as_resume_id?: string | null
+          created_at?: string
+          id?: string
+          model: string
+          resume_id: string
+          suggestions: Json
+          target_role?: string
+        }
+        Update: {
+          applied_as_resume_id?: string | null
+          created_at?: string
+          id?: string
+          model?: string
+          resume_id?: string
+          suggestions?: Json
+          target_role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resume_suggestions_resume_id_fkey"
+            columns: ["resume_id"]
+            isOneToOne: false
+            referencedRelation: "resumes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "resume_suggestions_applied_as_resume_id_fkey"
+            columns: ["applied_as_resume_id"]
+            isOneToOne: false
+            referencedRelation: "resumes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       role_pack_roles: {
         Row: {
           id: string
@@ -629,7 +674,7 @@ export type Database = {
     Functions: {
       set_active_resume: {
         Args: {
-          p_content_hash: string
+          p_content_hash: string | null
           p_file_path: string
           p_parsed_text: string
           p_skills: string[]

@@ -157,7 +157,7 @@ sequenceDiagram
 | sources | `src/features/sources` | Six ATS/board scrapers, RawJob normalization |
 | jobs | `src/features/jobs` | Persistence, dedup, dashboard queries, status CRUD |
 | filtering | `src/features/filtering` | Location tag inference from raw location strings |
-| resume | `src/features/resume` | PDF upload, text extraction, skill tagging |
+| resume | `src/features/resume` | PDF/DOCX upload, text extraction, skill tagging, AI resume coaching + apply-as-new-version (decisions.md AD-32/AD-33) |
 | roles | `src/features/roles` | Role selection, AI expansion, role_expansion_map cache |
 | scoring | `src/features/scoring` | Two-stage keyword+AI scoring pipeline |
 | notifications | `src/features/notifications` | Telegram message formatting and delivery |

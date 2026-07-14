@@ -138,6 +138,16 @@ erDiagram
         boolean is_active "UNIQUE partial index where true"
     }
 
+    RESUME_SUGGESTIONS {
+        uuid id PK
+        uuid resume_id "FK -- exact resume version this set was generated against"
+        text target_role
+        jsonb suggestions "ResumeSuggestionItem[]: {id, category, title, detail}"
+        text model
+        timestamptz created_at
+        uuid applied_as_resume_id "nullable FK -- new resume version created by apply, if any"
+    }
+
     ROLE_EXPANSION_MAP {
         text role PK
         text[] related_roles
@@ -194,6 +204,8 @@ erDiagram
     JOBS ||--o| NOTIFICATIONS_LOG : "notified once"
     ROLE_SELECTIONS ||--o{ DIGEST_SESSIONS : "scopes"
     JOBS ||--o{ JOB_DUPLICATES : "rediscovered as"
+    RESUMES ||--o{ RESUME_SUGGESTIONS : "generated against"
+    RESUMES ||--o| RESUME_SUGGESTIONS : "created by applying"
 ```
 
 ---

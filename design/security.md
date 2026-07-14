@@ -43,6 +43,7 @@ WITH CHECK (true);
 | job_duplicates | authenticated read-only (writes are service-role only, via scripts/scrape.ts) | authenticated |
 | company_career_pages | authenticated read-only (writes are service-role only, via scripts/discover-career-pages.ts) | authenticated |
 | digest_sessions | authenticated full access | authenticated |
+| resume_suggestions | authenticated full access | authenticated |
 
 Anonymous or unauthenticated requests receive zero rows / permission denied.
 
@@ -86,6 +87,7 @@ Resume files are stored with their sha256 content hash as the path (`<hash>.pdf`
 |---|---|---|
 | `SUPABASE_SERVICE_ROLE_KEY` | GitHub Actions secrets only | Cron scripts |
 | `OPENROUTER_API_KEY` | GitHub Actions secrets + Vercel env | Scripts + server actions (role expansion) |
+| `GEMINI_API_KEY` / `ANTHROPIC_API_KEY` | Vercel env only (no cron script uses them) | Server actions (resume suggestions, `src/shared/infrastructure/llmClient.ts`) — same pattern as `OPENROUTER_API_KEY`'s server-action usage: read server-side only, never exposed via `NEXT_PUBLIC_*` |
 | `TELEGRAM_BOT_TOKEN` | GitHub Actions secrets only | Notify script |
 | `TELEGRAM_CHAT_ID` | GitHub Actions secrets only | Notify script |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Vercel env (public) | Client-side Supabase calls |
