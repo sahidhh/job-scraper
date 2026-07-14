@@ -173,6 +173,7 @@ These are explicitly banned by the project rules (CLAUDE.md):
 | `discover:career-pages` | `tsx scripts/discover-career-pages.ts` | Manual run of ATS career-page discovery (Phase 2 Task 8) |
 | `setup:webhook` | `tsx scripts/setup-webhook.ts` | One-off Telegram webhook registration |
 | `scrape:careers-url` | `tsx scripts/scrape-careers-url.ts` | (merge-workspace Phase 5) Manual-trigger fetch of one operator-provided public careers page URL -- not part of any cron/workflow |
+| `migrate:jobhunt-sqlite` | `tsx scripts/migrate-jobhunt-sqlite.ts -- <path-to-jobhunt.db>` | (merge-workspace Phase 6) One-off jobhunt-app cutover: migrates its `resumes` and already-reviewed (`status != 'new'`) `jobs` rows into Supabase. Reads SQLite via Node's built-in `node:sqlite` -- no new dependency (`docs/decisions.md` AD-36) |
 
 ## 7. CI / CD
 
