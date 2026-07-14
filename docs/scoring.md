@@ -69,6 +69,17 @@ Triggered only when `keyword_score >= KEYWORD_THRESHOLD` (config default `0.25`,
 All failures leave `ai_score` null. `OpenRouterAiScoreProvider.getStats()` returns per-run analytics (`successful`, `failed`, `failuresByReason`), logged by `score.ts` at the end of each batch.
 4. On success: the same `job_scores` row is upserted with `ai_score = $score, ai_reasoning = $reasoning` (on conflict `(job_id, role_selection_id)` → update, not ignore — `repositories.md` §5).
 
+### 3.1 Local embedding-similarity signal (`embedding_score`, decisions.md AD-31)
+
+Alongside the OpenRouter call, the same `keywordThreshold` gate also runs a **local, offline** semantic-similarity check ported from jobhunt-app's `scoring.py`:
+
+1. `TransformersEmbeddingScoreProvider` embeds the resume's `parsedText` and the job's `title + description` via a `@huggingface/transformers` `feature-extraction` pipeline (`onnx-community/all-MiniLM-L6-v2-ONNX`, mean-pooled + normalized). The model loads once per `score.ts` run and is reused across all jobs in that run.
+2. Cosine similarity between the two vectors (`embeddingSimilarity.ts`) is mapped to `[0,1]` via the **continuous** transform `(sim + 1) / 2`, applied to every value with no special case at zero — the reference implementation's bug (jobhunt bug #1: only negative similarities were remapped, positive ones passed through raw, producing a discontinuity at `sim=0`) does not reproduce here.
+3. Stored as `job_scores.embedding_score` (nullable `real`). It is a **stage-2, informational** signal only — it does not feed `computeOverallScore`'s ranking blend or the dashboard sort (that remains exactly `ai_score` + configurable bonuses, per AD-26).
+4. Never throws. Returns `null` (leaving `embedding_score` unset) when there's no resume/job text to embed, or when the pipeline call fails for any reason (model load error, etc.) — and every such fallback is logged via `console.warn` (jobhunt bug #7: the reference implementation swallowed this failure silently).
+
+No API key or network call is needed at scoring time beyond the model's one-time download (cached on disk afterward), so this signal has zero marginal per-job cost, unlike the OpenRouter call.
+
 **Retry logic for `ai_score IS NULL` rows:** `JobRepository.findUnscored()` receives `keywordThreshold` and uses an OR filter to exclude two categories of "done" jobs:
 
    - **`ai_score IS NOT NULL`** — fully scored; excluded always.

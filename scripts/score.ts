@@ -6,6 +6,7 @@ import { scoreJob } from "@/features/scoring/application/scoreJob";
 import { OpenRouterAiScoreProvider } from "@/features/scoring/infrastructure/OpenRouterAiScoreProvider";
 import { SupabaseRankingPreferencesRepository } from "@/features/scoring/infrastructure/SupabaseRankingPreferencesRepository";
 import { SupabaseScoreRepository } from "@/features/scoring/infrastructure/SupabaseScoreRepository";
+import { TransformersEmbeddingScoreProvider } from "@/features/scoring/infrastructure/TransformersEmbeddingScoreProvider";
 import { SKILLS_DICTIONARY } from "@/shared/config/skills-dictionary";
 import { optionalEnv } from "@/shared/infrastructure/env";
 import { createSupabaseServiceClient } from "@/shared/infrastructure/supabaseClient";
@@ -20,6 +21,10 @@ async function main(): Promise<void> {
   const scoreRepository = new SupabaseScoreRepository(client);
   const rankingPreferencesRepository = new SupabaseRankingPreferencesRepository(client);
   const aiScoreProvider = new OpenRouterAiScoreProvider();
+  // Local, offline stage-2 semantic signal (decisions.md AD-31) -- the
+  // model loads once (cached across jobs in this run) and degrades to a
+  // logged null on any failure, so it's always safe to wire in.
+  const embeddingScoreProvider = new TransformersEmbeddingScoreProvider();
 
   const resume = await resumeRepository.getActive();
   if (!resume) {
@@ -67,6 +72,7 @@ async function main(): Promise<void> {
       const result = await scoreJob(job, resume, roleSelection.id, {
         scoreRepository,
         aiScoreProvider,
+        embeddingScoreProvider,
         skillsDictionary: SKILLS_DICTIONARY,
         keywordThreshold,
         costPer1kTokens,
@@ -83,7 +89,10 @@ async function main(): Promise<void> {
           `[score] job ${job.id}: AI provider returned null (call failed or malformed response); ai_score left null for retry`,
         );
       } else {
-        console.log(`[score] job ${job.id}: scored (keyword=${result.keywordScore.toFixed(2)}, ai=${result.aiScore.toFixed(2)})`);
+        const embeddingPart = result.embeddingScore != null ? `, embedding=${result.embeddingScore.toFixed(2)}` : "";
+        console.log(
+          `[score] job ${job.id}: scored (keyword=${result.keywordScore.toFixed(2)}, ai=${result.aiScore.toFixed(2)}${embeddingPart})`,
+        );
       }
 
       scored += 1;

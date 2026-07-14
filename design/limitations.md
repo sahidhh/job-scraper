@@ -91,6 +91,9 @@ Resume text and job descriptions are capped (`OPENROUTER_MAX_RESUME_PROMPT_CHARS
 ### 3.8 Ranking Preferences Don't Retroactively Re-Rank (`docs/decisions.md` AD-26)
 `overall_score` is computed once, at scoring time, from whatever `RankingPreferences` are in effect then. Changing preferences (e.g. adding a new preferred company) does not recompute `overall_score` for jobs already scored — it only takes effect for jobs scored from that point on (new scrapes, or the AI-retry queue). This mirrors §3.5's existing "no retroactive rescoring" behavior rather than introducing a new kind of staleness.
 
+### 3.9 `embedding_score` Is Informational Only, With No Dashboard Surface (`docs/decisions.md` AD-31)
+`job_scores.embedding_score` (local, offline resume/job cosine similarity) is computed and persisted at stage 2 but is not shown anywhere in the UI and does not affect `overall_score`/dashboard sort order. It is also not backfilled for scores written before this column existed, and not recomputed retroactively (same staleness shape as §3.5/§3.8). A cold environment with no cached model (a fresh CI runner or serverless cold start, not this project's persistent-cron deployment shape) downloads the ~90 MB model on the first `score.ts` invocation, adding latency to that one run; every failure mode (no cache, no network, model error) degrades to a logged null rather than blocking scoring.
+
 ---
 
 ## 4. Notifications

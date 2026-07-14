@@ -20,6 +20,7 @@
 | Notifications | Telegram Bot API | — | Simple HTTP delivery, no additional SDK |
 | PDF Parsing | pdf-parse | — | Extract text from uploaded PDF resumes |
 | DOCX Parsing | mammoth | — | Extract text (including table content) from uploaded DOCX resumes |
+| Local Embeddings | @huggingface/transformers | v4 | Offline resume/job semantic-similarity signal (`scoring.md` §3.1, `decisions.md` AD-31); runs on-device, no API key/cost |
 | Testing | vitest | latest | Fast, TypeScript-native test runner |
 | Script Runtime | tsx | latest | Execute TypeScript files directly (no build step) |
 | Package Manager | npm | — | Standard Node.js package manager |
@@ -103,6 +104,7 @@ These are explicitly banned by the project rules (CLAUDE.md):
     "zod": "^4.0",
     "pdf-parse": "^1.1",
     "mammoth": "^1.12",
+    "@huggingface/transformers": "^4.2",
     "recharts": "^3.8.1",
     "radix-ui": "^1.5.0",
     "@tailwindcss/postcss": "^4.3.1",
@@ -129,6 +131,8 @@ These are explicitly banned by the project rules (CLAUDE.md):
 ```
 
 **Note on jszip:** dev-only, used to build an in-memory `.docx` fixture (a real OPC zip) in `parseDocx.test.ts` so DOCX/table extraction is tested against actual mammoth parsing rather than a mocked `mammoth` module. It's already a transitive dependency of `mammoth` itself; listed explicitly as a devDependency rather than relied on implicitly.
+
+**Note on @huggingface/transformers:** pulls in native/WASM runtime deps (`onnxruntime-node`, `sharp`) and downloads a ~90 MB model on first use. Only ever imported by `TransformersEmbeddingScoreProvider.ts` (infrastructure) and instantiated by `scripts/score.ts` — no `src/app/` page or server action imports it, so it is never bundled into the Next.js app (verified: `npm run build`'s route bundle sizes are unaffected). Tests mock the pipeline (`TransformersEmbeddingScoreProvider.test.ts`) so `npm run verify` never triggers a real model download.
 
 ## 6. npm Scripts
 

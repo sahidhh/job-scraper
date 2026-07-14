@@ -30,6 +30,7 @@ describe("SupabaseScoreRepository", () => {
       p_estimated_cost_usd: null,
       p_overall_score: null,
       p_overall_score_reasons: null,
+      p_embedding_score: null,
     });
   });
 
@@ -50,6 +51,25 @@ describe("SupabaseScoreRepository", () => {
     expect(vi.mocked(client.rpc)).toHaveBeenCalledWith(
       "upsert_job_score",
       expect.objectContaining({ p_overall_score: 0.9, p_overall_score_reasons: ["preferred company"] }),
+    );
+  });
+
+  it("insertScore passes embeddingScore through to the RPC", async () => {
+    const { client } = mockSupabaseClient({ data: null, error: null });
+    const repo = new SupabaseScoreRepository(client);
+
+    await repo.insertScore({
+      jobId: "job-1",
+      roleSelectionId: "role-selection-1",
+      resumeVersion: 1,
+      keywordScore: 1,
+      aiScore: 0.85,
+      embeddingScore: 0.72,
+    });
+
+    expect(vi.mocked(client.rpc)).toHaveBeenCalledWith(
+      "upsert_job_score",
+      expect.objectContaining({ p_embedding_score: 0.72 }),
     );
   });
 

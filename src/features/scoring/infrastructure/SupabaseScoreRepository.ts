@@ -25,6 +25,7 @@ export class SupabaseScoreRepository implements ScoreRepository {
       p_estimated_cost_usd: score.estimatedCostUsd ?? null,
       p_overall_score: score.overallScore ?? null,
       p_overall_score_reasons: score.overallScoreReasons ?? null,
+      p_embedding_score: score.embeddingScore ?? null,
     });
 
     if (error) throw toAppError(error);

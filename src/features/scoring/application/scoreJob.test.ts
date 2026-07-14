@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { Job } from "@/features/jobs/domain/types";
 import type { Resume } from "@/features/resume/domain/types";
 import type { AiScoreProvider } from "@/features/scoring/domain/AiScoreProvider";
+import type { EmbeddingScoreProvider } from "@/features/scoring/domain/EmbeddingScoreProvider";
 import type { ScoreRepository } from "@/features/scoring/domain/ScoreRepository";
 import type { SkillDictionaryEntry } from "@/shared/domain/skills";
 import { scoreJob } from "./scoreJob";
@@ -77,6 +78,12 @@ function makeScoreRepository(): ScoreRepository {
 function makeAiProvider(
   result: { score: number; reasoning: string; model: string; tokensInput: number | null; tokensOutput: number | null } | null,
 ): AiScoreProvider {
+  return {
+    score: vi.fn().mockResolvedValue(result),
+  };
+}
+
+function makeEmbeddingProvider(result: number | null): EmbeddingScoreProvider {
   return {
     score: vi.fn().mockResolvedValue(result),
   };
@@ -160,5 +167,77 @@ describe("scoreJob", () => {
 
     expect(result.keywordScore).toBe(0);
     expect(aiScoreProvider.score).not.toHaveBeenCalled();
+  });
+
+  it("calls the embedding provider and stores its result when keyword score clears the threshold", async () => {
+    const job = makeJob();
+    const resume = makeResume({ skills: ["React", "Node.js"] });
+    const scoreRepository = makeScoreRepository();
+    const aiScoreProvider = makeAiProvider({ score: 0.85, reasoning: "Strong match", model: "x", tokensInput: null, tokensOutput: null });
+    const embeddingScoreProvider = makeEmbeddingProvider(0.72);
+
+    const result = await scoreJob(job, resume, "role-selection-1", {
+      scoreRepository,
+      aiScoreProvider,
+      embeddingScoreProvider,
+      skillsDictionary: dictionary,
+      keywordThreshold: 0.5,
+    });
+
+    expect(embeddingScoreProvider.score).toHaveBeenCalledWith({ job, resume });
+    expect(result.embeddingScore).toBe(0.72);
+  });
+
+  it("leaves embeddingScore null when the embedding provider returns null (fallback to overlap-only)", async () => {
+    const job = makeJob();
+    const resume = makeResume({ skills: ["React", "Node.js"] });
+    const scoreRepository = makeScoreRepository();
+    const aiScoreProvider = makeAiProvider({ score: 0.85, reasoning: "Strong match", model: "x", tokensInput: null, tokensOutput: null });
+    const embeddingScoreProvider = makeEmbeddingProvider(null);
+
+    const result = await scoreJob(job, resume, "role-selection-1", {
+      scoreRepository,
+      aiScoreProvider,
+      embeddingScoreProvider,
+      skillsDictionary: dictionary,
+      keywordThreshold: 0.5,
+    });
+
+    expect(result.embeddingScore).toBeNull();
+  });
+
+  it("never calls the embedding provider when keyword score is below the threshold", async () => {
+    const job = makeJob({ title: "Python Developer", description: "Work with Python and Django" });
+    const resume = makeResume({ skills: ["React", "Node.js"] });
+    const scoreRepository = makeScoreRepository();
+    const aiScoreProvider = makeAiProvider({ score: 0.9, reasoning: "n/a", model: "x", tokensInput: null, tokensOutput: null });
+    const embeddingScoreProvider = makeEmbeddingProvider(0.72);
+
+    const result = await scoreJob(job, resume, "role-selection-1", {
+      scoreRepository,
+      aiScoreProvider,
+      embeddingScoreProvider,
+      skillsDictionary: dictionary,
+      keywordThreshold: 0.5,
+    });
+
+    expect(embeddingScoreProvider.score).not.toHaveBeenCalled();
+    expect(result.embeddingScore).toBeNull();
+  });
+
+  it("leaves embeddingScore null when no embedding provider is supplied", async () => {
+    const job = makeJob();
+    const resume = makeResume({ skills: ["React", "Node.js"] });
+    const scoreRepository = makeScoreRepository();
+    const aiScoreProvider = makeAiProvider({ score: 0.85, reasoning: "Strong match", model: "x", tokensInput: null, tokensOutput: null });
+
+    const result = await scoreJob(job, resume, "role-selection-1", {
+      scoreRepository,
+      aiScoreProvider,
+      skillsDictionary: dictionary,
+      keywordThreshold: 0.5,
+    });
+
+    expect(result.embeddingScore).toBeNull();
   });
 });

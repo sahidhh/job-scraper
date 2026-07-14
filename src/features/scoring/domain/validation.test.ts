@@ -25,6 +25,30 @@ describe("validateNewJobScore", () => {
       }),
     ).toThrow();
   });
+
+  it("rejects an embeddingScore outside [0, 1] when present", () => {
+    expect(() =>
+      validateNewJobScore({
+        jobId: "j1",
+        roleSelectionId: "r1",
+        resumeVersion: 1,
+        keywordScore: 0.5,
+        embeddingScore: 1.1,
+      }),
+    ).toThrow();
+  });
+
+  it("accepts a valid embeddingScore", () => {
+    expect(() =>
+      validateNewJobScore({
+        jobId: "j1",
+        roleSelectionId: "r1",
+        resumeVersion: 1,
+        keywordScore: 0.5,
+        embeddingScore: 0.7,
+      }),
+    ).not.toThrow();
+  });
 });
 
 describe("validateRankingPreferences", () => {

@@ -90,6 +90,7 @@ erDiagram
         integer retry_count "incremented by upsert_job_score() whenever a write leaves ai_score null; never reset"
         real overall_score "nullable; ai_score + configurable ranking bonuses, computeOverallScore.ts; null iff ai_score is null"
         text[] overall_score_reasons "nullable; bonuses applied (e.g. 'preferred company'), for dashboard display"
+        real embedding_score "nullable; 0.0 - 1.0, local resume/job cosine similarity (AD-31); null if below keyword threshold, no provider, or embedding failed; not part of overall_score"
     }
 
     JOB_STATUSES {
@@ -247,16 +248,17 @@ erDiagram
 
 Both functions run in a single transaction, ensuring exactly one active record at all times.
 
-### `upsert_job_score(p_job_id, p_role_selection_id, p_resume_version, p_keyword_score, p_ai_score, p_ai_reasoning, p_model, p_tokens_input, p_tokens_output, p_estimated_cost_usd, p_overall_score default null, p_overall_score_reasons default null)`
+### `upsert_job_score(p_job_id, p_role_selection_id, p_resume_version, p_keyword_score, p_ai_score, p_ai_reasoning, p_model, p_tokens_input, p_tokens_output, p_estimated_cost_usd, p_overall_score default null, p_overall_score_reasons default null, p_embedding_score default null)`
 
 ```
 1. INSERT INTO job_scores (…) ON CONFLICT (job_id, role_selection_id, resume_version)
    DO UPDATE SET keyword_score/ai_score/ai_reasoning/model/tokens_*/estimated_cost_usd = excluded.*,
                  retry_count = job_scores.retry_count + (1 if excluded.ai_score IS NULL else 0),
-                 overall_score/overall_score_reasons = excluded.*
+                 overall_score/overall_score_reasons = excluded.*,
+                 embedding_score = excluded.embedding_score
 ```
 
-Atomic single-round-trip write + conditional counter increment (Phase 1 Task 6) -- a plain client-side `.upsert()` can't express "increment only when this write leaves ai_score null" without a read-modify-write per job. `p_overall_score`/`p_overall_score_reasons` (Theme 1 continuous-improvement pass) were appended as trailing parameters with defaults in `20260704000004_ranking_overall_score.sql` -- `CREATE OR REPLACE FUNCTION` supports adding parameters this way without creating a duplicate overload, so pre-existing callers that omit them are unaffected.
+Atomic single-round-trip write + conditional counter increment (Phase 1 Task 6) -- a plain client-side `.upsert()` can't express "increment only when this write leaves ai_score null" without a read-modify-write per job. `p_overall_score`/`p_overall_score_reasons` (Theme 1 continuous-improvement pass) were appended as trailing parameters with defaults in `20260704000004_ranking_overall_score.sql`; `p_embedding_score` (merge-workspace Phase 2, AD-31) was appended the same way in `20260714000001_job_scores_embedding_score.sql` -- `CREATE OR REPLACE FUNCTION` supports adding parameters this way without creating a duplicate overload, so pre-existing callers that omit them are unaffected.
 
 ---
 

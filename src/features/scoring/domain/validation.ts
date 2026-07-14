@@ -7,6 +7,10 @@ export function validateNewJobScore(score: NewJobScore): void {
   if (score.aiScore !== undefined && score.aiScore !== null) {
     assertUnitInterval(score.aiScore, "aiScore");
   }
+
+  if (score.embeddingScore !== undefined && score.embeddingScore !== null) {
+    assertUnitInterval(score.embeddingScore, "embeddingScore");
+  }
 }
 
 // Throws a descriptive error on the first invalid field so the settings UI
