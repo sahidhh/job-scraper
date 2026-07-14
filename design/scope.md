@@ -107,20 +107,20 @@ parsing, no AI" extraction standard than `extractSalary`/`extractContactEmail`. 
 | CLI commands | `npm run verify:production` (full run + files), `npm run diagnostics` (console-only quick check) |
 | CI readiness | `.github/workflows/verify-production.yml`, `workflow_dispatch`-only (no schedule -- Phase 9 explicitly excluded new deployment automation) |
 
-### P1.12 — AI Resume Suggestions (merge-workspace Phase 3, backend only)
+### P1.12 — AI Resume Suggestions (merge-workspace Phase 3; UI wired post-audit closure)
 
 | Feature | Description |
 |---|---|
 | AI resume coaching | `suggestResumeImprovementsAction` proposes concrete, non-fabricated improvements (Impact/Skills/Keywords/Clarity/Formatting categories) for the active resume via a provider-agnostic LLM client (`gemini` default, `anthropic` optional -- `LLM_PROVIDER`). Long resumes are chunked rather than truncated (decisions.md AD-33) |
 | Apply as new version | `applyResumeSuggestionsAction` rewrites the resume with chosen suggestions and saves it as a brand NEW resume version via the existing `set_active_resume` path -- never overwrites the current version |
-| No UI yet | Domain/application/infrastructure + server actions are complete and tested; no `/resume` page UI calls them yet (`design/limitations.md` §2.5), same "backend now, UI later" shape as P1.8/P1.10's embedding_score |
+| UI | `/resume`'s "AI suggestions" card (`ResumeSuggestionsCard`) lets the user request suggestions for an optional target role, check off which ones to apply, and apply them as a new version in one action. Wired in the post-audit closure session (`docs/decisions.md` AD-38) -- previously backend-only |
 
-### P1.13 — Application Drafting (merge-workspace Phase 4)
+### P1.13 — Application Drafting (merge-workspace Phase 4; cover-letter UI wired post-audit closure)
 
 | Feature | Description |
 |---|---|
 | AI application drafts | `draftApplicationAction` generates a truthful, non-fabricated email or cover-letter draft (`kind`) for one job against the active resume, via the same provider-agnostic `llmClient` (`gemini` default, `anthropic` optional) resume suggestions uses (decisions.md AD-32/AD-34). Persisted as one `applications` row per `(job, kind)`, pre-filled with the job's extracted contact email if one exists |
-| Review and edit | User reviews the draft in a `/dashboard` dialog, edits subject/body (`updateApplicationContentAction`), regenerates, or dismisses it -- nothing is sent without this step |
+| Review and edit | User reviews the draft in a `/dashboard` dialog, edits subject/body (`updateApplicationContentAction`), regenerates, or dismisses it -- nothing is sent without this step. An Email / Cover letter toggle in the same dialog lets the user switch `kind` and review each independently (`docs/decisions.md` AD-38) -- previously the dialog only ever passed `kind: "email"` |
 | Mailto-only send | "Open in mail client" opens a `mailto:` link (`buildMailtoLink`) in the user's own mail client; `markApplicationSentAction` only records that this happened -- the app never sends email itself (no SMTP, no email API) |
 | Status tracking | `draft` → `sent` (terminal) or `draft` → `dismissed` (redraftable); a sent application can never be redrafted or edited |
 | Pending-drafts reminder | `notifyPendingDrafts` sends a Telegram reminder listing draft applications awaiting review, reusing the same `TelegramSender` delivery infra the job digest already uses -- not a new notification channel |
@@ -132,6 +132,13 @@ parsing, no AI" extraction standard than `extractSalary`/`extractContactEmail`. 
 | JSearch connector | Aggregator API (RapidAPI) indexing Google for Jobs -- surfaces LinkedIn/Indeed/Glassdoor/company listings through one legal API, not direct scraping of those sites. Query/country search, capped at 2 terms x configured countries per run (default `in,sg,ae`). Rejects entries with no genuine, stable `job_id` rather than falling back to an apply-link-derived one (jobhunt bug #4) |
 | Adzuna connector | Same query/country search shape as JSearch. Adzuna does not cover the UAE, so only India/Singapore of the platform's three target regions are reachable through it (`design/limitations.md` §1.1) |
 | Static careers-URL fetcher | `scripts/scrape-careers-url.ts` (`npm run scrape:careers-url -- <url>`) fetches one operator-provided public careers page and LLM-extracts listed roles (`LlmCareersPageExtractor`, reusing the Phase 3 `llmClient`). Manual-trigger only -- not on `scrape.ts`'s cron loop/`registry.ts` (`design/architecture.md` §4.2, `docs/decisions.md` AD-35) |
+
+### P1.15 — Resume Version Restore (post-audit closure)
+
+| Feature | Description |
+|---|---|
+| Version history | `/resume`'s "Version history" card lists every resume version (`ResumeRepository.listVersions()`), newest first, with upload date and origin ("Uploaded" if it has a `content_hash`, "AI-applied" if it was produced by P1.12's apply-suggestions flow) |
+| Restore | `restoreResumeVersionAction` makes an old version active again by re-running `set_active_resume` seeded with that version's exact content -- never mutates or deletes the old row, so history stays intact and restoring is itself just another new version |
 
 ### P2 — Medium Priority
 

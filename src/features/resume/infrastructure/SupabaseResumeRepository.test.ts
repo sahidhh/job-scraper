@@ -44,6 +44,45 @@ describe("SupabaseResumeRepository", () => {
     expect(await repo.getActive()).toBeNull();
   });
 
+  it("listVersions returns every version, newest version first", async () => {
+    const olderRow: ResumeRow = { ...row, id: "resume-0", version: 0, is_active: false };
+    const { client, builder } = mockSupabaseClient({ data: [row, olderRow], error: null });
+    const repo = new SupabaseResumeRepository(client);
+
+    const result = await repo.listVersions();
+
+    expect(result).toEqual([
+      {
+        id: "resume-1",
+        filePath: "resumes/resume-1.pdf",
+        parsedText: "Experienced engineer",
+        skills: ["React", "Node.js"],
+        uploadedAt: "2026-01-01T00:00:00Z",
+        isActive: true,
+        version: 1,
+        contentHash: "hash-1",
+      },
+      {
+        id: "resume-0",
+        filePath: "resumes/resume-1.pdf",
+        parsedText: "Experienced engineer",
+        skills: ["React", "Node.js"],
+        uploadedAt: "2026-01-01T00:00:00Z",
+        isActive: false,
+        version: 0,
+        contentHash: "hash-1",
+      },
+    ]);
+    expect(builder.order).toHaveBeenCalledWith("version", { ascending: false });
+  });
+
+  it("listVersions returns [] when no resumes exist", async () => {
+    const { client } = mockSupabaseClient({ data: null, error: null });
+    const repo = new SupabaseResumeRepository(client);
+
+    expect(await repo.listVersions()).toEqual([]);
+  });
+
   it("findByContentHash returns the matching resume, mapped, ordered to the newest", async () => {
     const { client, builder } = mockSupabaseClient({ data: row, error: null });
     const repo = new SupabaseResumeRepository(client);

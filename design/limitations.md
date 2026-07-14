@@ -66,8 +66,8 @@ Skill extraction uses exact or near-exact string matching against the dictionary
 ### 2.4 Single Active Resume
 Only one resume can be active at a time. Switching resumes invalidates all existing scores for the new active role (scores are role_selection-scoped, so they remain, but skill-based keyword scores become stale until the next scoring run).
 
-### 2.5 Resume Suggestions Have No UI Yet (`docs/decisions.md` AD-33)
-`suggestResumeImprovementsAction`/`applyResumeSuggestionsAction` (AI resume coaching + apply-as-new-version) are implemented end-to-end — domain, application, infrastructure, and server actions all have test coverage — but no `/resume` page UI calls them yet. Same shape as §3.9's `embedding_score` gap: the merge plan's Phase 3 checklist scoped the backend capability, not a UI pass. A suggestion set becomes unusable (never appliable) once its resume version is superseded by a newer upload or another apply — `applyResumeSuggestions` rejects a mismatched `resumeId` rather than silently applying against stale text.
+### 2.5 Resume Suggestions: Stale Sets, and General LLM Output Quality (`docs/decisions.md` AD-33/AD-38)
+`/resume`'s "AI suggestions" card calls `suggestResumeImprovementsAction`/`applyResumeSuggestionsAction` end-to-end (UI wired in the post-audit closure session, AD-38 — previously backend-only). A suggestion set becomes unusable (never appliable) once its resume version is superseded by a newer upload or another apply — `applyResumeSuggestions` rejects a mismatched `resumeId` rather than silently applying against stale text; the UI's only recourse is to discard it and request a fresh set. As with any LLM-generated content in this app (resume suggestions, application drafts, careers-page extraction), output quality depends on the configured model and prompt, and the app cannot guarantee suggestions are always useful or well-formed — only that they are never fabricated (prompts explicitly forbid inventing experience, skills, or metrics).
 
 ---
 
@@ -167,9 +167,6 @@ The Telegram reminder for draft applications (`notifyPendingDrafts`) is stateles
 
 ### 8.2 One Application Per (Job, Kind)
 `applications` has a `UNIQUE (job_id, kind)` constraint — at most one email draft and one cover-letter draft per job, ever. Redrafting overwrites the existing `draft`/`dismissed` row in place; there is no history of prior draft attempts for the same job+kind, and a `sent` row can never be redrafted or edited (`draftApplication`/`updateApplicationContent`/`markApplicationSent` all reject a non-`draft` status).
-
-### 8.3 No Cover-Letter-Specific UI Distinction
-`kind: "coverletter"` is a fully supported value in the domain layer and database (longer word-count target in the drafting prompt), but the `/dashboard` review dialog only ever calls the actions with `kind: "email"` — there is no UI control yet to request a cover-letter draft instead. Reachable today only by calling `draftApplicationAction(jobId, "coverletter")` directly (e.g. from a future UI addition or a script), not from the shipped dialog.
 
 ---
 

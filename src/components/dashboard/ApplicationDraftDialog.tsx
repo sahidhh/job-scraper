@@ -24,7 +24,9 @@ import {
   updateApplicationContentAction,
 } from "@/features/applications/actions";
 import { buildMailtoLink } from "@/features/applications/application/buildMailtoLink";
-import type { Application } from "@/features/applications/domain/types";
+import type { Application, ApplicationKind } from "@/features/applications/domain/types";
+
+const KIND_LABELS: Record<ApplicationKind, string> = { email: "Email", coverletter: "Cover letter" };
 
 // Draft -> review -> send flow (mailto only for now, Phase 4). This app
 // never sends email on its own behalf: "Open in Mail Client" hands off to
@@ -35,6 +37,7 @@ export function ApplicationDraftDialog({ jobId, jobTitle }: { jobId: string; job
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [kind, setKind] = useState<ApplicationKind>("email");
   const [application, setApplication] = useState<Application | null>(null);
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
@@ -47,14 +50,11 @@ export function ApplicationDraftDialog({ jobId, jobTitle }: { jobId: string; job
     setBody(app?.body ?? "");
   }
 
-  function onOpenChange(next: boolean) {
-    setOpen(next);
+  function loadApplication(nextKind: ApplicationKind) {
     setError(null);
-    if (!next) return;
-
     setLoading(true);
     startTransition(async () => {
-      const result = await getApplicationForJobAction(jobId, "email");
+      const result = await getApplicationForJobAction(jobId, nextKind);
       if (result.ok) {
         syncFields(result.data);
       } else {
@@ -64,10 +64,23 @@ export function ApplicationDraftDialog({ jobId, jobTitle }: { jobId: string; job
     });
   }
 
+  function onOpenChange(next: boolean) {
+    setOpen(next);
+    setError(null);
+    if (!next) return;
+    loadApplication(kind);
+  }
+
+  function selectKind(nextKind: ApplicationKind) {
+    if (nextKind === kind) return;
+    setKind(nextKind);
+    loadApplication(nextKind);
+  }
+
   function generateDraft() {
     setError(null);
     startTransition(async () => {
-      const result = await draftApplicationAction(jobId, "email");
+      const result = await draftApplicationAction(jobId, kind);
       if (result.ok) {
         syncFields(result.data);
       } else {
@@ -137,6 +150,21 @@ export function ApplicationDraftDialog({ jobId, jobTitle }: { jobId: string; job
           <DialogDescription className="truncate">{jobTitle}</DialogDescription>
         </DialogHeader>
 
+        <div className="flex gap-2">
+          {(Object.keys(KIND_LABELS) as ApplicationKind[]).map((option) => (
+            <Button
+              key={option}
+              type="button"
+              size="sm"
+              variant={kind === option ? "default" : "outline"}
+              disabled={isPending || loading}
+              onClick={() => selectKind(option)}
+            >
+              {KIND_LABELS[option]}
+            </Button>
+          ))}
+        </div>
+
         {loading ? (
           <div className="flex items-center justify-center py-8 text-muted-foreground">
             <Loader2 className="size-5 animate-spin" />
@@ -145,7 +173,8 @@ export function ApplicationDraftDialog({ jobId, jobTitle }: { jobId: string; job
           <div className="space-y-3">
             {isDismissed && <Badge variant="outline">Dismissed</Badge>}
             <p className="text-sm text-muted-foreground">
-              Generate a tailored email draft using your active resume. You always review it before anything is sent.
+              Generate a tailored {KIND_LABELS[kind].toLowerCase()} draft using your active resume. You always
+              review it before anything is sent.
             </p>
             <Button onClick={generateDraft} disabled={isPending}>
               {isDismissed ? "Regenerate draft" : "Generate draft"}

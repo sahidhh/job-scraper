@@ -41,11 +41,25 @@ After the first scrape+score+notify run, your dashboard will show scored jobs an
 
 > Skills are used directly in keyword scoring. Keep the list accurate and complete for best results.
 
+### Get AI Suggestions
+1. In the "AI suggestions" card, optionally enter a target role for context, then click "Get suggestions"
+2. Review the proposed improvements (each labeled Impact/Skills/Keywords/Clarity/Formatting) and check the ones you want
+3. Click "Apply selected (N)" — this creates a brand new resume version with just the chosen suggestions applied; your current version is untouched and stays in the version history
+4. Click "Discard" instead if you don't want any of them — nothing is changed
+
+> Suggestions never invent experience, skills, or metrics — they only rephrase, restructure, or highlight what's already in your resume.
+
+### Restore an Earlier Version
+- The "Version history" card (shown once you have more than one version) lists every past resume version with its upload date and origin ("Uploaded" for a file you uploaded, "AI-applied" for a version created by applying resume suggestions)
+- Click "Restore" on any inactive version to make it active again
+- Restoring never deletes or overwrites history — it creates a brand new version with that old version's exact text and skills, the same way a fresh upload would
+
 ### Notes
 - Only one resume can be active at a time
 - Uploading a new resume deactivates the previous one
 - Skills on the previous resume do not carry over — review after each upload
 - Score history is not invalidated when you upload a new resume; new scores use the new skills
+- Old versions are never deleted — restore any of them from the version history card
 
 ---
 
@@ -129,10 +143,11 @@ Use the page controls at the bottom to navigate pages.
 
 ### Draft an Application
 Click the mail icon on any job row/card to open the application dialog.
-1. Click **Generate draft** — an AI-drafted email (using only facts from your active resume, never invented) is created and pre-filled with the job's contact email if one was found on the posting
-2. Review it. Edit the subject or body directly and click **Save changes** if you want to tweak wording
-3. Click **Open in mail client** — this opens a `mailto:` link in your own mail app with the subject/body prefilled. Send it from there. **The dashboard never sends anything on its own** — this is always your own mail client, your own send
-4. If you don't want to send it, click **Dismiss** instead — you can regenerate a fresh draft for the same job later
+1. Choose **Email** or **Cover letter** using the toggle at the top of the dialog — each is drafted, reviewed, and sent independently for the same job
+2. Click **Generate draft** — an AI-drafted email or cover letter (using only facts from your active resume, never invented) is created and pre-filled with the job's contact email if one was found on the posting
+3. Review it. Edit the subject or body directly and click **Save changes** if you want to tweak wording
+4. Click **Open in mail client** — this opens a `mailto:` link in your own mail app with the subject/body prefilled. Send it from there. **The dashboard never sends anything on its own** — this is always your own mail client, your own send
+5. If you don't want to send it, click **Dismiss** instead — you can regenerate a fresh draft for the same job later
 
 Once a draft is marked sent, it can't be edited or redrafted — it's a permanent record of what you actually sent.
 Dismissed drafts can be redrafted at any time. See §9 for how pending (unreviewed) drafts show up in Telegram.

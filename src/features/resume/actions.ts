@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { applyResumeSuggestions } from "@/features/resume/application/applyResumeSuggestions";
+import { restoreResumeVersion } from "@/features/resume/application/restoreResumeVersion";
 import { suggestResumeImprovements } from "@/features/resume/application/suggestResumeImprovements";
 import { uploadResume } from "@/features/resume/application/uploadResume";
 import { updateSkills } from "@/features/resume/application/updateSkills";
@@ -78,6 +79,23 @@ export async function updateResumeSkillsAction(resumeId: string, skills: string[
     const resumeRepository = new SupabaseResumeRepository(client);
 
     const result = await updateSkills(resumeId, skills, { resumeRepository });
+    revalidatePath("/resume");
+    return { ok: true, data: result };
+  } catch (error) {
+    return { ok: false, error: errorMessage(error) };
+  }
+}
+
+// Restores an old resume version as the new active version. Never mutates
+// the old row in place -- reactivates its content via the same
+// set_active_resume path a fresh upload uses (audit finding #1: old
+// versions were preserved in Postgres but had no reachable undo path).
+export async function restoreResumeVersionAction(resumeId: string): Promise<ActionResult<Resume>> {
+  try {
+    const client = await createSupabaseServerClient();
+    const resumeRepository = new SupabaseResumeRepository(client);
+
+    const result = await restoreResumeVersion(resumeId, { resumeRepository });
     revalidatePath("/resume");
     return { ok: true, data: result };
   } catch (error) {

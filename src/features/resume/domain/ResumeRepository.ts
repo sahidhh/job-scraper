@@ -4,6 +4,14 @@ export interface ResumeRepository {
   getActive(): Promise<Resume | null>;
 
   /**
+   * Every resume version (active and inactive), newest version first.
+   * Backs the version-history/undo UI -- old versions are preserved in
+   * Postgres by set_active_resume's deactivate-not-delete semantics but
+   * were otherwise unreachable from the application layer.
+   */
+  listVersions(): Promise<Resume[]>;
+
+  /**
    * Most recent resume row (any version) with this content_hash, or null.
    * Backs the sha256 parse-once cache (decisions.md AD-30) -- lets the
    * application layer skip pdf-parse/mammoth entirely on a re-upload of

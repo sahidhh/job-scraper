@@ -52,6 +52,7 @@ function makeDeps(overrides: Partial<ApplyResumeSuggestionsDeps> = {}): ApplyRes
 
   const resumeRepository: ResumeRepository = {
     getActive: vi.fn(),
+    listVersions: vi.fn(),
     findByContentHash: vi.fn(),
     create: vi.fn().mockImplementation((input: NewResume) =>
       Promise.resolve(makeResume({ id: "resume-2", version: 2, parsedText: input.parsedText, contentHash: input.contentHash })),

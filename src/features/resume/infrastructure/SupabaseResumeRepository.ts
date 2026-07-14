@@ -30,6 +30,15 @@ export class SupabaseResumeRepository implements ResumeRepository {
     return data ? toResume(data) : null;
   }
 
+  // Version history (undo path): every version, newest first. Old versions
+  // are never deleted by set_active_resume, only deactivated.
+  async listVersions(): Promise<Resume[]> {
+    const { data, error } = await this.client.from("resumes").select("*").order("version", { ascending: false });
+
+    if (error) throw toAppError(error);
+    return (data ?? []).map(toResume);
+  }
+
   // Parse-once cache lookup (decisions.md AD-30): most recent row (any
   // version) with this content_hash. Ordered by uploaded_at so a re-upload
   // always matches the newest parse of that content.

@@ -108,9 +108,21 @@ Actions **never throw** to the client. On success they call `revalidatePath()` t
 
 ---
 
+#### `restoreResumeVersionAction(resumeId)`
+**File:** `src/features/resume/actions.ts`  
+**Description:** Restores an old, inactive resume version as the new active version (audit finding #1 — old versions were preserved in Postgres via `set_active_resume`'s deactivate-not-delete semantics but had no reachable undo path). Never mutates the old row in place — re-runs `set_active_resume` seeded with the target version's exact `filePath`/`parsedText`/`skills`/`contentHash`, producing a brand new version with identical content. Fails if the version doesn't exist or is already active.
+
+| Param | Type | Description |
+|---|---|---|
+| resumeId | string (UUID) | The inactive version's row id, from `ResumeRepository.listVersions()` |
+
+**Returns:** `ActionResult<Resume>` (the new version)
+
+---
+
 #### `suggestResumeImprovementsAction(targetRole)`
 **File:** `src/features/resume/actions.ts`  
-**Description:** Generates AI coaching suggestions for the active resume (decisions.md AD-32/AD-33) via `LlmResumeSuggestionProvider` (Gemini default, Anthropic optional per `LLM_PROVIDER`). Long resumes are chunked (not truncated — jobhunt bug #2) so every part gets analyzed; suggestions from all chunks are merged and persisted as one new `resume_suggestions` row scoped to the active resume's exact version. Never mutates the resume itself. No UI wired up yet (`design/limitations.md`).
+**Description:** Generates AI coaching suggestions for the active resume (decisions.md AD-32/AD-33) via `LlmResumeSuggestionProvider` (Gemini default, Anthropic optional per `LLM_PROVIDER`). Long resumes are chunked (not truncated — jobhunt bug #2) so every part gets analyzed; suggestions from all chunks are merged and persisted as one new `resume_suggestions` row scoped to the active resume's exact version. Never mutates the resume itself. Called from `/resume`'s "AI suggestions" card (`ResumeSuggestionsCard`, decisions.md AD-38).
 
 | Param | Type | Description |
 |---|---|---|
@@ -137,7 +149,7 @@ Actions **never throw** to the client. On success they call `revalidatePath()` t
 
 #### `draftApplicationAction(jobId, kind?)`
 **File:** `src/features/applications/actions.ts`  
-**Description:** Drafts (or redrafts) an email/cover-letter application for one job against the active resume, via `LlmApplicationDraftProvider` (the same provider-agnostic `llmClient`/`LLM_PROVIDER` as resume suggestions, decisions.md AD-32/AD-34). Job description and resume text are truncated to the same caps jobhunt's `apply.py` used (4000/8000 chars — AD-23 prompt-cost precedent, not a bug). Persists as an upsert on the `(job_id, kind)` unique constraint, resetting status to `draft`. Redrafting an already-`sent` application is rejected — a sent application is a permanent record.
+**Description:** Drafts (or redrafts) an email/cover-letter application for one job against the active resume, via `LlmApplicationDraftProvider` (the same provider-agnostic `llmClient`/`LLM_PROVIDER` as resume suggestions, decisions.md AD-32/AD-34). Job description and resume text are truncated to the same caps jobhunt's `apply.py` used (4000/8000 chars — AD-23 prompt-cost precedent, not a bug). Persists as an upsert on the `(job_id, kind)` unique constraint, resetting status to `draft`. Redrafting an already-`sent` application is rejected — a sent application is a permanent record. The `/dashboard` review dialog exposes an Email / Cover letter toggle that passes `kind` through (decisions.md AD-38) — previously the dialog only ever called this with `kind: "email"`.
 
 | Param | Type | Description |
 |---|---|---|

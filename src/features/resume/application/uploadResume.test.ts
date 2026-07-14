@@ -28,6 +28,7 @@ function makeResume(overrides: Partial<Resume> = {}): Resume {
 function makeResumeRepository(existingByHash: Resume | null = null): ResumeRepository {
   return {
     getActive: vi.fn(),
+    listVersions: vi.fn(),
     findByContentHash: vi.fn().mockResolvedValue(existingByHash),
     create: vi.fn().mockImplementation(
       (input): Promise<Resume> =>
