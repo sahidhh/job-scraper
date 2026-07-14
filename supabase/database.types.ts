@@ -798,6 +798,9 @@ export type Database = {
         | "wellfound"
         | "remoteok"
         | "mycareersfuture"
+        | "jsearch"
+        | "adzuna"
+        | "careers_url"
       location_tag: "india" | "singapore" | "uae" | "remote"
       role_map_source: "seed" | "ai"
       scrape_run_status: "success" | "partial" | "failed"
@@ -936,6 +939,9 @@ export const Constants = {
         "wellfound",
         "remoteok",
         "mycareersfuture",
+        "jsearch",
+        "adzuna",
+        "careers_url",
       ],
       location_tag: ["india", "singapore", "uae", "remote"],
       role_map_source: ["seed", "ai"],

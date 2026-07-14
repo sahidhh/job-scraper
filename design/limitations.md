@@ -3,11 +3,14 @@
 ## 1. Data & Coverage
 
 ### 1.1 Job Source Coverage
-Only six sources are integrated (Greenhouse, Lever, Ashby, Wellfound, RemoteOK, MyCareersFuture). Major platforms like LinkedIn, Indeed, Glassdoor, and Naukri are not supported because they either have no public API, require authentication, or prohibit scraping in their ToS.
+Eight sources run on the normal scrape cron (Greenhouse, Lever, Ashby, Wellfound, RemoteOK, MyCareersFuture, JSearch, Adzuna -- merge-workspace Phase 5 added the last two), plus one manual-trigger-only source (the static careers-URL fetcher, `careers_url`, §1.1a). LinkedIn, Indeed, and Glassdoor listings do reach the platform indirectly through JSearch (which indexes Google for Jobs), but there is still no direct integration with those sites or with Naukri -- they have no public API for direct access, require authentication, or prohibit scraping in their ToS.
 
 Of the 38 ATS company boards currently configured, **13 are confirmed healthy** and **25 are broken** as of the June 2026 validation run (run ID 27865212149). Three DB migrations (`20260620000001–3`) are code-complete and will raise the healthy count to ≥ 20 once applied. See `reports/source-validation-2026-06-22.md` for the full breakdown and `docs/research/source-strategy-review.md` for the expansion plan.
 
 RemoteOK and Wellfound are disabled (zero effective yield). MyCareersFuture is healthy (Singapore-specific, small volume).
+
+### 1.1a JSearch, Adzuna, and the Careers-URL Fetcher (merge-workspace Phase 5)
+JSearch and Adzuna both auto-disable (clean skip, no error) when their API credentials (`RAPIDAPI_KEY`; `ADZUNA_APP_ID`/`ADZUNA_APP_KEY`) are unset -- neither is enabled out of the box. Both are bounded to a small, fixed number of `(search term x country)` requests per run (`MAX_SEARCH_TERMS = 2`) to stay within typical free-tier rate limits; this trades completeness for a small, predictable request volume rather than exhaustively covering every expanded role. **Adzuna does not cover the UAE** -- only India and Singapore of this platform's three target regions are reachable through it (`ADZUNA_COUNTRIES` default `in,sg`); UAE coverage still comes from JSearch and the ATS adapters. The static careers-URL fetcher is best-effort, static HTML only (no headless browser, same limitation jobhunt-app's own reference implementation states) -- a JS-rendered careers page will extract no jobs. It is manual-trigger only (`npm run scrape:careers-url -- <url>`), not part of any cron/workflow, and its extraction quality depends on the configured LLM the same way resume suggestions/application drafts do (`design/limitations.md` §2.5's caveats about LLM output quality apply here too).
 
 ### 1.2 Wellfound Dependency
 The Wellfound adapter requires a custom feed URL (`WELLFOUND_FEED_URL`) because Wellfound has no documented public API. If the URL is not configured, the adapter auto-disables and returns zero results. `WELLFOUND_DISABLED=true` is set explicitly in `scrape.yml` to suppress any residual log noise. Users without a Wellfound feed receive no Wellfound data. See `docs/sources/wellfound.md` for setup instructions.

@@ -13,6 +13,9 @@ const ALL_SOURCES = [
   "wellfound",
   "remoteok",
   "mycareersfuture",
+  "jsearch",
+  "adzuna",
+  "careers_url",
 ] as const;
 
 type ReportSource = (typeof ALL_SOURCES)[number];

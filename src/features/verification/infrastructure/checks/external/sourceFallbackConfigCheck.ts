@@ -34,13 +34,41 @@ export function sourceFallbackConfigCheck(): Check {
       const remoteOkDisabled = isTruthyFlag(process.env.REMOTEOK_DISABLED);
       details.push(`RemoteOK: ${remoteOkDisabled ? "explicitly disabled" : "enabled"}`);
 
+      // jsearch/adzuna (merge-workspace Phase 5): both auto-disable when
+      // their API credentials are unset (same "unconfigured = clean skip"
+      // convention as Wellfound/RemoteOK), so the only real contradiction
+      // worth flagging is credentials present alongside an explicit disable.
+      const rapidApiKey = process.env.RAPIDAPI_KEY;
+      const jsearchDisabled = isTruthyFlag(process.env.JSEARCH_DISABLED);
+      if (rapidApiKey && jsearchDisabled) {
+        status = "warning";
+        details.push("RAPIDAPI_KEY is set but JSEARCH_DISABLED is also true — JSearch will not run despite having a key");
+      } else {
+        details.push(`JSearch: ${rapidApiKey ? (jsearchDisabled ? "explicitly disabled" : "enabled") : "no API key configured"}`);
+      }
+
+      const adzunaConfigured = Boolean(process.env.ADZUNA_APP_ID && process.env.ADZUNA_APP_KEY);
+      const adzunaDisabled = isTruthyFlag(process.env.ADZUNA_DISABLED);
+      if (adzunaConfigured && adzunaDisabled) {
+        status = "warning";
+        details.push("ADZUNA_APP_ID/ADZUNA_APP_KEY are set but ADZUNA_DISABLED is also true — Adzuna will not run despite having credentials");
+      } else {
+        details.push(`Adzuna: ${adzunaConfigured ? (adzunaDisabled ? "explicitly disabled" : "enabled") : "no API credentials configured"}`);
+      }
+
       return {
         status,
         summary: status === "pass" ? "Source fallback configuration is consistent" : "Source fallback configuration has a contradiction",
         details,
-        probableCause: status === "warning" ? "WELLFOUND_FEED_URL and WELLFOUND_DISABLED were set independently, likely by different people/sessions, without checking for a conflict." : undefined,
-        suggestedFix: status === "warning" ? "Either unset WELLFOUND_DISABLED to actually use the configured feed, or remove WELLFOUND_FEED_URL if Wellfound is meant to stay off." : undefined,
-        affectedSubsystem: status === "warning" ? "Scraping pipeline (Wellfound source)" : undefined,
+        probableCause:
+          status === "warning"
+            ? "A source's credentials/feed URL and its explicit *_DISABLED flag were set independently, likely by different people/sessions, without checking for a conflict."
+            : undefined,
+        suggestedFix:
+          status === "warning"
+            ? "Either unset the *_DISABLED flag to actually use the configured credentials, or remove the credentials if the source is meant to stay off."
+            : undefined,
+        affectedSubsystem: status === "warning" ? "Scraping pipeline (feed-based sources)" : undefined,
         docReference: status === "warning" ? "docs/sources/wellfound.md" : undefined,
       };
     },

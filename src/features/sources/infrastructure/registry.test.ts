@@ -14,6 +14,8 @@ describe("sourceScrapers registry", () => {
     const withoutCompanyConfig = sourceScrapers.filter((s) => !s.requiresCompanyConfig).map((s) => s.source);
 
     expect(new Set(withCompanyConfig)).toEqual(new Set(["greenhouse", "lever", "ashby"]));
-    expect(new Set(withoutCompanyConfig)).toEqual(new Set(["wellfound", "remoteok", "mycareersfuture"]));
+    expect(new Set(withoutCompanyConfig)).toEqual(
+      new Set(["wellfound", "remoteok", "mycareersfuture", "jsearch", "adzuna"]),
+    );
   });
 });

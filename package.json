@@ -27,7 +27,8 @@
     "backfill:min-years": "tsx scripts/backfill-min-years.ts",
     "report:sources": "tsx scripts/report-sources.ts",
     "discover:career-pages": "tsx scripts/discover-career-pages.ts",
-    "setup:webhook": "tsx scripts/setup-webhook.ts"
+    "setup:webhook": "tsx scripts/setup-webhook.ts",
+    "scrape:careers-url": "tsx scripts/scrape-careers-url.ts"
   },
   "dependencies": {
     "@huggingface/transformers": "^4.2.0",

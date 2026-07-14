@@ -23,6 +23,15 @@ describe("stripHtml", () => {
   it("collapses consecutive blank lines and trims the result", () => {
     expect(stripHtml("<p>One</p><p></p><p>Two</p>")).toBe("One\nTwo");
   });
+
+  it("strips script and style block content, not just the tags", () => {
+    const html = "<style>.a{color:red}</style><p>Real content</p><script>alert('x')</script>";
+    expect(stripHtml(html)).toBe("Real content");
+  });
+
+  it("strips noscript block content", () => {
+    expect(stripHtml("<noscript>Enable JS</noscript><p>Visible</p>")).toBe("Visible");
+  });
 });
 
 describe("normalizeWhitespace", () => {

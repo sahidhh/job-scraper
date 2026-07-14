@@ -308,6 +308,26 @@
 5. Console report is always printed; `--format=all` (the `verify:production` default) additionally writes `verification-reports/latest.md` and `latest.json`
 6. Process exits `1` only if the verdict is `not_ready`
 
+---
+
+### UC-17 — Fetch Jobs From a Static Careers URL (merge-workspace Phase 5)
+
+**Actor:** Operator
+**Trigger:** Manual run of `npm run scrape:careers-url -- <careers-page-url>`
+**Precondition:** An active role selection exists (same precondition `scrape.ts` has); the target page is a public, static-HTML careers page (JS-rendered pages are not supported); `GEMINI_API_KEY` or `ANTHROPIC_API_KEY` is configured for `llmClient.ts`
+**Main Flow:**
+1. Script fetches the given URL and strips it to plain text (`stripHtml`, script/style content removed)
+2. Text is chunked (`chunkText`) and each chunk is sent to `LlmCareersPageExtractor`, which asks the configured LLM to extract listed job postings as JSON
+3. Extracted items are mapped to `RawJob`, with a deterministic sha256-derived `sourceJobId` from `(url, title)` standing in for the stable ID a real ATS API would provide
+4. The same `tagLocations` → `hasAllowedLocation` → `ingestJobs` pipeline `scrape.ts` uses processes the results (location filtering, cross-source dedup, upsert)
+5. One `scrape_runs` row is recorded for `source = 'careers_url'`, same shape as every other source's run log
+
+**Postcondition:** Jobs found on the page and matching the active role selection's location targets are ingested; console output and the `scrape_runs` row report found/kept/inserted/updated counts
+
+**Alternate Flow (empty page):** If the page has no extractable text (e.g. entirely JS-rendered) or the LLM finds no postings, the run completes with `found: 0` rather than failing
+
+**Alternate Flow (fetch failure):** A non-2xx response from the target URL fails the run with `status = 'failed'` and a classified `failureCategory`, same as any other source's failure path
+
 **Postcondition:** Operator sees a full Ready/Needs Attention/Not Ready assessment with per-check detail and actionable recommendations
 
 **Alternate Flow:** No live Supabase project configured (e.g. a fresh checkout) → every credential-dependent check reports `warning: Skipped — ...` instead of crashing; the run still completes and produces a report
@@ -367,3 +387,4 @@
 | US-13 | see why a job was surfaced (remote, urgent, salary, employment type badges) at a glance in Telegram | I can triage without opening the dashboard |
 | US-14 | get an AI-drafted, reviewable application for a job, then send it from my own mail client | I apply faster without the platform sending anything on my behalf |
 | US-15 | get reminded in Telegram when I have draft applications sitting unreviewed | I don't forget to follow up on jobs I meant to apply to |
+| US-16 | point the platform at one company's careers page and have it pull in the roles listed there | I can cover a company that isn't on any supported ATS/aggregator without a full new source integration |

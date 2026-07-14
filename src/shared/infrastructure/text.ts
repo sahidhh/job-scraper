@@ -1,5 +1,6 @@
 // Normalization rule 1 (scrapers.md §3): HTML -> plain text, preserving
 // line breaks for block-level elements, decoding common entities.
+const SCRIPT_STYLE_PATTERN = /<(script|style|noscript)[^>]*>[\s\S]*?<\/\1>/gi;
 const BLOCK_BREAK_PATTERN = /<\/(p|div|li|h[1-6]|tr)>|<br\s*\/?>/gi;
 const TAG_PATTERN = /<[^>]*>/g;
 const ENTITY_PATTERN = /&[a-z#0-9]+;/gi;
@@ -14,8 +15,15 @@ const ENTITIES: Record<string, string> = {
   "&apos;": "'",
 };
 
+// ATS-provided job descriptions never contain <script>/<style> blocks, so
+// this is a no-op for every existing caller -- added so the careers-URL
+// fetcher (merge-workspace Phase 5) can reuse this one util on raw,
+// full-page HTML instead of duplicating a second HTML-to-text function
+// (jobhunt/sources.py's `_html_to_text` strips these first for the same
+// reason: without it, script/style body text leaks into the extracted text).
 export function stripHtml(html: string): string {
-  const withBreaks = html.replace(BLOCK_BREAK_PATTERN, "\n");
+  const withoutScripts = html.replace(SCRIPT_STYLE_PATTERN, " ");
+  const withBreaks = withoutScripts.replace(BLOCK_BREAK_PATTERN, "\n");
   const withoutTags = withBreaks.replace(TAG_PATTERN, "");
   const decoded = withoutTags.replace(ENTITY_PATTERN, (entity) => ENTITIES[entity.toLowerCase()] ?? entity);
 

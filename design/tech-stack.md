@@ -75,6 +75,12 @@ These are explicitly banned by the project rules (CLAUDE.md):
 | `OPENROUTER_MAX_DESCRIPTION_PROMPT_CHARS` | `2000` | Caps job description text sent in the AI prompt (Phase 3 Task 11-12 cost control) |
 | `OPENROUTER_COST_PER_1K_TOKENS` | _(unset)_ | Blended per-1k-token rate for the active model (e.g. `0.0008` for $0.80/1M); enables cost logging and `estimated_cost_usd` in `job_scores` |
 | `WELLFOUND_DISABLED` | _(unset)_ | Set `true` or `1` to explicitly disable Wellfound ingestion without triggering a config warning |
+| `RAPIDAPI_KEY` | _(unset)_ | JSearch (RapidAPI) key; unset = JSearch auto-disables (clean skip, same convention as Wellfound) |
+| `JSEARCH_DISABLED` | _(unset)_ | Set `true` or `1` to explicitly disable JSearch even if `RAPIDAPI_KEY` is set |
+| `JSEARCH_COUNTRIES` | `in,sg,ae` | Comma-separated country codes JSearch searches per run (merge-workspace Phase 5) |
+| `ADZUNA_APP_ID` / `ADZUNA_APP_KEY` | _(unset)_ | Adzuna API credentials; either unset = Adzuna auto-disables |
+| `ADZUNA_DISABLED` | _(unset)_ | Set `true` or `1` to explicitly disable Adzuna even if credentials are set |
+| `ADZUNA_COUNTRIES` | `in,sg` | Comma-separated country codes Adzuna searches per run -- no `ae`, Adzuna does not cover the UAE (`design/limitations.md` §1.1) |
 | `SOURCE_DISABLE_THRESHOLD` | `7` | Number of consecutive probe failures before a source is auto-disabled |
 | `MIN_HEALTHY_SOURCE_COUNT` | `3` | Minimum number of healthy sources; validation exits 1 if count drops below this |
 | `SCORING_STUCK_THRESHOLD_HOURS` | `48` | Hours an AI-retry job can wait before `score.ts` logs it as "stuck" (Phase 1 Task 6, `getScoringQueueReport`) |
@@ -166,6 +172,7 @@ These are explicitly banned by the project rules (CLAUDE.md):
 | `backfill:min-years` | `tsx scripts/backfill-min-years.ts` | (v1.2) Explicit name for the one-off `min_years` backfill (previously unwired) |
 | `discover:career-pages` | `tsx scripts/discover-career-pages.ts` | Manual run of ATS career-page discovery (Phase 2 Task 8) |
 | `setup:webhook` | `tsx scripts/setup-webhook.ts` | One-off Telegram webhook registration |
+| `scrape:careers-url` | `tsx scripts/scrape-careers-url.ts` | (merge-workspace Phase 5) Manual-trigger fetch of one operator-provided public careers page URL -- not part of any cron/workflow |
 
 ## 7. CI / CD
 

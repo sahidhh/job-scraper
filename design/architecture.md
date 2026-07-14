@@ -109,6 +109,8 @@ flowchart LR
         WF["Wellfound\n(feed URL)"]
         RO["RemoteOK\n(public RSS)"]
         MC["MyCareersFuture\n(public API)"]
+        JS["JSearch\n(RapidAPI, query+country)"]
+        AZ["Adzuna\n(query+country)"]
     end
 
     subgraph pipeline ["🔄 Pipeline"]
@@ -134,6 +136,37 @@ same logical posting was already ingested elsewhere -- it is recorded in `job_du
 provenance instead of becoming a second `jobs` row, so scoring and notifications run once per
 logical job. Jobs already known by `(source, source_job_id)` always go through the normal
 update path, unaffected by the fingerprint check.
+
+### 4.1 JSearch and Adzuna (merge-workspace Phase 5)
+
+Both are query/country-search aggregator APIs (unlike the feed-only adapters above), so each issues
+one HTTP request per `(search term, target country)` combo -- same "issue N requests instead of one
+big feed" shape as MyCareersFuture -- capped at 2 search terms to keep worst-case requests-per-run
+small (`JSearchScraper.ts`/`AdzunaScraper.ts`, `MAX_SEARCH_TERMS`). JSearch indexes Google for Jobs
+(surfacing LinkedIn/Indeed/Glassdoor/company listings through one legal aggregator API, not direct
+scraping of those sites -- `design/scope.md` §4). Adzuna's covered-country list does not include the
+UAE (`design/limitations.md` §1.1); only India/Singapore of this platform's three target regions are
+reachable through it. Both fix jobhunt bug #4: an entry with no genuine, stable ID from the source is
+rejected outright rather than substituting an unstable fallback (e.g. an apply/redirect link, which
+can carry per-request tracking tokens) as `sourceJobId` -- the `(source, source_job_id)` upsert key
+this diagram's "Upsert jobs" step relies on must actually be stable across re-fetches of the same
+posting, or the job silently re-inserts as "new" on every run instead of updating in place.
+
+### 4.2 Static Careers-URL Fetcher (merge-workspace Phase 5, manual-trigger only)
+
+A third new source, `careers_url`, ports jobhunt/sources.py's `fetch_company_careers`: given one
+operator-provided public careers page URL, it fetches the page (static HTML only -- no headless
+browser, same limitation jobhunt's own docstring states), strips it to plain text, and LLM-extracts
+listed roles via `LlmCareersPageExtractor`/`llmClient.ts` (Phase 3's provider-agnostic abstraction).
+It is **not** in the `sources` subgraph/`sourceScrapers` registry above and does not run on
+`scrape.ts`'s cron loop -- `CareersUrlScraper.ts`'s `fetchCareersUrlJobs` takes a URL argument the
+registry's uniform `fetchJobs(companies, roles)` shape has no place for, and there is no expected
+run cadence to track. It is invoked on demand via `scripts/scrape-careers-url.ts`
+(`npm run scrape:careers-url -- <url>`), which otherwise reuses the exact same
+tagLocations → hasAllowedLocation → ingestJobs → recordRun pipeline as every other source. See
+`docs/decisions.md` AD-35 for why `careers_url` is a valid `JobSource` value (the jobs table needs
+it) but is deliberately excluded from `JOB_SOURCES` (the source-health-tracked, notification-filter
+set) -- including it there would make every health check flag it "stale" forever after its first run.
 
 ---
 

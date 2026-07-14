@@ -21,7 +21,7 @@ A single technical professional (software engineer, data scientist, or similar) 
 | Resume upload & skill extraction | Upload PDF or DOCX, extract text (sha256 parse-once cache), tag skills from dictionary |
 | Role selection & AI expansion | Define target role; expand to related roles via LLM or cache |
 | Role Packs | Pre-defined curated role groups; click to instantly activate without AI call |
-| Multi-source job scraping | Greenhouse, Lever, Ashby (per board_token), Wellfound, RemoteOK, MyCareersFuture |
+| Multi-source job scraping | Greenhouse, Lever, Ashby (per board_token), Wellfound, RemoteOK, MyCareersFuture, JSearch, Adzuna (merge-workspace Phase 5) |
 | Location filtering | Tag jobs by India / Singapore / UAE / Remote; drop untagged |
 | Two-stage scoring | Keyword score (free) → AI score (gated) per job |
 | Telegram notifications | Push alert for jobs above AI score threshold |
@@ -125,6 +125,14 @@ parsing, no AI" extraction standard than `extractSalary`/`extractContactEmail`. 
 | Status tracking | `draft` → `sent` (terminal) or `draft` → `dismissed` (redraftable); a sent application can never be redrafted or edited |
 | Pending-drafts reminder | `notifyPendingDrafts` sends a Telegram reminder listing draft applications awaiting review, reusing the same `TelegramSender` delivery infra the job digest already uses -- not a new notification channel |
 
+### P1.14 — Additional Job Sources (merge-workspace Phase 5)
+
+| Feature | Description |
+|---|---|
+| JSearch connector | Aggregator API (RapidAPI) indexing Google for Jobs -- surfaces LinkedIn/Indeed/Glassdoor/company listings through one legal API, not direct scraping of those sites. Query/country search, capped at 2 terms x configured countries per run (default `in,sg,ae`). Rejects entries with no genuine, stable `job_id` rather than falling back to an apply-link-derived one (jobhunt bug #4) |
+| Adzuna connector | Same query/country search shape as JSearch. Adzuna does not cover the UAE, so only India/Singapore of the platform's three target regions are reachable through it (`design/limitations.md` §1.1) |
+| Static careers-URL fetcher | `scripts/scrape-careers-url.ts` (`npm run scrape:careers-url -- <url>`) fetches one operator-provided public careers page and LLM-extracts listed roles (`LlmCareersPageExtractor`, reusing the Phase 3 `llmClient`). Manual-trigger only -- not on `scrape.ts`'s cron loop/`registry.ts` (`design/architecture.md` §4.2, `docs/decisions.md` AD-35) |
+
 ### P2 — Medium Priority
 
 | Feature | Description |
@@ -156,7 +164,7 @@ parsing, no AI" extraction standard than `extractSalary`/`extractContactEmail`. 
 | Auto-apply / auto-send applications | AI may draft or suggest content; the user always reviews and applies manually (decisions.md AD-33/AD-34; carried over from jobhunt-app's "no auto-apply" design rule) |
 | SMTP / server-side email sending | "mailto only for now" (decisions.md AD-34) -- no email credentials are stored or used by this app |
 | Interview preparation | Out of scope |
-| Job board accounts (LinkedIn, Indeed) | No public API; scraping would violate ToS |
+| Job board accounts (LinkedIn, Indeed) | No public API for direct scraping; scraping those sites ourselves would violate ToS. JSearch (P1.14) is a licensed third-party aggregator API that indexes Google for Jobs -- it surfaces listings originally posted on LinkedIn/Indeed/Glassdoor without this app ever scraping those sites itself, the same distinction jobhunt-app's own design rules draw |
 | Mobile application | Web-only; Telegram notifications serve mobile alerting |
 | Team / recruiter features | Single-user tool |
 | Real-time scraping (push) | Cron-based polling; no webhook from ATS sources |
@@ -185,6 +193,9 @@ P1.10 — Production Verification & Health Framework (v1.4, shipped)
 P1.13 — Application Drafting (merge-workspace Phase 4, shipped)
  └── AI draft (email/cover letter), review + edit, mailto-only send, status tracking, Telegram pending-drafts reminder
 
+P1.14 — Additional Job Sources (merge-workspace Phase 5, shipped)
+ └── JSearch + Adzuna connectors (cron-driven), static careers-URL fetcher (manual-trigger only)
+
 P2 — Preferences
  └── Desired experience, App settings
 
@@ -199,7 +210,7 @@ P4 — Future
 
 ### Data Scope
 
-- **Job sources:** Only the six integrated sources. New sources require a new adapter implementing the scraper interface.
+- **Job sources:** Only the eight cron-driven integrated sources (Greenhouse, Lever, Ashby, Wellfound, RemoteOK, MyCareersFuture, JSearch, Adzuna) plus one manual-trigger-only source (the static careers-URL fetcher, `careers_url`). New cron sources require a new adapter implementing the `JobSourceScraper` interface and registration in `registry.ts`.
 - **Geographies:** India, Singapore, UAE, Remote. Adding a new geography requires a migration to extend the `location_tag` enum and updating the `tagLocations()` function.
 - **Skill dictionary:** Fixed canonical list. New skills require updating `src/shared/domain/skillsDictionary.ts`.
 
@@ -225,4 +236,4 @@ P4 — Future
 | Telegram rate limits | Bot API rate-limited; large notification batches may experience delay |
 | PDF/DOCX-only resumes | Plain text, HTML, and other formats not supported |
 | Manual company setup | Board tokens must be entered by user; no auto-discovery |
-| Source validation scope | Only Greenhouse/Lever/Ashby board tokens validated; feed-based sources (RemoteOK, Wellfound, MyCareersFuture) not probed |
+| Source validation scope | Only Greenhouse/Lever/Ashby board tokens validated; feed/API-based sources (RemoteOK, Wellfound, MyCareersFuture, JSearch, Adzuna) not probed by `validate-sources.ts` -- `sourceFallbackConfigCheck` (verify-production) covers a narrower "credentials vs. *_DISABLED contradiction" check for the API-key-gated ones instead |

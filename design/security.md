@@ -91,6 +91,8 @@ Resume files are stored with their sha256 content hash as the path (`<hash>.pdf`
 | `GEMINI_API_KEY` / `ANTHROPIC_API_KEY` | Vercel env only (no cron script uses them) | Server actions (resume suggestions, `src/shared/infrastructure/llmClient.ts`) — same pattern as `OPENROUTER_API_KEY`'s server-action usage: read server-side only, never exposed via `NEXT_PUBLIC_*` |
 | `TELEGRAM_BOT_TOKEN` | GitHub Actions secrets only | Notify script |
 | `TELEGRAM_CHAT_ID` | GitHub Actions secrets only | Notify script |
+| `RAPIDAPI_KEY` | GitHub Actions secrets only | Scrape script (`JSearchScraper.ts`) — not a Supabase key, but scoped to cron/scripts the same way `TELEGRAM_BOT_TOKEN` is; never needed by `src/app/` |
+| `ADZUNA_APP_ID` / `ADZUNA_APP_KEY` | GitHub Actions secrets only | Scrape script (`AdzunaScraper.ts`) — same scoping rationale as `RAPIDAPI_KEY` |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Vercel env (public) | Client-side Supabase calls |
 | `NEXT_PUBLIC_SUPABASE_URL` | Vercel env (public) | Client-side Supabase calls |
 
@@ -123,7 +125,7 @@ All database queries use the Supabase JS SDK (PostgREST) with parameterized quer
 - Telegram messages use `parse_mode: "HTML"` with explicit field-by-field formatting — no user-controlled HTML is interpolated into the template without escaping
 
 ### Server-Side Request Forgery (SSRF)
-All outbound HTTP requests are made to hardcoded URLs (OpenRouter, Telegram Bot API, ATS board APIs, Wellfound feed). The Wellfound feed URL is user-configurable via env var — this is a known SSRF surface. It is mitigated because it is an administrator-only env var, not a user-submitted URL.
+All outbound HTTP requests are made to hardcoded URLs (OpenRouter, Telegram Bot API, ATS board APIs, Wellfound feed) or to hardcoded API hosts with operator-controlled query parameters (JSearch, Adzuna — merge-workspace Phase 5, the URL host itself is never derived from input). The Wellfound feed URL and the static careers-URL fetcher's target URL (`scripts/scrape-careers-url.ts` — merge-workspace Phase 5) are both user-configurable, arbitrary-URL surfaces — this is a known SSRF pattern. Both are mitigated the same way: the URL comes from a CLI arg/env var the operator sets on their own machine or CI secret store, run manually or from a trusted GitHub Actions job, never from an unauthenticated public form or a request the single operator doesn't already control. There is no public-facing endpoint that accepts a URL from an untrusted caller and fetches it server-side.
 
 ---
 
