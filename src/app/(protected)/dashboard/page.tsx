@@ -107,7 +107,6 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       {activeSelection ? (
         <DashboardContent
           roleSelectionId={activeSelection.id}
-          primaryRole={activeSelection.primaryRole}
           expandedRoles={activeSelection.expandedRoles}
           filters={parseFilters(params)}
           params={params}
@@ -126,13 +125,11 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 // when only the filter-dependent JobsSection re-renders (P1 #2).
 async function DashboardContent({
   roleSelectionId,
-  primaryRole,
   expandedRoles,
   filters,
   params,
 }: {
   roleSelectionId: string;
-  primaryRole: string;
   expandedRoles: string[];
   filters: JobFilters;
   params: DashboardSearchParams;
@@ -158,7 +155,6 @@ async function DashboardContent({
       <Suspense fallback={<JobsSectionFallback />}>
         <JobsSection
           roleSelectionId={roleSelectionId}
-          primaryRole={primaryRole}
           expandedRoles={expandedRoles}
           filters={filters}
           params={params}
@@ -180,14 +176,12 @@ function JobsSectionFallback() {
 
 async function JobsSection({
   roleSelectionId,
-  primaryRole,
   expandedRoles,
   filters,
   params,
   scrapeRuns,
 }: {
   roleSelectionId: string;
-  primaryRole: string;
   expandedRoles: string[];
   filters: JobFilters;
   params: DashboardSearchParams;

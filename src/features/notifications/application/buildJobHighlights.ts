@@ -31,10 +31,10 @@ function formatSalaryHighlight(match: JobHighlightSignals): string | null {
 
   const currency = match.salaryCurrency ?? "";
   const period = match.salaryPeriod ? `/${PERIOD_ABBREVIATION[match.salaryPeriod]}` : "";
-  const min = Math.round(match.salaryMin).toLocaleString();
+  const min = Math.round(match.salaryMin).toLocaleString("en-US");
   const range =
     match.salaryMax !== null && match.salaryMax !== match.salaryMin
-      ? `${min}–${Math.round(match.salaryMax).toLocaleString()}`
+      ? `${min}–${Math.round(match.salaryMax).toLocaleString("en-US")}`
       : min;
 
   return `\u{1F4B0} ${currency}${range}${period}`.trim();

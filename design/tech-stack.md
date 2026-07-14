@@ -7,7 +7,7 @@
 | UI Framework | Next.js (App Router) | 15 | RSC, server actions, SSR without extra API layer |
 | UI Language | TypeScript | 5 (strict) | Type safety across all layers |
 | Styling | Tailwind CSS | 4 | Utility-first, minimal bundle |
-| Component Library | shadcn/ui + Radix UI | latest | Accessible, unstyled primitives |
+| Component Library | shadcn/ui + Radix UI | latest | Accessible, unstyled primitives; includes both granular `@radix-ui/react-*` packages and unified `radix-ui` package |
 | Icons | Lucide React | latest | Consistent icon set |
 | Charts | Recharts | latest | Lightweight React chart library |
 | Database | Supabase (Postgres 14.5) | v2 | Managed Postgres + Auth + Storage in one service |
@@ -79,6 +79,8 @@ These are explicitly banned by the project rules (CLAUDE.md):
 | `JOB_EXPIRATION_DAYS` | `14` | Days since `last_seen_at` before `scrape.ts` soft-deactivates a job (`is_active = false`, `inactive_reason = 'expired'`) |
 | `REMOTEOK_DISABLED` | _(unset)_ | Set `true` or `1` to explicitly disable RemoteOK ingestion (set in `scrape.yml` — RemoteOK's near-zero yield made it not worth probing on every run, see `docs/remoteok-evaluation.md`) |
 
+**Note on NOTIFY_MODE:** The code default is `individual`, but the scheduled production workflow `.github/workflows/scrape.yml` overrides this to `digest` by default via `NOTIFY_MODE: ${{ vars.NOTIFY_MODE || 'digest' }}` (line 71). This is intentional—digest mode is the production-recommended setting per `docs/reviews/project-completion-audit.md`.
+
 ## 4. Runtime Targets
 
 | Runtime | Environment | Node version |
@@ -99,7 +101,10 @@ These are explicitly banned by the project rules (CLAUDE.md):
     "@supabase/ssr": "^0.12",
     "zod": "^4.0",
     "pdf-parse": "^1.1",
-    "recharts": "^2.x",
+    "recharts": "^3.8.1",
+    "radix-ui": "^1.5.0",
+    "@tailwindcss/postcss": "^4.3.1",
+    "tw-animate-css": "^1.4.0",
     "lucide-react": "latest",
     "class-variance-authority": "latest",
     "clsx": "latest",
@@ -110,8 +115,12 @@ These are explicitly banned by the project rules (CLAUDE.md):
     "tailwindcss": "^4",
     "vitest": "latest",
     "tsx": "latest",
+    "eslint": "^9",
+    "eslint-config-next": "^15.5",
+    "@eslint/eslintrc": "^3",
     "@types/node": "latest",
-    "@types/react": "latest"
+    "@types/react": "latest",
+    "@types/react-dom": "latest"
   }
 }
 ```
@@ -126,7 +135,8 @@ These are explicitly banned by the project rules (CLAUDE.md):
 | `test` | `vitest run` | Run unit tests once |
 | `test:watch` | `vitest` | Watch mode for tests |
 | `typecheck` | `tsc --noEmit` | Type-check without build |
-| `verify` | `npm run typecheck && npm run test && npm run build` | Single quality-gate command (v1.2) — run before considering any change done |
+| `lint` | `eslint .` | ESLint (next/core-web-vitals + next/typescript) |
+| `verify` | `npm run typecheck && npm run lint && npm run test && npm run build` | Single quality-gate command (v1.2) — run before considering any change done |
 | `check:service-role-boundary` | `tsx scripts/checkServiceRoleBoundary.ts` | CI safety gate — ensures service role key not used in app/ |
 | `scrape` | `tsx scripts/scrape.ts` | Manual scrape run |
 | `score` | `tsx scripts/score.ts` | Manual scoring run |
@@ -148,9 +158,9 @@ These are explicitly banned by the project rules (CLAUDE.md):
 
 | Pipeline | Trigger | Steps |
 |---|---|---|
-| `ci.yml` | Push / PR to main | `tsc --noEmit` → `vitest run` → `check:service-role-boundary` |
+| `ci.yml` | Push / PR to main | `typecheck` → `lint` → `test` → `build`; separate `check:service-role-boundary` job |
 | `scrape.yml` | Cron (every 6h) or `workflow_dispatch` | `scrape.ts` → `score.ts` → `notify.ts` |
 | `validate-sources.yml` | `workflow_dispatch` only | `validate-sources.ts` — probe ATS boards, exit 1 only on new failures or sub-minimum healthy count |
 | `verify-production.yml` | `workflow_dispatch` only (v1.4, no schedule) | `verify-production.ts` — 24-check operational health report, uploads `verification-reports/` as a build artifact, exit 1 only on a critical-severity failure |
 
-The cron `schedule:` entry in `scrape.yml` remains commented out until the user explicitly approves go-live.
+The cron `schedule:` entry in `scrape.yml` is **active** (`0 */6 * * *`, every 6 hours), not commented out — whether this 6h cadence was a deliberate, approved choice is an open question tracked in `TECHNICAL_DEBT.md` #1, not a doc-accuracy issue.

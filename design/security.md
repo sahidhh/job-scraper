@@ -9,7 +9,7 @@ The platform uses **Supabase Auth** (email + password) for the single user accou
 | Session storage | httpOnly cookies (managed by `@supabase/ssr`) |
 | Session refresh | `middleware.ts` refreshes session on every request |
 | Route protection | Middleware redirects unauthenticated requests to `/login` |
-| Token exposure | Anon key is public (safe — RLS enforces access); service role key is never in Next.js |
+| Token exposure | Anon key is public (safe — RLS enforces access); service role key is never in client-reachable Next.js code (one server-only route handler exception, §3/AD-29) |
 | No JWT manipulation | Supabase handles all token lifecycle; no custom JWT logic |
 
 ---
@@ -57,14 +57,14 @@ critical-severity failure. Run via `npm run verify:production` / `npm run diagno
 
 ## 3. Service Role Boundary
 
-The `SUPABASE_SERVICE_ROLE_KEY` bypasses RLS entirely. It is **only** permitted in `scripts/` — never in `src/app/` or `src/features/`.
+The `SUPABASE_SERVICE_ROLE_KEY` bypasses RLS entirely. It is permitted only in `scripts/`, in the service-client factory itself, and in one formally-approved exception — never anywhere else in `src/app/` or `src/features/`. See AD-29 (`docs/decisions.md`) for the exception's rationale.
 
 ### Enforcement
 
 **CI gate:** `npm run check:service-role-boundary`
-(`scripts/checkServiceRoleBoundary.ts`) — statically scans all files under `app/` for any import of the service client or reference to `SERVICE_ROLE_KEY`. Fails the CI build if found.
+(`scripts/checkServiceRoleBoundary.ts`) — statically scans `src/` and `scripts/` for any import of the service client or reference to `SERVICE_ROLE_KEY`, exempting `scripts/**` and the paths in its `ALLOWED_FILES` set. Fails the CI build if found outside those.
 
-**Convention:** The service client is in `src/shared/infrastructure/supabase/serviceClient.ts` and is imported only by `scripts/scrape.ts`, `scripts/score.ts`, and `scripts/notify.ts`.
+**Convention:** The service client factory is `src/shared/infrastructure/supabaseClient.ts` (`createSupabaseServiceClient`). It is imported by `scripts/scrape.ts`, `scripts/score.ts`, and `scripts/notify.ts`, and by one allowlisted exception: `src/app/api/telegram/webhook/route.ts` (AD-29) — a server-only Next.js route handler, never reachable from the browser bundle, gated on the `X-Telegram-Bot-Api-Secret-Token` header rather than Supabase Auth, which needs cross-RLS read access to serve "Worth Reviewing" pagination to an authenticated Telegram callback.
 
 **Deployment:** `SUPABASE_SERVICE_ROLE_KEY` is set only as a GitHub Actions secret — not as a Vercel env var. This prevents it from appearing in any server-side Next.js bundle.
 
