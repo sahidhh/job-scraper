@@ -314,6 +314,39 @@
 
 ---
 
+### UC-17 — Draft, Review, and Send a Job Application (merge-workspace Phase 4, decisions.md AD-34)
+
+**Actor:** User  
+**Trigger:** User clicks the mail icon on a job row/card on `/dashboard`  
+**Precondition:** Active resume exists  
+**Main Flow:**
+1. `getApplicationForJobAction(jobId, "email")` checks for an existing `(job_id, kind)` application row
+2. If none exists (or the existing one is `dismissed`), user clicks "Generate draft" → `draftApplicationAction(jobId, kind)` calls `LlmApplicationDraftProvider` with the job's title/company/location/description (truncated to 4000 chars) and the active resume's text (truncated to 8000 chars — same caps jobhunt's `apply.py` used, AD-23 precedent), asking for a truthful, non-fabricated subject/body
+3. Draft is persisted (upsert on `(job_id, kind)`, status `draft`), pre-filled with the job's `contact_email` as recipient if one was extracted at ingest
+4. User reviews the draft in the dialog, optionally edits subject/body and saves (`updateApplicationContentAction`)
+5. User clicks "Open in mail client" → a `mailto:` link (`buildMailtoLink.ts`) opens their own mail client with the draft prefilled; `markApplicationSentAction(id)` records `status = sent`, `sent_at = now()`
+
+**Alternate Flow (dismiss):** User clicks "Dismiss" instead of sending → `markApplicationDismissedAction(id)` sets `status = dismissed`; the job can be redrafted later, generating a fresh draft over the same row
+
+**Alternate Flow (already sent):** Redrafting an application whose `status` is already `sent` is rejected — a sent application is a permanent record of what was actually sent
+
+**Postcondition:** No message is ever sent by the app itself — every send is the user's own action in their own mail client (scope.md's "Auto-apply / auto-send" exclusion)
+
+---
+
+### UC-18 — Pending Draft Applications Reminder (merge-workspace Phase 4)
+
+**Actor:** Cron  
+**Trigger:** End of `scripts/notify.ts`, immediately after UC-12's job-match digest  
+**Main Flow:**
+1. Query every `applications` row with `status = 'draft'`, joined with its job's title/company
+2. If any exist, format a short HTML reminder (`formatPendingDraftsReminder.ts`, same message style as the job digest) and send it via the same `TelegramSender` port UC-12 already uses — no new notification channel
+3. If none exist, nothing is sent
+
+**Note:** Stateless by design — the reminder reflects the current pending-draft count on every run, so it naturally stops repeating once every draft is sent or dismissed (UC-17); there is no separate "already reminded" tracking.
+
+---
+
 
 ## 3. User Story Summary
 
@@ -332,3 +365,5 @@
 | US-11 | configure notification filters | I only receive alerts for jobs matching my criteria |
 | US-12 | block companies/agencies and exclude employment types (internship/contract/etc.) from alerts | I stop seeing postings I'd never apply to |
 | US-13 | see why a job was surfaced (remote, urgent, salary, employment type badges) at a glance in Telegram | I can triage without opening the dashboard |
+| US-14 | get an AI-drafted, reviewable application for a job, then send it from my own mail client | I apply faster without the platform sending anything on my behalf |
+| US-15 | get reminded in Telegram when I have draft applications sitting unreviewed | I don't forget to follow up on jobs I meant to apply to |

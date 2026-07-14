@@ -148,6 +148,21 @@ erDiagram
         uuid applied_as_resume_id "nullable FK -- new resume version created by apply, if any"
     }
 
+    APPLICATIONS {
+        uuid id PK
+        uuid job_id "FK -- cascades on job delete"
+        uuid resume_id "FK -- exact resume version this draft was written against"
+        text kind "email | coverletter"
+        text subject
+        text body
+        text recipient_email "nullable; jobs.contact_email at draft time"
+        text status "draft | sent | dismissed"
+        text model
+        timestamptz created_at
+        timestamptz updated_at
+        timestamptz sent_at "nullable; set only once markSent succeeds"
+    }
+
     ROLE_EXPANSION_MAP {
         text role PK
         text[] related_roles
@@ -206,6 +221,8 @@ erDiagram
     JOBS ||--o{ JOB_DUPLICATES : "rediscovered as"
     RESUMES ||--o{ RESUME_SUGGESTIONS : "generated against"
     RESUMES ||--o| RESUME_SUGGESTIONS : "created by applying"
+    JOBS ||--o{ APPLICATIONS : "drafted for"
+    RESUMES ||--o{ APPLICATIONS : "written against"
 ```
 
 ---
@@ -234,6 +251,8 @@ erDiagram
 | `companies` | `UNIQUE (source, board_token) WHERE board_token IS NOT NULL` | No duplicate board configs |
 | `companies` | `INDEX (health_status)` | Fast lookup of unhealthy/disabled sources |
 | `digest_sessions` | `INDEX (created_at DESC)` | Fast latest-session lookup for webhook pagination |
+| `applications` | `UNIQUE (job_id, kind)` | One application row per job+kind; redrafting upserts on this conflict target |
+| `applications` | `INDEX (status)` | `listPendingDrafts`' reminder query (`status = 'draft'`) |
 
 ---
 

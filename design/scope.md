@@ -115,6 +115,16 @@ parsing, no AI" extraction standard than `extractSalary`/`extractContactEmail`. 
 | Apply as new version | `applyResumeSuggestionsAction` rewrites the resume with chosen suggestions and saves it as a brand NEW resume version via the existing `set_active_resume` path -- never overwrites the current version |
 | No UI yet | Domain/application/infrastructure + server actions are complete and tested; no `/resume` page UI calls them yet (`design/limitations.md` §2.5), same "backend now, UI later" shape as P1.8/P1.10's embedding_score |
 
+### P1.13 — Application Drafting (merge-workspace Phase 4)
+
+| Feature | Description |
+|---|---|
+| AI application drafts | `draftApplicationAction` generates a truthful, non-fabricated email or cover-letter draft (`kind`) for one job against the active resume, via the same provider-agnostic `llmClient` (`gemini` default, `anthropic` optional) resume suggestions uses (decisions.md AD-32/AD-34). Persisted as one `applications` row per `(job, kind)`, pre-filled with the job's extracted contact email if one exists |
+| Review and edit | User reviews the draft in a `/dashboard` dialog, edits subject/body (`updateApplicationContentAction`), regenerates, or dismisses it -- nothing is sent without this step |
+| Mailto-only send | "Open in mail client" opens a `mailto:` link (`buildMailtoLink`) in the user's own mail client; `markApplicationSentAction` only records that this happened -- the app never sends email itself (no SMTP, no email API) |
+| Status tracking | `draft` → `sent` (terminal) or `draft` → `dismissed` (redraftable); a sent application can never be redrafted or edited |
+| Pending-drafts reminder | `notifyPendingDrafts` sends a Telegram reminder listing draft applications awaiting review, reusing the same `TelegramSender` delivery infra the job digest already uses -- not a new notification channel |
+
 ### P2 — Medium Priority
 
 | Feature | Description |
@@ -142,9 +152,9 @@ parsing, no AI" extraction standard than `extractSalary`/`extractContactEmail`. 
 | Feature | Reason |
 |---|---|
 | Multiple users / multi-tenancy | Single-user by design; no user_id columns |
-| Automated job applications | Scope is discovery and triage, not application |
-| Auto-apply / auto-send applications | AI may draft or suggest content; the user always reviews and applies manually (decisions.md AD-33; carried over from jobhunt-app's "no auto-apply" design rule) |
-| Cover letter generation | Out of scope for V1 |
+| Automated job applications (auto-submitting without a human sending it) | The app never sends an application on its own behalf -- AI may draft an email/cover letter for review (`src/features/applications/`, decisions.md AD-34), but sending is always the user opening a `mailto:` link in their own mail client, never a server-side send |
+| Auto-apply / auto-send applications | AI may draft or suggest content; the user always reviews and applies manually (decisions.md AD-33/AD-34; carried over from jobhunt-app's "no auto-apply" design rule) |
+| SMTP / server-side email sending | "mailto only for now" (decisions.md AD-34) -- no email credentials are stored or used by this app |
 | Interview preparation | Out of scope |
 | Job board accounts (LinkedIn, Indeed) | No public API; scraping would violate ToS |
 | Mobile application | Web-only; Telegram notifications serve mobile alerting |
@@ -171,6 +181,9 @@ P1.9 — Job Attributes & Personal Intelligence (v1.2, shipped)
 
 P1.10 — Production Verification & Health Framework (v1.4, shipped)
  └── Generic Check[] runner, 26 infra/application/external/data-quality checks, health score + Markdown/JSON/console reports, verify:production/diagnostics CLI, CI-ready workflow_dispatch
+
+P1.13 — Application Drafting (merge-workspace Phase 4, shipped)
+ └── AI draft (email/cover letter), review + edit, mailto-only send, status tracking, Telegram pending-drafts reminder
 
 P2 — Preferences
  └── Desired experience, App settings

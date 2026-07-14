@@ -22,6 +22,7 @@ function makeJob(overrides: Partial<NormalizedJob> = {}): NormalizedJob {
 
 function makeRepository(): JobRepository {
   return {
+    getById: vi.fn(),
     upsertMany: vi.fn().mockResolvedValue({ inserted: 0, updated: 0, duplicates: 0 }),
     findUnscored: vi.fn(),
     findForDashboard: vi.fn(),

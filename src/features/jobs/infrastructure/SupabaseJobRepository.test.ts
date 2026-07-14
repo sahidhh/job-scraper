@@ -61,6 +61,26 @@ const jobRow: JobRow = {
 };
 
 describe("SupabaseJobRepository", () => {
+  describe("getById", () => {
+    it("maps the row, including description", async () => {
+      const { client, builder } = mockSupabaseClient({ data: jobRow, error: null });
+      const repo = new SupabaseJobRepository(client);
+
+      const result = await repo.getById("job-1");
+
+      expect(result?.id).toBe("job-1");
+      expect(result?.description).toBe("Build things");
+      expect(builder.eq).toHaveBeenCalledWith("id", "job-1");
+    });
+
+    it("returns null when no row matches", async () => {
+      const { client } = mockSupabaseClient({ data: null, error: null });
+      const repo = new SupabaseJobRepository(client);
+
+      expect(await repo.getById("missing")).toBeNull();
+    });
+  });
+
   describe("upsertMany", () => {
     it("counts existing keys as updated and the rest as inserted, omitting first_seen_at from the payload", async () => {
       const { client, builders } = queuedSupabaseClient([

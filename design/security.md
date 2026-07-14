@@ -44,6 +44,7 @@ WITH CHECK (true);
 | company_career_pages | authenticated read-only (writes are service-role only, via scripts/discover-career-pages.ts) | authenticated |
 | digest_sessions | authenticated full access | authenticated |
 | resume_suggestions | authenticated full access | authenticated |
+| applications | authenticated full access | authenticated |
 
 Anonymous or unauthenticated requests receive zero rows / permission denied.
 

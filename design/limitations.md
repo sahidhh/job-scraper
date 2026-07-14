@@ -157,7 +157,20 @@ Skill gap and skill demand insights are meaningful only when both an active resu
 
 ---
 
-## 8. Known Technical Debt
+## 8. Applications (`docs/decisions.md` AD-34)
+
+### 8.1 Pending-Drafts Reminder Repeats Until Resolved
+The Telegram reminder for draft applications (`notifyPendingDrafts`) is stateless — it lists whatever `applications` rows currently have `status = 'draft'` on every cron run, with no "already reminded" tracking. This is deliberate (see AD-34's Rationale), but it means a draft the user genuinely intends to send "later" will show up in every notify run (every 2 hours, per the standard cron cadence) until it's sent or dismissed. There is no snooze.
+
+### 8.2 One Application Per (Job, Kind)
+`applications` has a `UNIQUE (job_id, kind)` constraint — at most one email draft and one cover-letter draft per job, ever. Redrafting overwrites the existing `draft`/`dismissed` row in place; there is no history of prior draft attempts for the same job+kind, and a `sent` row can never be redrafted or edited (`draftApplication`/`updateApplicationContent`/`markApplicationSent` all reject a non-`draft` status).
+
+### 8.3 No Cover-Letter-Specific UI Distinction
+`kind: "coverletter"` is a fully supported value in the domain layer and database (longer word-count target in the drafting prompt), but the `/dashboard` review dialog only ever calls the actions with `kind: "email"` — there is no UI control yet to request a cover-letter draft instead. Reachable today only by calling `draftApplicationAction(jobId, "coverletter")` directly (e.g. from a future UI addition or a script), not from the shipped dialog.
+
+---
+
+## 9. Known Technical Debt
 
 | Item | Impact | Priority |
 |---|---|---|

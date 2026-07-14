@@ -182,6 +182,13 @@ function toDuplicateRow(job: NormalizedJob, canonicalJobId: string): JobDuplicat
 export class SupabaseJobRepository implements JobRepository {
   constructor(private readonly client: TypedSupabaseClient) {}
 
+  async getById(id: string): Promise<Job | null> {
+    const { data, error } = await this.client.from("jobs").select("*").eq("id", id).maybeSingle();
+
+    if (error) throw toAppError(error);
+    return data ? toJob(data) : null;
+  }
+
   async upsertMany(jobs: NormalizedJob[]): Promise<UpsertResult> {
     let inserted = 0;
     let updated = 0;

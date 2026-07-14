@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { TableCell, TableRow } from "@/components/ui/table";
 import type { JobStatus, JobWithScore } from "@/features/jobs/domain/types";
+import { ApplicationDraftDialog } from "./ApplicationDraftDialog";
 import { JobStatusSelect } from "./JobStatusSelect";
 
 // Total column count, used for the expanded-reasoning row's colSpan:
@@ -113,15 +114,18 @@ export function JobRow({
           </div>
         </TableCell>
         <TableCell>
-          <a
-            href={job.url}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex size-8 items-center justify-center rounded-md text-primary transition-opacity hover:opacity-70"
-            aria-label={`View ${job.title}`}
-          >
-            <ExternalLink className="size-4" />
-          </a>
+          <div className="flex items-center">
+            <a
+              href={job.url}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex size-8 items-center justify-center rounded-md text-primary transition-opacity hover:opacity-70"
+              aria-label={`View ${job.title}`}
+            >
+              <ExternalLink className="size-4" />
+            </a>
+            <ApplicationDraftDialog jobId={job.id} jobTitle={job.title} />
+          </div>
         </TableCell>
       </TableRow>
       {open && (

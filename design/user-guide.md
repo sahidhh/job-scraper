@@ -85,7 +85,7 @@ your AI relevance score plus any ranking bonuses you've configured (see "Ranking
 - **AI Score** (0–100%) — AI-assessed relevance (may be null if below keyword threshold or pending)
 - **Ranking bonus** — shown next to the AI score when a bonus applied (e.g. "+ preferred company, remote")
 - **Status** — your workflow status for this job
-- **Actions** — open job URL in new tab
+- **Actions** — open job URL in new tab, or draft an application (mail icon — see "Draft an Application" below)
 
 ### Filtering
 - **Search:** Filter by keyword in title or company name
@@ -126,6 +126,16 @@ without double-counting. Leave everything blank (or click "Clear all") to rank b
 
 ### Pagination
 Use the page controls at the bottom to navigate pages.
+
+### Draft an Application
+Click the mail icon on any job row/card to open the application dialog.
+1. Click **Generate draft** — an AI-drafted email (using only facts from your active resume, never invented) is created and pre-filled with the job's contact email if one was found on the posting
+2. Review it. Edit the subject or body directly and click **Save changes** if you want to tweak wording
+3. Click **Open in mail client** — this opens a `mailto:` link in your own mail app with the subject/body prefilled. Send it from there. **The dashboard never sends anything on its own** — this is always your own mail client, your own send
+4. If you don't want to send it, click **Dismiss** instead — you can regenerate a fresh draft for the same job later
+
+Once a draft is marked sent, it can't be edited or redrafted — it's a permanent record of what you actually sent.
+Dismissed drafts can be redrafted at any time. See §9 for how pending (unreviewed) drafts show up in Telegram.
 
 ---
 
@@ -234,6 +244,9 @@ A single grouped Telegram message per cron run containing:
   - `📊 Dashboard` button — opens `APP_URL/dashboard?minScore=0.80`
 
 The Worth Reviewing and Dashboard buttons require `APP_URL` and `TELEGRAM_CALLBACK_SECRET` to be set. When either is absent those buttons are omitted silently.
+
+### Pending Draft Applications Reminder
+After the job-match notification above, if you have any application drafts sitting in "draft" status (§4 "Draft an Application"), the cron run sends one more Telegram message listing them by job title and company, with a nudge to review and send from the dashboard. This reminder repeats every cron run for as long as a draft stays unreviewed — send it, dismiss it, or it'll keep showing up.
 
 ### Adjust the Threshold
 Set `NOTIFY_THRESHOLD` in your GitHub Actions secrets (and Vercel env vars if you want the setting visible in the UI).

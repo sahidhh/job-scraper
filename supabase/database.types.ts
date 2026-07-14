@@ -32,6 +32,66 @@ export type Database = {
         }
         Relationships: []
       }
+      applications: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          job_id: string
+          kind: string
+          model: string
+          recipient_email: string | null
+          resume_id: string
+          sent_at: string | null
+          status: string
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          body?: string
+          created_at?: string
+          id?: string
+          job_id: string
+          kind?: string
+          model?: string
+          recipient_email?: string | null
+          resume_id: string
+          sent_at?: string | null
+          status?: string
+          subject?: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          job_id?: string
+          kind?: string
+          model?: string
+          recipient_email?: string | null
+          resume_id?: string
+          sent_at?: string | null
+          status?: string
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "applications_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "applications_resume_id_fkey"
+            columns: ["resume_id"]
+            isOneToOne: false
+            referencedRelation: "resumes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       companies: {
         Row: {
           active: boolean

@@ -161,6 +161,7 @@ sequenceDiagram
 | roles | `src/features/roles` | Role selection, AI expansion, role_expansion_map cache |
 | scoring | `src/features/scoring` | Two-stage keyword+AI scoring pipeline |
 | notifications | `src/features/notifications` | Telegram message formatting and delivery |
+| applications | `src/features/applications` | AI application drafting (email/cover letter), review/edit, mailto-only send, status tracking (decisions.md AD-34) |
 | insights | `src/features/insights` | Analytics computations (skill gaps, charts) |
 | companies | `src/features/companies` | Board-token CRUD for Greenhouse/Lever/Ashby |
 | settings | `src/features/settings` | User preferences (desired experience years) |

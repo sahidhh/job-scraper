@@ -2,6 +2,14 @@ import type { CreateStatusInput, Job, JobFilters, JobStats, JobsPage, JobStatus,
 
 export interface JobRepository {
   /**
+   * Single job by id, including `description` (unlike findForDashboard's
+   * page rows, which omit it -- P1 #4). Feeds application drafting
+   * (features/applications), the only caller that needs the full posting
+   * text server-side.
+   */
+  getById(id: string): Promise<Job | null>;
+
+  /**
    * All configured statuses ordered by sortOrder (job_statuses table, P0).
    * Drives the per-row status dropdown and the dashboard status filter.
    */

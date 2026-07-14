@@ -133,6 +133,72 @@ Actions **never throw** to the client. On success they call `revalidatePath()` t
 
 ---
 
+### Applications
+
+#### `draftApplicationAction(jobId, kind?)`
+**File:** `src/features/applications/actions.ts`  
+**Description:** Drafts (or redrafts) an email/cover-letter application for one job against the active resume, via `LlmApplicationDraftProvider` (the same provider-agnostic `llmClient`/`LLM_PROVIDER` as resume suggestions, decisions.md AD-32/AD-34). Job description and resume text are truncated to the same caps jobhunt's `apply.py` used (4000/8000 chars — AD-23 prompt-cost precedent, not a bug). Persists as an upsert on the `(job_id, kind)` unique constraint, resetting status to `draft`. Redrafting an already-`sent` application is rejected — a sent application is a permanent record.
+
+| Param | Type | Description |
+|---|---|---|
+| jobId | string (UUID) | Job to draft an application for |
+| kind | `"email" \| "coverletter"` | Optional, defaults to `"email"` |
+
+**Returns:** `ActionResult<Application>`
+
+---
+
+#### `getApplicationForJobAction(jobId, kind?)`
+**File:** `src/features/applications/actions.ts`  
+**Description:** Fetches the existing `(job_id, kind)` application row, if any, without generating a new draft. Used by the review UI to show a prior draft/sent/dismissed application on open.
+
+| Param | Type | Description |
+|---|---|---|
+| jobId | string (UUID) | Job to look up |
+| kind | `"email" \| "coverletter"` | Optional, defaults to `"email"` |
+
+**Returns:** `ActionResult<Application | null>`
+
+---
+
+#### `updateApplicationContentAction(id, subject, body)`
+**File:** `src/features/applications/actions.ts`  
+**Description:** User edits to a draft's subject/body during review. Only a `draft`-status application can be edited.
+
+| Param | Type | Description |
+|---|---|---|
+| id | string (UUID) | Application row id |
+| subject | string | Replacement subject line |
+| body | string | Replacement body text (cannot be empty) |
+
+**Returns:** `ActionResult<Application>`
+
+---
+
+#### `markApplicationSentAction(id)`
+**File:** `src/features/applications/actions.ts`  
+**Description:** Records that the user opened the `mailto:` link (`buildMailtoLink.ts`) and sent the message themselves — this app never sends email on its own behalf (scope.md's "Auto-apply / auto-send" exclusion). Transitions `draft` → `sent` and stamps `sent_at`; `sent` is terminal.
+
+| Param | Type | Description |
+|---|---|---|
+| id | string (UUID) | Application row id |
+
+**Returns:** `ActionResult<Application>`
+
+---
+
+#### `markApplicationDismissedAction(id)`
+**File:** `src/features/applications/actions.ts`  
+**Description:** User decided not to send this draft. Transitions `draft` → `dismissed`; a dismissed application can later be redrafted via `draftApplicationAction`.
+
+| Param | Type | Description |
+|---|---|---|
+| id | string (UUID) | Application row id |
+
+**Returns:** `ActionResult<Application>`
+
+---
+
 ### Roles
 
 #### `expandRoleAction(primaryRole)`

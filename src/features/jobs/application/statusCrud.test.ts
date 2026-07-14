@@ -13,6 +13,7 @@ const mockStatus: JobStatus = {
 
 function makeRepository(): JobRepository {
   return {
+    getById: vi.fn(),
     upsertMany: vi.fn(),
     findUnscored: vi.fn(),
     findForDashboard: vi.fn(),

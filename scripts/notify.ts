@@ -1,3 +1,5 @@
+import { notifyPendingDrafts } from "@/features/applications/application/notifyPendingDrafts";
+import { SupabaseApplicationRepository } from "@/features/applications/infrastructure/SupabaseApplicationRepository";
 import { sendDigest } from "@/features/notifications/application/sendDigest";
 import { sendDigestMvp } from "@/features/notifications/application/sendDigestMvp";
 import { sendNotification } from "@/features/notifications/application/sendNotification";
@@ -67,6 +69,14 @@ async function main(): Promise<void> {
   } else {
     const sent = await sendNotification(roleSelection.id, deps);
     console.log(`[notify] sent ${sent} notification(s) for role selection ${roleSelection.id}`);
+  }
+
+  // Surfaces draft applications awaiting review (Phase 4) by reusing this
+  // same TelegramSender -- not a new notification channel or cron job.
+  const applicationRepository = new SupabaseApplicationRepository(client);
+  const pendingCount = await notifyPendingDrafts({ applicationRepository, telegramSender });
+  if (pendingCount > 0) {
+    console.log(`[notify] reminded about ${pendingCount} pending draft application(s)`);
   }
 }
 

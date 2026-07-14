@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { JobStatus, JobWithScore } from "@/features/jobs/domain/types";
+import { ApplicationDraftDialog } from "./ApplicationDraftDialog";
 import { JobStatusSheet } from "./JobStatusSheet";
 
 function formatScore(score: number | null): string {
@@ -116,17 +117,22 @@ export function JobCard({
       {/* Bottom bar: status + view link */}
       <div className="flex items-center justify-between border-t bg-muted/30 px-4 py-2.5">
         <JobStatusSheet jobId={job.id} statusId={job.statusId} statuses={statuses} />
-        <a
-          href={job.url}
-          target="_blank"
-          rel="noreferrer"
-          onClick={(e) => e.stopPropagation()}
-          className="flex items-center gap-1 text-sm font-medium text-primary transition-opacity hover:opacity-70"
-          aria-label={`View ${job.title}`}
-        >
-          <ExternalLink className="size-4" />
-          <span className="sr-only">View job</span>
-        </a>
+        <div className="flex items-center gap-1">
+          <a
+            href={job.url}
+            target="_blank"
+            rel="noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="flex items-center gap-1 text-sm font-medium text-primary transition-opacity hover:opacity-70"
+            aria-label={`View ${job.title}`}
+          >
+            <ExternalLink className="size-4" />
+            <span className="sr-only">View job</span>
+          </a>
+          <div onClick={(e) => e.stopPropagation()}>
+            <ApplicationDraftDialog jobId={job.id} jobTitle={job.title} />
+          </div>
+        </div>
       </div>
     </article>
   );
