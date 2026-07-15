@@ -123,7 +123,7 @@ export function JobCard({
             target="_blank"
             rel="noreferrer"
             onClick={(e) => e.stopPropagation()}
-            className="flex items-center gap-1 text-sm font-medium text-primary transition-opacity hover:opacity-70"
+            className="inline-flex size-11 items-center justify-center rounded-md text-primary transition-opacity hover:opacity-70"
             aria-label={`View ${job.title}`}
           >
             <ExternalLink className="size-4" />

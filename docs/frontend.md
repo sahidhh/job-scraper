@@ -18,8 +18,32 @@ src/app/
 │   │   └── page.tsx
 │   ├── insights/
 │   │   └── page.tsx           # P1 — skill-gap + demand over role-matched jobs
+│   ├── analytics/
+│   │   ├── layout.tsx         # header + RouteTabs (Overview/Scraping & Scoring/Job Breakdown/Sources)
+│   │   ├── page.tsx           # Overview tab: pipeline + scoring queue + token stats
+│   │   ├── loading.tsx
+│   │   ├── scraping/          # Scraping & Scoring tab
+│   │   │   ├── page.tsx
+│   │   │   └── loading.tsx
+│   │   ├── breakdown/         # Job Breakdown tab
+│   │   │   ├── page.tsx
+│   │   │   └── loading.tsx
+│   │   └── sources/           # Sources tab (source health)
+│   │       ├── page.tsx
+│   │       └── loading.tsx
 │   └── settings/
-│       └── page.tsx
+│       ├── layout.tsx         # header + RouteTabs (Sources/Workflow/Notifications/Activity)
+│       ├── page.tsx           # Sources tab: companies, experience, thresholds, ranking
+│       ├── loading.tsx
+│       ├── workflow/          # Workflow tab (job statuses)
+│       │   ├── page.tsx
+│       │   └── loading.tsx
+│       ├── notifications/     # Notifications tab (notification filters)
+│       │   ├── page.tsx
+│       │   └── loading.tsx
+│       └── activity/          # Activity tab (scrape runs + notification log)
+│           ├── page.tsx
+│           └── loading.tsx
 ├── auth/
 │   └── callback/
 │       └── route.ts           # Supabase auth code-exchange (PKCE) callback
@@ -29,19 +53,21 @@ src/app/
 - `(auth)` and `(protected)` are route groups — they don't affect URLs, only layouts.
 - `/` redirects to `/dashboard` (which redirects to `/login` if unauthenticated, via middleware).
 - No public signup page — single-user app. The one account is created once via the Supabase dashboard (Authentication → Users → Add user) as a setup step, not part of the app UI.
+- `/analytics` and `/settings` use route-based tabs (sub-routes, not client-side toggles): each tab is its own server component fetching only its own data, with a co-located `loading.tsx` skeleton shown while that tab's fetch resolves. `/dashboard` and `/insights` were evaluated for the same treatment but kept as single routes — dashboard has only one data-bearing section (already lazy via an internal `<Suspense>` around `JobsSection`), and insights' two cards both derive from one shared query so splitting them into routes would only duplicate that fetch, not reduce it (insights instead got a `<Suspense>` wrapper so it streams rather than blocks).
 
 ## 2. Components (shadcn/ui primitives as building blocks)
 
 | Component | Used in | Built from shadcn primitives |
 |---|---|---|
-| `AppShell` | `(protected)/layout.tsx` | `NavigationMenu` / simple sidebar `Sheet` — links to Dashboard, Roles, Resume, Settings, Logout |
-| `JobsTable` | `/dashboard` | Client component (`"use client"`): holds multi-select state, renders the select-all checkbox header, the bulk-action bar (`Select` + Apply/Archive/Clear `Button`s), `Table`, `Badge` |
+| `AppShell` | `(protected)/layout.tsx` | Desktop sidebar nav + mobile header/`BottomNav` — links to Dashboard, Roles, Resume, Insights, Analytics, Settings, Logout |
+| `RouteTabs` | `/analytics`, `/settings` layouts | Client component (`"use client"`): horizontally-scrollable, `usePathname`-driven tab nav (`Link`s to sub-routes, not client-side state) — mirrors `BottomNav`'s active-link pattern |
+| `JobsTable` | `/dashboard` | Client component (`"use client"`): holds multi-select state, renders the select-all checkbox header, the bulk-action bar (`Select` + Apply/Archive/Clear `Button`s), `Table` on desktop, `JobCard` list on mobile (`md:hidden`/`hidden md:block` split), `Badge` |
 | `JobRow` (expandable) | inside `JobsTable` | `Collapsible` — reveals `ai_reasoning`; row checkbox + per-row `JobStatusSelect` |
 | `JobStatusSelect` | inside `JobRow` | Client component: `Select` of statuses (colored dot) → `setJobStatusAction([jobId], statusId)` then `router.refresh()` |
 | `FilterBar` | `/dashboard` | `Select` (location tag, source, **status**), `Input` (min score, **max years**), **"show archived" checkbox**. `maxYears` defaults to the Settings desired-experience value; the input overrides per-view (P2) |
 | `InsightsPage` / `SkillRow` | `/insights` | `Card`, `Badge`, proportion bars — "Level up" (skill gaps) + "In demand" lists from `computeSkillGaps`/`computeSkillDemand` over role-matched jobs (P1) |
-| `AnalyticsPage` | `/analytics` | Server component — fetches scrape runs, AI scores, status breakdown via `SupabaseMatchedJobsRepository`; transforms with pure fns; passes to `AnalyticsCharts` (P3) |
-| `AnalyticsCharts` | `/analytics` | `"use client"` — 4 recharts charts: `JobsOverTimeChart` (line), `JobsBySourceChart` (bar), `ScoreHistogramChart` (bar, green), `StatusBreakdownChart` (bar, per-status color via `Cell`). Empty-state guard per chart (P3) |
+| Analytics tab pages | `/analytics`, `/analytics/scraping`, `/analytics/breakdown`, `/analytics/sources` | Server components, one per tab — each fetches only its own slice via `SupabaseMatchedJobsRepository`/`getSourceHealthReport`/`getScoringQueueReport`; transforms with pure fns; passes to `AnalyticsCharts` |
+| `AnalyticsCharts` | all `/analytics/*` tabs | `"use client"` — recharts charts (`JobsOverTimeChart`, `JobsBySourceChart`, `ScoreHistogramChart`, `StatusBreakdownChart`, `JobsByExperienceChart`, `JobsByLocationChart`, `JobsByCompanyChart`, `ScoredBySourceChart`) + stat-card groups (`TokenStatsCards`, `SalaryStatsCards`, `RemoteStatCard`, `PipelineStatsCards`, `ScoringQueueStatsCards`). Empty-state guard per chart |
 | `ExperienceCard` | `/settings` | Client `Card` + numeric `Input` → `setDesiredExperienceAction`; blank clears the soft year filter (P2) |
 | `RoleSelectorForm` | `/roles` | `Input`, `Button` |
 | `ExpandedRolesCard` | `/roles` | `Card`, `Badge` (toggleable chips per related role, click to include/exclude from selection), confirm `Button` |
@@ -49,7 +75,7 @@ src/app/
 | `SkillsEditor` | `/resume` | `Badge` (removable chips) + `Input` for adding new skills |
 | `CompaniesTable` | `/settings` | `Table`, `Button` (edit/delete), `Dialog` |
 | `CompanyFormDialog` | `/settings` | `Dialog`, `Input`, `Select` (source enum) |
-| `ScrapeRunsList` | `/settings` | `Table` — recent `scrape_runs` (source, status, jobs_found, run_at, error) |
+| `ScrapeRunsList` | `/settings/activity` | `Table` — recent `scrape_runs` (source, status, jobs_found, run_at, error) |
 | `ThresholdsCard` | `/settings` | `Card` — read-only display of `KEYWORD_THRESHOLD`/`NOTIFY_THRESHOLD` from config |
 | Insights "Level up" / "In demand" cards | `/insights` | `Card`, `Badge`, proportion bars. Server component recomputes job skills at read time (`extractSkills` over role-matched jobs), then `computeSkillGaps`/`computeSkillDemand`. Honest copy: demand is over the user's scraped role-matched jobs, not the market |
 | `LoginForm` | `/login` | `Card`, `Input`, `Button`, `Form` (with `zod` validation) |

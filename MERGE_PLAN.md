@@ -1,4 +1,51 @@
-# MERGE_PLAN.md — Bugfix Session Findings Log
+# MERGE_PLAN.md — Session Findings Log
+
+## UX session — tabbed lazy-loaded pages + mobile responsiveness
+
+**Session:** Presentation-layer UX pass: per-tab lazy data loading on the four main pages, plus a mobile-responsiveness audit of those pages + resume/applications flows at 375px.
+**Date:** 2026-07-15
+**Branch:** `claude/tabbed-lazy-mobile-ux-wy4x3r`
+**Scope:** Presentation layer only — no domain/application behavior changes.
+
+### 1. Tabbed pages with per-tab data loading
+
+**Mapping performed first** (file:line) for all four pages (`/dashboard`, `/insights`, `/analytics`, `/settings`), proposed to the user, confirmed before building:
+
+- **`/dashboard`** — one data-bearing section (`JobsSection`), already lazy via an internal `<Suspense>`. **No route split** — nothing to split, and forcing tabs onto a single-section page would be unjustified complexity.
+- **`/insights`** — both cards ("Level up" / "In demand") derive from one shared `findRoleMatchedJobs` query, split into two views only via pure functions in memory. A route split would either share the fetch (no benefit) or duplicate it (extra round-trip, no reduction). **No route split** — instead wrapped the existing single fetch in `<Suspense>` with a skeleton so it streams instead of blocking the whole page.
+- **`/analytics`** — had 13 independent repo calls in one `Promise.all`, all blocking before any of its 7 `<section>`s rendered. **Split into 4 route tabs**, each its own server component with a co-located `loading.tsx`: `/analytics` (Overview: pipeline + scoring queue + token stats), `/analytics/scraping` (Scraping & Scoring), `/analytics/breakdown` (Job Breakdown + Job metrics), `/analytics/sources` (source health).
+- **`/settings`** — had 7 repo calls in one `Promise.all` feeding 4 already-visually-separated sections. **Split into 4 route tabs matching the existing `SectionLabel` groups verbatim**: `/settings` (Sources: companies, experience, thresholds, ranking), `/settings/workflow` (job statuses), `/settings/notifications` (notification filters), `/settings/activity` (scrape runs + notification log).
+
+**Implementation:** New shared `src/components/layout/RouteTabs.tsx` client component (route-based `Link` tabs driven by `usePathname`, not client-side state — each tab is a distinct route/server component). Used by new `layout.tsx` files for `/analytics` and `/settings`.
+
+**Revalidation paths updated** to follow their component's new tab location: `createStatusAction`/`updateStatusAction`/`deleteStatusAction` (`src/features/jobs/actions.ts`) now revalidate `/settings/workflow` instead of `/settings`; `setNotificationPreferencesAction` (`src/features/notifications/actions.ts`) now revalidates `/settings/notifications`. Company/experience/ranking actions (still on the `/settings` root/Sources tab) were left targeting `/settings` unchanged.
+
+### 2. Mobile responsiveness audit (375px)
+
+Audited `/dashboard`, `/insights`, `/analytics`, `/settings`, `/resume`, and the application-draft/resume-restore flows. Most of this was already well-built from an earlier session (`BottomNav`, mobile header in `AppShell`, `JobsTable`'s `JobCard`/`JobRow` split, `FilterBar`'s bottom-`Sheet` mobile filters, `JobStatusSheet`, shadcn `Table`'s built-in `overflow-x-auto` + `hidden md:table-cell` column-hiding already applied to `CompaniesTable`/`ScrapeRunsList`/`NotificationsLogList`, and `SourceHealthTable`/`ScrapeRunHealthTable`'s own `overflow-x-auto` dense tables). No table was found "genuinely unusable" as-is, so none were converted to card lists beyond what already existed.
+
+Two concrete defects found and fixed:
+- **`ApplicationDraftDialog.tsx`** — `DialogContent` had no `max-height`/scroll, so on short mobile viewports (e.g. iPhone SE, 375×667) the dialog's subject input + 10-row textarea + footer buttons could overflow past the visible viewport with the footer (Save/Send/Dismiss) clipped off-screen and unreachable. Fixed: `max-h-[85vh] overflow-y-auto` on `DialogContent`.
+- **Tap targets below the 44px minimum** on the mobile job-card bottom bar: `JobCard.tsx`'s "View job" `<a>` had no explicit size (just an icon + `sr-only` text, effective tap target ~16×16px); `ApplicationDraftDialog`'s trigger button was `size-8` (32px). Fixed both to `size-11` (44px) on mobile, with `ApplicationDraftDialog`'s trigger reverting to `size-8` at `md:` since it's shared with the desktop `JobRow` table cell where a mouse pointer is used.
+
+**Mobile QA checklist for manual testing (375px width):**
+- [ ] Dashboard: bottom nav renders (Jobs/Analytics/Insights/Roles/Settings), FilterBar opens as a bottom sheet, job list renders as cards (not a squeezed table), each card's status pill opens a bottom sheet, tapping "View job" and the mail/draft icon both have a comfortably large tap target
+- [ ] ApplicationDraftDialog: open on a short-viewport device (or resize browser height down) — confirm the dialog scrolls internally and the footer buttons (Save/Open in mail client/Dismiss) are always reachable
+- [ ] Insights: two cards stack vertically, skeleton flashes briefly on load
+- [ ] Analytics: tab bar (Overview/Scraping & Scoring/Job Breakdown/Sources) scrolls horizontally without breaking page layout, each tab loads independently with its own skeleton, charts/cards stack to one column
+- [ ] Settings: tab bar (Sources/Workflow/Notifications/Activity) works the same way; companies table scrolls horizontally inside its own container rather than pushing the page wide; "Add company" dialog is usable
+- [ ] Resume: upload card, skills editor, AI suggestions, and version history all readable/usable one-handed; restore buttons are tappable
+- [ ] Verify no page has horizontal page-level scroll (only specific dense tables scroll internally)
+
+### Verification
+
+`npm run verify` (typecheck + lint + test + build) is green: 107 test files, 894 tests passing; production build succeeds with all new routes (`/analytics`, `/analytics/scraping`, `/analytics/breakdown`, `/analytics/sources`, `/settings`, `/settings/workflow`, `/settings/notifications`, `/settings/activity`) present in the route table.
+
+Docs updated in the same commit per `CLAUDE.md`'s document-maintenance rules: `docs/frontend.md` (route structure + components table), `design/user-guide.md`, `design/api-reference.md` (Next.js App Routes table), `design/use-cases.md`, `design/limitations.md`, `design/scope.md` (path references to the two sections that moved off the `/settings` root: Status Management → `/settings/workflow`, Notification filters → `/settings/notifications`).
+
+---
+
+# Bugfix Session Findings Log
 
 **Session:** Real-world manual testing failures (three issues reported by the user after live use of `/resume`).
 **Date:** 2026-07-15
