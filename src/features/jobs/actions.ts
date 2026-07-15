@@ -34,7 +34,7 @@ export async function createStatusAction(input: CreateStatusInput): Promise<Acti
     const jobRepository = new SupabaseJobRepository(client);
     const status = await createStatus(input, { jobRepository });
 
-    revalidatePath("/settings");
+    revalidatePath("/settings/workflow");
     revalidatePath("/dashboard");
     return { ok: true, data: status };
   } catch (error) {
@@ -51,7 +51,7 @@ export async function updateStatusAction(
     const jobRepository = new SupabaseJobRepository(client);
     const status = await updateStatus(id, input, { jobRepository });
 
-    revalidatePath("/settings");
+    revalidatePath("/settings/workflow");
     revalidatePath("/dashboard");
     return { ok: true, data: status };
   } catch (error) {
@@ -65,7 +65,7 @@ export async function deleteStatusAction(id: string): Promise<ActionResult> {
     const jobRepository = new SupabaseJobRepository(client);
     await deleteStatus(id, { jobRepository });
 
-    revalidatePath("/settings");
+    revalidatePath("/settings/workflow");
     revalidatePath("/dashboard");
     return { ok: true, data: undefined };
   } catch (error) {

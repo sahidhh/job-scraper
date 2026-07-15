@@ -138,13 +138,13 @@ export function ApplicationDraftDialog({ jobId, jobTitle }: { jobId: string; job
       <DialogTrigger asChild>
         <button
           type="button"
-          className="inline-flex size-8 items-center justify-center rounded-md text-primary transition-opacity hover:opacity-70"
+          className="inline-flex size-11 items-center justify-center rounded-md text-primary transition-opacity hover:opacity-70 md:size-8"
           aria-label={`Draft application for ${jobTitle}`}
         >
           <Mail className="size-4" />
         </button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-xl">
+      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>Application draft</DialogTitle>
           <DialogDescription className="truncate">{jobTitle}</DialogDescription>

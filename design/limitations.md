@@ -111,7 +111,7 @@ The `notifications_log` table prevents duplicate sends for jobs already notified
 The Telegram Bot API enforces rate limits (approximately 30 messages/second globally, 20 messages/minute per chat). Large batches of high-scoring jobs may experience queuing delays. The platform respects `retry_after` headers (capped at 30s).
 
 ### 4.3 No Notification Categories or Filters
-All jobs above `NOTIFY_THRESHOLD` are notified unless narrowed by `NotificationPreferences` (role/skill/location/experience/source include filters, plus `blockedCompanies`/`excludeEmploymentTypes` exclude filters as of v1.2), configurable from the `/settings` "Notification filters" card.
+All jobs above `NOTIFY_THRESHOLD` are notified unless narrowed by `NotificationPreferences` (role/skill/location/experience/source include filters, plus `blockedCompanies`/`excludeEmploymentTypes` exclude filters as of v1.2), configurable from the `/settings/notifications` "Notification filters" card.
 
 ### 4.4 "Why This Job" Highlights Are Best-Effort
 The Telegram highlight badges (remote/urgent/salary/employment-type, v1.2) are derived entirely from `extractJobAttributes`/`extractSalary` output already computed at ingest -- they inherit all the coverage gaps documented in §1.11/§1.10 (e.g. a job with an unrecognized salary format shows no salary badge, not an approximate one). There is no "matches preferred company/tech stack" badge yet. `RankingPreferences.preferredCompanies` exists and is used to bias the dashboard's `overall_score` sort (P1.9, `computeOverallScore.ts`), but it is not wired into the digest's highlight badges, and `preferredTechnologies` was never built at all (see `ROADMAP.md`'s Deferred table).

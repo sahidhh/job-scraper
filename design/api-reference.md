@@ -312,7 +312,7 @@ Actions **never throw** to the client. On success they call `revalidatePath()` t
 
 #### `setNotificationPreferencesAction(prefs)`
 **File:** `src/features/notifications/actions.ts`  
-**Description:** Validates (`validateNotificationPreferences`) and persists notification filter preferences. Pass `null` to clear preferences and revert to notify-all. Include filters are ANDed with each other (any single match within a filter is sufficient — OR logic within the filter); the exclude filters (v1.2) further narrow the result after the include filters pass. Editable from the `/settings` "Notification filters" card as of v1.2 (previously only settable programmatically).
+**Description:** Validates (`validateNotificationPreferences`) and persists notification filter preferences. Pass `null` to clear preferences and revert to notify-all. Include filters are ANDed with each other (any single match within a filter is sufficient — OR logic within the filter); the exclude filters (v1.2) further narrow the result after the include filters pass. Editable from `/settings/notifications` (previously only settable programmatically).
 
 | Param | Type | Description |
 |---|---|---|
@@ -379,8 +379,14 @@ Actions **never throw** to the client. On success they call `revalidatePath()` t
 | `/dashboard` | GET | Required | Job table page |
 | `/roles` | GET | Required | Role selection page |
 | `/resume` | GET | Required | Resume management page |
-| `/settings` | GET | Required | Company config + status management |
-| `/analytics` | GET | Required | Analytics charts |
+| `/settings` | GET | Required | Sources tab — company config, desired experience, thresholds, ranking |
+| `/settings/workflow` | GET | Required | Workflow tab — job status management |
+| `/settings/notifications` | GET | Required | Notifications tab — notification filter preferences |
+| `/settings/activity` | GET | Required | Activity tab — recent scrape runs + notification log |
+| `/analytics` | GET | Required | Overview tab — pipeline, scoring queue, token stats |
+| `/analytics/scraping` | GET | Required | Scraping & Scoring tab |
+| `/analytics/breakdown` | GET | Required | Job Breakdown tab |
+| `/analytics/sources` | GET | Required | Sources tab — source health |
 | `/insights` | GET | Required | Skill gap + demand insights |
 
 All routes except `/login` and `/auth/callback` are protected by `middleware.ts` which redirects unauthenticated requests to `/login`.

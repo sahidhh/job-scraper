@@ -156,7 +156,7 @@ Dismissed drafts can be redrafted at any time. See §9 for how pending (unreview
 
 ## 5. Status Workflow
 
-**Location:** `/settings` → Status Management
+**Location:** `/settings/workflow`
 
 ### Default Statuses
 | Status | Color | Description |
@@ -215,7 +215,7 @@ Shows the most-requested skills across all matched and scored jobs — regardles
 
 ## 8. Analytics
 
-**Location:** `/analytics`
+**Location:** `/analytics`, split into four tabs: Overview (pipeline + scoring queue + token stats), Scraping & Scoring, Job Breakdown, and Sources.
 
 | Chart | Description |
 |---|---|
@@ -268,7 +268,7 @@ Set `NOTIFY_THRESHOLD` in your GitHub Actions secrets (and Vercel env vars if yo
 
 ### Notification Filters
 
-**Location:** `/settings` → "Notification filters" card
+**Location:** `/settings/notifications`
 
 Narrow which matched jobs actually trigger a Telegram alert, without changing `NOTIFY_THRESHOLD`. All fields are optional comma-separated lists (or a single number for experience); leaving a field blank means "no filter" for that dimension. Leaving every field blank clears preferences entirely (notify on every match above the threshold — the default).
 
@@ -358,4 +358,4 @@ Exits `1` only when the verdict is `not_ready` (a critical-severity failure) —
 | Resume skills look wrong | PDF/DOCX parsing missed skills | Manually add/remove skills on `/resume` |
 | Skill insights empty | No scored jobs yet | Run a full scrape → score cycle |
 | Cron script fails with "Missing required environment variable" | A required secret isn't set in this environment | Run `npm run doctor` locally to see exactly which vars are missing |
-| Expected notification didn't arrive | A notification filter (blocked company, excluded employment type, etc.) silently excluded it | Check `/settings` → "Notification filters" — clear a field to test, or check `docs/reviews` for the exclude-filter semantics |
+| Expected notification didn't arrive | A notification filter (blocked company, excluded employment type, etc.) silently excluded it | Check `/settings/notifications` — clear a field to test, or check `docs/reviews` for the exclude-filter semantics |

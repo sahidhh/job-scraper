@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,12 +32,23 @@ export default async function InsightsPage() {
       </div>
 
       {activeSelection ? (
-        <InsightsContent roleSelectionId={activeSelection.id} expandedRoles={activeSelection.expandedRoles} />
+        <Suspense fallback={<InsightsFallback />}>
+          <InsightsContent roleSelectionId={activeSelection.id} expandedRoles={activeSelection.expandedRoles} />
+        </Suspense>
       ) : (
         <Button asChild>
           <Link href="/roles">Choose a role</Link>
         </Button>
       )}
+    </div>
+  );
+}
+
+function InsightsFallback() {
+  return (
+    <div className="grid gap-4 md:grid-cols-2">
+      <div className="h-64 animate-pulse rounded-xl border border-border bg-muted/50" />
+      <div className="h-64 animate-pulse rounded-xl border border-border bg-muted/50" />
     </div>
   );
 }

@@ -30,7 +30,7 @@ export async function setNotificationPreferencesAction(
     const client = await createSupabaseServerClient();
     const repo = new SupabaseNotificationPreferencesRepository(client);
     await repo.setPreferences(prefs);
-    revalidatePath("/settings");
+    revalidatePath("/settings/notifications");
     return { ok: true, data: undefined };
   } catch (error) {
     return { ok: false, error: errorMessage(error) };

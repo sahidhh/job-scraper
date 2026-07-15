@@ -247,7 +247,7 @@
 ### UC-13 — Configure Notification Preferences
 
 **Actor:** User  
-**Trigger:** User edits the "Notification filters" card on `/settings`  
+**Trigger:** User edits the "Notification filters" card on `/settings/notifications`  
 **Main Flow:**
 1. User edits comma-separated fields (roles, skills, locations, sources, blocked companies, excluded employment types, muted keywords) and min/max experience
 2. Client validates enum fields (locations/sources/employment types) against the known vocab before submitting

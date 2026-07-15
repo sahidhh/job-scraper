@@ -42,7 +42,7 @@ A single technical professional (software engineer, data scientist, or similar) 
 
 | Feature | Description |
 |---|---|
-| Notification preferences | Configurable include filters: role, skill, location, experience, source — applied before Telegram delivery; editable via `/settings` → Notifications (continuous-improvement pass -- the backend action predated this UI) |
+| Notification preferences | Configurable include filters: role, skill, location, experience, source — applied before Telegram delivery; editable via `/settings/notifications` (continuous-improvement pass -- the backend action predated this UI) |
 | Company/employment-type/keyword mute | `excludeCompanies`/`excludeEmploymentTypes`/`excludeKeywords` on `NotificationPreferences` mute Telegram alerts; all three are also enforced on the dashboard job list (`JobFilters.excludeCompanies`/`excludeEmploymentTypes`/`excludeKeywords`), so a mute is a genuine "never show me this," not just a quieter alert |
 
 ### P1.9 — Ranking & Search (continuous-improvement pass, shipped)
@@ -86,7 +86,7 @@ parsing, no AI" extraction standard than `extractSalary`/`extractContactEmail`. 
 |---|---|
 | Job attribute extraction | `extractJobAttributes` deterministically tags employment type (internship/contract/freelance/temporary/part_time/full_time), seniority (executive/principal/lead/senior/entry/mid), work arrangement (hybrid/onsite), visa sponsorship, relocation assistance, security clearance, and urgent hiring from title+description at ingest, stored on `jobs.employment_type` etc. Regex-only, no AI |
 | Notification exclude filters | `NotificationPreferences.blockedCompanies` / `excludeEmploymentTypes` -- companies or employment types the user never wants alerted, ANDed with the existing include filters |
-| Notification preferences UI | `/settings` "Notification filters" card -- the P1.5 filters (previously only settable via direct `app_settings` write) plus the new exclude filters are now editable end-to-end |
+| Notification preferences UI | `/settings/notifications` "Notification filters" card -- the P1.5 filters (previously only settable via direct `app_settings` write) plus the new exclude filters are now editable end-to-end |
 | Telegram "why this job" highlights | `buildJobHighlights` renders remote/urgent/salary/employment-type badges on both the individual-match and digest message formats, derived from data already computed at ingest (no extra AI calls) |
 
 ### P1.8 — AI Cost Optimization (in progress)
