@@ -14,7 +14,7 @@ export type SupportedResumeMimeType = keyof typeof RESUME_FILE_EXTENSION_BY_MIME
 
 // Dispatches to the format-specific extractor by MIME type. This is the
 // `parseText` port implementation wired into uploadResume() from actions.ts
-// (kept out of the application layer so pdf-parse/mammoth stay
+// (kept out of the application layer so pdfjs-dist/mammoth stay
 // infrastructure-only, architecture.md §5 rule 3).
 export const parseResumeFile: ParseResumeText = async (buffer, mimeType) => {
   switch (mimeType) {

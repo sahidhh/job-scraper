@@ -1,6 +1,6 @@
 import { optionalEnv, requireEnv } from "./env";
 import { fetchWithRetry } from "./http";
-import type { AiFailureReason } from "./openrouterClient";
+import { callOpenRouterCompletion, OpenRouterError, type AiFailureReason } from "./openrouterClient";
 
 // Provider-agnostic LLM abstraction (merge-workspace Phase 3, mirrors
 // jobhunt/llm.py's shape): switch providers with LLM_PROVIDER, no code
@@ -10,14 +10,20 @@ import type { AiFailureReason } from "./openrouterClient";
 //
 // Distinct from AiScoreProvider/OpenRouterAiScoreProvider (scoring.md §3):
 // that port scores jobs against a resume through OpenRouter's multi-model
-// gateway. This client is for the new resume-suggestions feature and talks
-// to Gemini/Anthropic directly. See decisions.md AD-32 for why these were
-// kept as two separate abstractions instead of merging into one.
-export type LlmProvider = "gemini" | "anthropic";
+// gateway with a strict JSON-schema constraint. This client is for resume
+// suggestions/application drafts/careers extraction. AD-42: the default
+// provider is now "openrouter" (routes through the SAME OpenRouter client
+// and OPENROUTER_API_KEY scoring already requires, model
+// google/gemini-2.5-flash) so drafting/suggestions no longer need a second
+// provider key. "gemini"/"anthropic" (direct REST to those providers) stay
+// available via LLM_PROVIDER for anyone who wants to route this feature
+// through a different key/provider than scoring.
+export type LlmProvider = "openrouter" | "gemini" | "anthropic";
 
 const REQUEST_TIMEOUT_MS = 30_000;
 
 const DEFAULT_MODELS: Record<LlmProvider, string> = {
+  openrouter: "google/gemini-2.5-flash",
   gemini: "gemini-2.5-flash",
   anthropic: "claude-haiku-4-5",
 };
@@ -49,8 +55,10 @@ export interface LlmCompleteResult {
 }
 
 export function currentLlmProvider(): LlmProvider {
-  const value = optionalEnv("LLM_PROVIDER", "gemini").toLowerCase();
-  return value === "anthropic" ? "anthropic" : "gemini";
+  const value = optionalEnv("LLM_PROVIDER", "openrouter").toLowerCase();
+  if (value === "anthropic") return "anthropic";
+  if (value === "gemini") return "gemini";
+  return "openrouter";
 }
 
 function currentModel(provider: LlmProvider): string {
@@ -73,14 +81,35 @@ export async function completeLlm(request: LlmCompleteRequest): Promise<LlmCompl
   const model = currentModel(provider);
   try {
     const text =
-      provider === "anthropic" ? await callAnthropic(request, model) : await callGemini(request, model);
+      provider === "anthropic"
+        ? await callAnthropic(request, model)
+        : provider === "gemini"
+          ? await callGemini(request, model)
+          : await callOpenRouter(request, model);
     return { text, provider, model };
   } catch (err) {
     if (err instanceof LlmError) throw err;
+    if (err instanceof OpenRouterError) {
+      console.warn(`[llm] provider=${provider} model=${model} reason=${err.reason}`);
+      throw new LlmError(err.message, err.reason);
+    }
     const reason: AiFailureReason = err instanceof Error && err.name === "AbortError" ? "timeout" : "unknown";
     console.warn(`[llm] provider=${provider} model=${model} reason=${reason}`);
     throw new LlmError(err instanceof Error ? err.message : String(err), reason);
   }
+}
+
+async function callOpenRouter(request: LlmCompleteRequest, model: string): Promise<string> {
+  const { text } = await callOpenRouterCompletion({
+    model,
+    maxTokens: request.maxTokens,
+    jsonMode: request.jsonMode,
+    messages: [
+      { role: "system", content: request.system },
+      { role: "user", content: request.user },
+    ],
+  });
+  return text;
 }
 
 async function callGemini(request: LlmCompleteRequest, model: string): Promise<string> {

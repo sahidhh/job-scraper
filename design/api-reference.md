@@ -85,7 +85,7 @@ Actions **never throw** to the client. On success they call `revalidatePath()` t
 
 #### `uploadResumeAction(formData)`
 **File:** `src/features/resume/actions.ts`  
-**Description:** Uploads a PDF or DOCX resume, extracts text (pdf-parse / mammoth) and skills, and sets it as the active resume via `set_active_resume` RPC. The file's sha256 hash is checked against `resumes.content_hash` first (`ResumeRepository.findByContentHash`) — on a match, parsing is skipped entirely and the cached `parsed_text` is reused (decisions.md AD-30). Storage path is `<sha256>.<pdf|docx>`, so re-uploading identical bytes overwrites the same object. Empty/near-empty extracted text (e.g. a scanned PDF) is rejected with an error and no resume row is created.
+**Description:** Uploads a PDF or DOCX resume, extracts text (pdfjs-dist / mammoth) and skills, and sets it as the active resume via `set_active_resume` RPC. The file's sha256 hash is checked against `resumes.content_hash` first (`ResumeRepository.findByContentHash`) — on a match, parsing is skipped entirely and the cached `parsed_text` is reused (decisions.md AD-30). Storage path is `<sha256>.<pdf|docx>`, so re-uploading identical bytes overwrites the same object. Empty/near-empty extracted text (e.g. a scanned PDF) is rejected with an error and no resume row is created.
 
 | Param | Type | Description |
 |---|---|---|
@@ -122,7 +122,7 @@ Actions **never throw** to the client. On success they call `revalidatePath()` t
 
 #### `suggestResumeImprovementsAction(targetRole)`
 **File:** `src/features/resume/actions.ts`  
-**Description:** Generates AI coaching suggestions for the active resume (decisions.md AD-32/AD-33) via `LlmResumeSuggestionProvider` (Gemini default, Anthropic optional per `LLM_PROVIDER`). Long resumes are chunked (not truncated — jobhunt bug #2) so every part gets analyzed; suggestions from all chunks are merged and persisted as one new `resume_suggestions` row scoped to the active resume's exact version. Never mutates the resume itself. Called from `/resume`'s "AI suggestions" card (`ResumeSuggestionsCard`, decisions.md AD-38).
+**Description:** Generates AI coaching suggestions for the active resume (decisions.md AD-32/AD-33/AD-42) via `LlmResumeSuggestionProvider` (OpenRouter default, Gemini/Anthropic direct optional per `LLM_PROVIDER`). Long resumes are chunked (not truncated — jobhunt bug #2) so every part gets analyzed; suggestions from all chunks are merged and persisted as one new `resume_suggestions` row scoped to the active resume's exact version. Never mutates the resume itself. Called from `/resume`'s "AI suggestions" card (`ResumeSuggestionsCard`, decisions.md AD-38).
 
 | Param | Type | Description |
 |---|---|---|
@@ -453,13 +453,15 @@ All routes except `/login` and `/auth/callback` are protected by `middleware.ts`
 
 ---
 
-### 3.1b Gemini / Anthropic (resume suggestions)
+### 3.1b OpenRouter (default) / Gemini / Anthropic (resume suggestions, application drafts, careers extraction)
 
-**File:** `src/shared/infrastructure/llmClient.ts` (decisions.md AD-32) — separate from OpenRouter above; used only by `ResumeSuggestionProvider`, never by job scoring.
+**File:** `src/shared/infrastructure/llmClient.ts` — a distinct abstraction from `openrouterClient.ts`'s schema-constrained `callOpenRouterJson` (§3.1, used only by job scoring/role expansion), but its **default** provider (`openrouter`) now routes through that same `openrouterClient.ts` module (`callOpenRouterCompletion`, a plain non-schema chat completion) and the same `OPENROUTER_API_KEY` (decisions.md AD-42, supersedes AD-32's "Gemini default" for the default case only — the two-abstraction split itself, and the `gemini`/`anthropic` direct-REST options, are unchanged).
 **Timeout:** 30 seconds. **Retry:** 1 retry on 5xx / 429 / timeout, 2s delay (same `fetchWithRetry` as OpenRouter).
-**Provider switch:** `LLM_PROVIDER` env var (`gemini` default, `anthropic` optional); `LLM_MODEL` overrides the per-provider default model.
+**Provider switch:** `LLM_PROVIDER` env var (`openrouter` default, `gemini` or `anthropic` optional); `LLM_MODEL` overrides the per-provider default model (`openrouter`'s default model is `google/gemini-2.5-flash`).
 
-**Gemini** — `POST https://generativelanguage.googleapis.com/v1beta/models/<model>:generateContent`, header `x-goog-api-key: <GEMINI_API_KEY>`:
+**OpenRouter (default)** — same endpoint/request shape as §3.1's `callOpenRouterJson`, but without `response_format: json_schema` (uses `json_object` mode when the caller requests JSON, or no `response_format` at all) — see §3.1 for the request shape.
+
+**Gemini** (`LLM_PROVIDER=gemini`) — `POST https://generativelanguage.googleapis.com/v1beta/models/<model>:generateContent`, header `x-goog-api-key: <GEMINI_API_KEY>`:
 ```json
 {
   "systemInstruction": { "parts": [{ "text": "<system prompt>" }] },
@@ -473,7 +475,7 @@ All routes except `/login` and `/auth/callback` are protected by `middleware.ts`
 ```
 `responseMimeType`/`thinkingConfig` are only sent when the caller requests JSON mode (`suggest()`, not `rewrite()`). Thinking is disabled for JSON calls because `gemini-2.5-*` are thinking models whose thinking tokens eat into `maxOutputTokens`, same reasoning as jobhunt/llm.py's `_gemini`.
 
-**Anthropic** — `POST https://api.anthropic.com/v1/messages`, headers `x-api-key: <ANTHROPIC_API_KEY>`, `anthropic-version: 2023-06-01`:
+**Anthropic** (`LLM_PROVIDER=anthropic`) — `POST https://api.anthropic.com/v1/messages`, headers `x-api-key: <ANTHROPIC_API_KEY>`, `anthropic-version: 2023-06-01`:
 ```json
 {
   "model": "<model>",
@@ -653,8 +655,9 @@ SELECT * FROM set_active_resume(
   p_parsed_text  TEXT,
   p_skills       TEXT[],
   p_content_hash TEXT  -- nullable (AD-33)
-) RETURNS resumes
+) RETURNS SETOF resumes
 ```
+`RETURNS SETOF resumes`, not a bare `resumes` composite — PostgREST serializes a `SETOF` result as a JSON array, matching `database.types.ts`'s generated `Returns: ...[]` and `SupabaseResumeRepository.create`'s `data?.[0]`. Two later migrations (`20260618000002`, `20260710000001`) redeclared this as a bare `resumes` return while adding versioning/content-hash columns, which silently broke restore (`"set_active_resume returned no row"` even though the insert succeeded) — fixed by `20260715000002_fix_set_active_resume_setof_regression.sql` (AD-39). This doc previously documented the broken bare-`resumes` shape as if it were correct; keep this note in sync with the migration's actual `returns` clause going forward.
 Atomically deactivates all resumes and inserts a new active one. `p_content_hash` is the sha256 of the uploaded file's bytes (parse-once cache key, decisions.md AD-30) — `NULL` when the new version has no backing uploaded file, e.g. a resume-suggestions apply (`AD-33`), so it's never accidentally picked up by the parse-once cache lookup.
 
 ### `set_active_role_selection`

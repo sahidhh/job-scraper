@@ -286,7 +286,7 @@ The five skill categories referenced in this document map to concrete tools as f
 
 **Responsibilities:**
 - Create `.github/workflows/*.yml` running `scripts/scrape.ts` → `scripts/score.ts` → `scripts/notify.ts` via `tsx`, on the AD-04 "every 2h" schedule.
-- Verify `next.config.ts`'s `serverExternalPackages: ["pdf-parse"]` and any other Vercel-specific config stays correct as dependencies change.
+- Verify `next.config.ts`'s `serverExternalPackages: ["pdfjs-dist"]` and any other Vercel-specific config stays correct as dependencies change.
 - Document required secrets (names only, never values) for GitHub Actions: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`, `TELEGRAM_BOT_TOKEN`, `KEYWORD_THRESHOLD`, `NOTIFY_THRESHOLD`.
 - Coordinate with Security Agent's Finding #3 check (service-role key boundary) as part of CI.
 

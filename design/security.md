@@ -87,8 +87,8 @@ Resume files are stored with their sha256 content hash as the path (`<hash>.pdf`
 | Secret | Where Stored | Used By |
 |---|---|---|
 | `SUPABASE_SERVICE_ROLE_KEY` | GitHub Actions secrets only | Cron scripts |
-| `OPENROUTER_API_KEY` | GitHub Actions secrets + Vercel env | Scripts + server actions (role expansion) |
-| `GEMINI_API_KEY` / `ANTHROPIC_API_KEY` | Vercel env only (no cron script uses them) | Server actions (resume suggestions, `src/shared/infrastructure/llmClient.ts`) — same pattern as `OPENROUTER_API_KEY`'s server-action usage: read server-side only, never exposed via `NEXT_PUBLIC_*` |
+| `OPENROUTER_API_KEY` | GitHub Actions secrets + Vercel env | Scripts + server actions (role expansion, job scoring, and — since AD-42 — the default `llmClient.ts` provider backing resume suggestions/application drafts/careers extraction) |
+| `GEMINI_API_KEY` / `ANTHROPIC_API_KEY` | Vercel env only (no cron script uses them); optional, only needed if `LLM_PROVIDER` is set to `gemini`/`anthropic` (AD-42 — `openrouter` is now the default and needs neither) | Server actions (resume suggestions, `src/shared/infrastructure/llmClient.ts`) — same pattern as `OPENROUTER_API_KEY`'s server-action usage: read server-side only, never exposed via `NEXT_PUBLIC_*` |
 | `TELEGRAM_BOT_TOKEN` | GitHub Actions secrets only | Notify script |
 | `TELEGRAM_CHAT_ID` | GitHub Actions secrets only | Notify script |
 | `RAPIDAPI_KEY` | GitHub Actions secrets only | Scrape script (`JSearchScraper.ts`) — not a Supabase key, but scoped to cron/scripts the same way `TELEGRAM_BOT_TOKEN` is; never needed by `src/app/` |
@@ -109,7 +109,7 @@ All user input entering the system boundary is validated with **Zod** schemas be
 | Server actions (form data) | Zod parse of incoming parameters |
 | OpenRouter responses | JSON schema response format + Zod parse |
 | ATS API responses | Zod schemas on normalized `RawJob` shape |
-| Resume upload | MIME type check (PDF/DOCX only) + pdf-parse/mammoth error handling; empty/near-empty extracted text (e.g. scanned PDF) rejected by `validateParsedText` |
+| Resume upload | MIME type check (PDF/DOCX only) + pdfjs-dist/mammoth error handling; empty/near-empty extracted text (e.g. scanned PDF) rejected by `validateParsedText` |
 
 The TypeScript `any` type is explicitly banned (CLAUDE.md) — all data at boundaries must be typed.
 

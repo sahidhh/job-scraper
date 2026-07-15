@@ -111,7 +111,7 @@ parsing, no AI" extraction standard than `extractSalary`/`extractContactEmail`. 
 
 | Feature | Description |
 |---|---|
-| AI resume coaching | `suggestResumeImprovementsAction` proposes concrete, non-fabricated improvements (Impact/Skills/Keywords/Clarity/Formatting categories) for the active resume via a provider-agnostic LLM client (`gemini` default, `anthropic` optional -- `LLM_PROVIDER`). Long resumes are chunked rather than truncated (decisions.md AD-33) |
+| AI resume coaching | `suggestResumeImprovementsAction` proposes concrete, non-fabricated improvements (Impact/Skills/Keywords/Clarity/Formatting categories) for the active resume via a provider-agnostic LLM client (`openrouter` default -- same key as job scoring, decisions.md AD-42; `gemini`/`anthropic` direct optional -- `LLM_PROVIDER`). Long resumes are chunked rather than truncated (decisions.md AD-33) |
 | Apply as new version | `applyResumeSuggestionsAction` rewrites the resume with chosen suggestions and saves it as a brand NEW resume version via the existing `set_active_resume` path -- never overwrites the current version |
 | UI | `/resume`'s "AI suggestions" card (`ResumeSuggestionsCard`) lets the user request suggestions for an optional target role, check off which ones to apply, and apply them as a new version in one action. Wired in the post-audit closure session (`docs/decisions.md` AD-38) -- previously backend-only |
 
