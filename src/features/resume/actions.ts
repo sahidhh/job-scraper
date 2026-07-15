@@ -15,12 +15,11 @@ import {
   type SupportedResumeMimeType,
 } from "@/features/resume/infrastructure/parseResumeFile";
 import { SupabaseResumeRepository } from "@/features/resume/infrastructure/SupabaseResumeRepository";
+import { SupabaseResumeStorage } from "@/features/resume/infrastructure/SupabaseResumeStorage";
 import { SupabaseResumeSuggestionRepository } from "@/features/resume/infrastructure/SupabaseResumeSuggestionRepository";
 import type { ActionResult } from "@/shared/actionResult";
 import { SKILLS_DICTIONARY } from "@/shared/config/skills-dictionary";
 import { createSupabaseServerClient } from "@/shared/infrastructure/supabase/server";
-
-const RESUME_BUCKET = "resumes";
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "Unexpected error.";
@@ -30,11 +29,12 @@ function isSupportedResumeMimeType(mimeType: string): mimeType is SupportedResum
   return mimeType in RESUME_FILE_EXTENSION_BY_MIME_TYPE;
 }
 
-// frontend.md §3 -- stores the file in Supabase Storage under a
-// content-hash path (naturally dedupes storage too), parses text via
-// pdf-parse/mammoth (skipped entirely on a sha256 cache hit, decisions.md
-// AD-30), extracts skills via the dictionary, and activates the new resume
-// (set_active_resume RPC, decisions.md AD-09).
+// frontend.md §3 -- parses text via pdfjs-dist/mammoth first (skipped
+// entirely on a sha256 cache hit, decisions.md AD-30) and validates it,
+// THEN stores the file in Supabase Storage under a content-hash path
+// (naturally dedupes storage too) and activates the new resume
+// (set_active_resume RPC, decisions.md AD-09) -- in that order, so a parse
+// failure never strands a Storage object or a partial resume row (AD-40).
 export async function uploadResumeAction(formData: FormData): Promise<ActionResult<Resume>> {
   try {
     const file = formData.get("file");
@@ -51,18 +51,12 @@ export async function uploadResumeAction(formData: FormData): Promise<ActionResu
     const client = await createSupabaseServerClient();
     const extension = RESUME_FILE_EXTENSION_BY_MIME_TYPE[file.type];
     const filePath = `${contentHash}.${extension}`;
-    const { error: uploadError } = await client.storage.from(RESUME_BUCKET).upload(filePath, buffer, {
-      contentType: file.type,
-      upsert: true,
-    });
-    if (uploadError) {
-      return { ok: false, error: uploadError.message };
-    }
 
     const resumeRepository = new SupabaseResumeRepository(client);
+    const resumeStorage = new SupabaseResumeStorage(client);
     const result = await uploadResume(
       { filePath, buffer, mimeType: file.type, contentHash },
-      { resumeRepository, skillsDictionary: SKILLS_DICTIONARY, parseText: parseResumeFile },
+      { resumeRepository, resumeStorage, skillsDictionary: SKILLS_DICTIONARY, parseText: parseResumeFile },
     );
 
     revalidatePath("/resume");

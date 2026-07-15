@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { OpenRouterError, callOpenRouterJson } from "./openrouterClient";
+import { OpenRouterError, callOpenRouterCompletion, callOpenRouterJson } from "./openrouterClient";
 
 function chatResponse(
   content: unknown,
@@ -194,5 +194,87 @@ describe("callOpenRouterJson", () => {
 
     expect(usage.promptTokens).toBeNull();
     expect(usage.completionTokens).toBeNull();
+  });
+});
+
+// AD-42: plain (non-schema-constrained) completion, powers llmClient.ts's
+// default "openrouter" provider (resume suggestions/application drafts/
+// careers extraction) through this same client/key.
+describe("callOpenRouterCompletion", () => {
+  function plainChatResponse(
+    content: string,
+    status = 200,
+    usage?: { prompt_tokens?: number; completion_tokens?: number },
+  ): Response {
+    return new Response(JSON.stringify({ choices: [{ message: { content } }], usage }), { status });
+  }
+
+  beforeEach(() => {
+    process.env.OPENROUTER_API_KEY = "test-key";
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    delete process.env.OPENROUTER_API_KEY;
+  });
+
+  it("posts the given model/messages/max_tokens and returns raw text (not schema-constrained)", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(plainChatResponse("hello back"));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { text } = await callOpenRouterCompletion({
+      model: "google/gemini-2.5-flash",
+      maxTokens: 500,
+      messages: [{ role: "user", content: "hi" }],
+    });
+
+    expect(text).toBe("hello back");
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("https://openrouter.ai/api/v1/chat/completions");
+    expect(init.headers).toMatchObject({ Authorization: "Bearer test-key" });
+    const body = JSON.parse(init.body as string);
+    expect(body.model).toBe("google/gemini-2.5-flash");
+    expect(body.max_tokens).toBe(500);
+    expect(body.response_format).toBeUndefined();
+  });
+
+  it("requests json_object response_format when jsonMode is true", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(plainChatResponse("{}"));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await callOpenRouterCompletion({
+      model: "google/gemini-2.5-flash",
+      maxTokens: 100,
+      jsonMode: true,
+      messages: [{ role: "user", content: "hi" }],
+    });
+
+    const body = JSON.parse((fetchMock.mock.calls[0]![1] as RequestInit).body as string);
+    expect(body.response_format).toEqual({ type: "json_object" });
+  });
+
+  it("throws OpenRouterError with reason quota_exceeded on 402", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response("insufficient credits", { status: 402 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const err = await callOpenRouterCompletion({
+      model: "google/gemini-2.5-flash",
+      maxTokens: 100,
+      messages: [],
+    }).catch((e) => e);
+
+    expect(err).toBeInstanceOf(OpenRouterError);
+    expect((err as OpenRouterError).reason).toBe("quota_exceeded");
+  });
+
+  it("returns token usage when the response includes usage", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(plainChatResponse("ok", 200, { prompt_tokens: 300, completion_tokens: 40 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { usage } = await callOpenRouterCompletion({ model: "m", maxTokens: 100, messages: [] });
+
+    expect(usage).toEqual({ promptTokens: 300, completionTokens: 40 });
   });
 });

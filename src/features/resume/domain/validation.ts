@@ -4,7 +4,7 @@ export function normalizeSkillName(skill: string): string {
   return skill.trim();
 }
 
-// A scanned/image-only PDF (or a corrupt DOCX) makes pdf-parse/mammoth
+// A scanned/image-only PDF (or a corrupt DOCX) makes pdfjs-dist/mammoth
 // return an empty or near-empty string. Silently accepting that would
 // create a resume row with no usable content and zero extracted skills,
 // with no signal to the user about why. Reject it instead so the failure

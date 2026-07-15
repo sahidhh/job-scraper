@@ -258,16 +258,18 @@ erDiagram
 
 ## Database Functions (RPC)
 
-### `set_active_resume(file_path, parsed_text, skills[], content_hash)`
+### `set_active_resume(file_path, parsed_text, skills[], content_hash) RETURNS SETOF resumes`
 
 ```
 1. Compute next_version = MAX(version) + 1
 2. UPDATE resumes SET is_active = false   -- deactivate previous
 3. INSERT INTO resumes (…, is_active = true, version = next_version, content_hash)  -- activate new
-4. RETURN new row
+4. RETURN new row (as a SETOF, not a bare composite -- decisions.md AD-39)
 ```
 
-`content_hash` (sha256 of the uploaded file's bytes) is always supplied by `uploadResume()` -- see `ResumeRepository.findByContentHash`, the parse-once cache lookup that runs before this RPC and decides whether pdf-parse/mammoth is invoked at all (decisions.md AD-30).
+Must stay `RETURNS SETOF resumes`, not a bare `resumes` composite -- PostgREST serializes a `SETOF` result as a JSON array, matching `SupabaseResumeRepository.create`'s `data?.[0]` unwrap. Two migrations after the function's original definition (`20260618000002`, `20260710000001`) each had to drop+recreate it to add a column and both regressed this to a bare composite return, breaking `restoreResumeVersion` in production until `20260715000002_fix_set_active_resume_setof_regression.sql` (AD-39).
+
+`content_hash` (sha256 of the uploaded file's bytes) is always supplied by `uploadResume()` -- see `ResumeRepository.findByContentHash`, the parse-once cache lookup that runs before this RPC and decides whether pdfjs-dist/mammoth is invoked at all (decisions.md AD-30).
 
 ### `set_active_role_selection(primary_role, expanded_roles[])`
 

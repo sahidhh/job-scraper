@@ -18,7 +18,7 @@
 | Validation | Zod | v4 | Schema validation at system boundaries |
 | AI / LLM | OpenRouter API | — | Multi-model gateway; model configurable via env |
 | Notifications | Telegram Bot API | — | Simple HTTP delivery, no additional SDK |
-| PDF Parsing | pdf-parse | — | Extract text from uploaded PDF resumes |
+| PDF Parsing | pdfjs-dist (legacy/Node build) | v4 | Extract text from uploaded PDF resumes (decisions.md AD-41 — swapped from pdf-parse, which pinned an old, unmaintained internal PDF.js fork that rejected some real-world PDFs) |
 | DOCX Parsing | mammoth | — | Extract text (including table content) from uploaded DOCX resumes |
 | Local Embeddings | @huggingface/transformers | v4 | Offline resume/job semantic-similarity signal (`scoring.md` §3.1, `decisions.md` AD-31); runs on-device, no API key/cost |
 | Testing | vitest | latest | Fast, TypeScript-native test runner |
@@ -45,9 +45,8 @@ These are explicitly banned by the project rules (CLAUDE.md):
 |---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL (exposed to browser) |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key (exposed to browser; RLS enforced) |
-| `OPENROUTER_API_KEY` | OpenRouter account key (server-side only) |
-| `OPENROUTER_MODEL` | Model ID e.g. `anthropic/claude-3.5-sonnet` |
-| `GEMINI_API_KEY` | Google AI Studio key for the resume-suggestions LLM client (`src/shared/infrastructure/llmClient.ts`); required unless `LLM_PROVIDER=anthropic` (decisions.md AD-32) |
+| `OPENROUTER_API_KEY` | OpenRouter account key (server-side only). Powers job scoring/role expansion AND, by default, `llmClient.ts` (resume suggestions/application drafts/careers extraction) — decisions.md AD-42. No second LLM key required unless `LLM_PROVIDER` is switched to `gemini`/`anthropic` (see Optional below) |
+| `OPENROUTER_MODEL` | Model ID e.g. `anthropic/claude-3.5-sonnet` (job scoring/role expansion only — `llmClient.ts`'s OpenRouter calls default to `google/gemini-2.5-flash`, overridable via `LLM_MODEL`) |
 
 ### Required — Cron Scripts (GitHub Actions Secrets)
 
@@ -87,9 +86,10 @@ These are explicitly banned by the project rules (CLAUDE.md):
 | `SOURCE_STALE_HOURS` | `6` | Hours since a source's last scrape_runs row (of any status) before it's flagged `isStale` on `/analytics` -- distinct from an actively-failing source |
 | `JOB_EXPIRATION_DAYS` | `14` | Days since `last_seen_at` before `scrape.ts` soft-deactivates a job (`is_active = false`, `inactive_reason = 'expired'`) |
 | `REMOTEOK_DISABLED` | _(unset)_ | Set `true` or `1` to explicitly disable RemoteOK ingestion (set in `scrape.yml` — RemoteOK's near-zero yield made it not worth probing on every run, see `docs/remoteok-evaluation.md`) |
-| `LLM_PROVIDER` | `gemini` | Resume-suggestions LLM provider switch: `gemini` or `anthropic` (decisions.md AD-32); mirrors jobhunt/llm.py's shape but defaults to Gemini per the merge plan, not jobhunt's own `anthropic` default |
-| `LLM_MODEL` | per-provider (`gemini-2.5-flash` / `claude-haiku-4-5`) | Overrides the default model for the active `LLM_PROVIDER` |
-| `ANTHROPIC_API_KEY` | _(unset)_ | Anthropic key for the resume-suggestions LLM client; required only when `LLM_PROVIDER=anthropic` |
+| `LLM_PROVIDER` | `openrouter` | `llmClient.ts` provider switch: `openrouter` (default, routes through `OPENROUTER_API_KEY`/`openrouterClient.ts`), `gemini`, or `anthropic` (decisions.md AD-32, AD-42 — supersedes AD-32's Gemini-default for the default case; direct Gemini/Anthropic REST stays available for anyone who wants a different key/provider than scoring) |
+| `LLM_MODEL` | per-provider (`google/gemini-2.5-flash` / `gemini-2.5-flash` / `claude-haiku-4-5`) | Overrides the default model for the active `LLM_PROVIDER` |
+| `GEMINI_API_KEY` | _(unset)_ | Google AI Studio key for `llmClient.ts`'s direct-Gemini path; required only when `LLM_PROVIDER=gemini` (decisions.md AD-42 — no longer required by default) |
+| `ANTHROPIC_API_KEY` | _(unset)_ | Anthropic key for `llmClient.ts`'s direct-Anthropic path; required only when `LLM_PROVIDER=anthropic` |
 
 **Note on NOTIFY_MODE:** The code default is `individual`, but the scheduled production workflow `.github/workflows/scrape.yml` overrides this to `digest` by default via `NOTIFY_MODE: ${{ vars.NOTIFY_MODE || 'digest' }}` (line 71). This is intentional—digest mode is the production-recommended setting per `docs/reviews/project-completion-audit.md`.
 
@@ -112,7 +112,7 @@ These are explicitly banned by the project rules (CLAUDE.md):
     "@supabase/supabase-js": "^2.45",
     "@supabase/ssr": "^0.12",
     "zod": "^4.0",
-    "pdf-parse": "^1.1",
+    "pdfjs-dist": "^4.10",
     "mammoth": "^1.12",
     "@huggingface/transformers": "^4.2",
     "recharts": "^3.8.1",
@@ -170,6 +170,7 @@ These are explicitly banned by the project rules (CLAUDE.md):
 | `validate-sources` | `tsx scripts/validate-sources.ts` | Probe all configured ATS boards; exit 1 only on new failures or healthy count below minimum |
 | `backfill:fingerprints` | `tsx scripts/backfill-fingerprints.ts` | One-off backfill of `jobs.fingerprint` for rows inserted before cross-source dedup (Phase 1 Task 1) |
 | `backfill:min-years` | `tsx scripts/backfill-min-years.ts` | (v1.2) Explicit name for the one-off `min_years` backfill (previously unwired) |
+| `sweep:stranded-resumes` | `tsx scripts/sweep-stranded-resumes.ts` | (bugfix session, decisions.md AD-40) Read-only report of Storage objects orphaned by the pre-fix upload ordering and any resume row with suspiciously short `parsed_text`; pass `--delete-orphaned-storage` to remove confirmed-orphaned Storage objects (rows are never auto-deleted) |
 | `discover:career-pages` | `tsx scripts/discover-career-pages.ts` | Manual run of ATS career-page discovery (Phase 2 Task 8) |
 | `setup:webhook` | `tsx scripts/setup-webhook.ts` | One-off Telegram webhook registration |
 | `scrape:careers-url` | `tsx scripts/scrape-careers-url.ts` | (merge-workspace Phase 5) Manual-trigger fetch of one operator-provided public careers page URL -- not part of any cron/workflow |

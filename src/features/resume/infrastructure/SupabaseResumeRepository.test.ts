@@ -132,6 +132,26 @@ describe("SupabaseResumeRepository", () => {
     ).rejects.toThrow("set_active_resume returned no row");
   });
 
+  // Regression test for a real production incident: 20260618000002 and
+  // 20260710000001 both redeclared set_active_resume as `returns resumes`
+  // (a single composite row) instead of `returns setof resumes`, so
+  // PostgREST serialized a *bare object* instead of an array -- even though
+  // the underlying INSERT succeeded, `data?.[0]` on an object is always
+  // undefined, and "restore" failed with "set_active_resume returned no
+  // row" for a row that was actually persisted. Fixed by
+  // 20260715000002_fix_set_active_resume_setof_regression.sql (verified
+  // manually against a local Postgres 16: `proretset` was `f` before the
+  // fix, `t` after). This test pins the client-side symptom of that SQL
+  // regression so it can't silently reappear.
+  it("create throws (rather than silently succeeding) if the RPC returns a bare object instead of an array", async () => {
+    const { client } = mockSupabaseClient({ data: row as unknown as ResumeRow[], error: null });
+    const repo = new SupabaseResumeRepository(client);
+
+    await expect(
+      repo.create({ filePath: "x", parsedText: "y", skills: [], contentHash: "hash-x" }),
+    ).rejects.toThrow("set_active_resume returned no row");
+  });
+
   it("updateSkills updates and returns the resume", async () => {
     const { client, builder } = mockSupabaseClient({ data: { ...row, skills: ["Python"] }, error: null });
     const repo = new SupabaseResumeRepository(client);

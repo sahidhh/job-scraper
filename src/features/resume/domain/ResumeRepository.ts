@@ -14,7 +14,7 @@ export interface ResumeRepository {
   /**
    * Most recent resume row (any version) with this content_hash, or null.
    * Backs the sha256 parse-once cache (decisions.md AD-30) -- lets the
-   * application layer skip pdf-parse/mammoth entirely on a re-upload of
+   * application layer skip pdfjs-dist/mammoth entirely on a re-upload of
    * byte-identical content.
    */
   findByContentHash(contentHash: string): Promise<Resume | null>;

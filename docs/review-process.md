@@ -90,7 +90,7 @@ Before any PR merges, the following checklist must pass (maps directly to `CLAUD
 3. **Layering rules hold** (per `dependency-audit.md`'s verification method — exhaustive import grep):
    - `domain/` has zero outward dependencies.
    - `application/` depends only on `domain/` (+ injected interfaces).
-   - `infrastructure/` implements `domain/` interfaces; only place Supabase/OpenRouter/Telegram/`pdf-parse` clients are imported.
+   - `infrastructure/` implements `domain/` interfaces; only place Supabase/OpenRouter/Telegram/`pdfjs-dist` clients are imported.
    - `presentation` (`app/`, `actions.ts`, `scripts/*.ts`) is the sole composition root.
 4. **Architecture changes have sign-off and docs.** If the change adds/removes a table, repository, feature boundary, or dependency: an **architect** sign-off exists (per `docs/agent-workflow.md` Escalation Rules), and `docs/architecture.md`/`docs/decisions.md`/`docs/database.md`/`docs/repositories.md` are updated in the **same PR** — `CLAUDE.md`: "Always update docs when architecture changes."
 5. **Reviewer sign-off recorded.** No unresolved Critical/High finding from a **reviewer** pass. Medium/Low findings may be deferred with an explicit note.

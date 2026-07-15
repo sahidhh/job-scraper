@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { ResumeRepository } from "@/features/resume/domain/ResumeRepository";
+import type { ResumeStorage } from "@/features/resume/domain/ResumeStorage";
 import type { Resume } from "@/features/resume/domain/types";
 import { DomainValidationError } from "@/shared/domain/errors";
 import type { SkillDictionaryEntry } from "@/shared/domain/skills";
@@ -47,9 +48,17 @@ function makeResumeRepository(existingByHash: Resume | null = null): ResumeRepos
   };
 }
 
+function makeResumeStorage(): ResumeStorage {
+  return {
+    upload: vi.fn().mockResolvedValue(undefined),
+    remove: vi.fn().mockResolvedValue(undefined),
+  };
+}
+
 function makeDeps(overrides: Partial<UploadResumeDeps> = {}): UploadResumeDeps {
   return {
     resumeRepository: makeResumeRepository(),
+    resumeStorage: makeResumeStorage(),
     skillsDictionary: dictionary,
     parseText: vi.fn().mockResolvedValue("Experienced with React and Node.js development"),
     ...overrides,
@@ -263,6 +272,124 @@ describe("uploadResume", () => {
           deps,
         ),
       ).resolves.toBeDefined();
+    });
+  });
+
+  describe("atomicity (MERGE_PLAN.md Bug 1 / AD-40)", () => {
+    it("creates neither a Storage object nor a resume row when the parser throws", async () => {
+      const resumeStorage = makeResumeStorage();
+      const resumeRepository = makeResumeRepository();
+      const deps = makeDeps({
+        resumeRepository,
+        resumeStorage,
+        parseText: vi.fn().mockRejectedValue(new Error("Invalid PDF structure")),
+      });
+
+      await expect(
+        uploadResume(
+          { filePath: "resumes/bad.pdf", buffer: Buffer.from("corrupt pdf"), mimeType: "application/pdf", contentHash: "hash-bad" },
+          deps,
+        ),
+      ).rejects.toThrow("Invalid PDF structure");
+
+      expect(resumeStorage.upload).not.toHaveBeenCalled();
+      expect(resumeRepository.create).not.toHaveBeenCalled();
+    });
+
+    it("creates no Storage object when parsed text fails validation (e.g. scanned PDF)", async () => {
+      const resumeStorage = makeResumeStorage();
+      const resumeRepository = makeResumeRepository();
+      const deps = makeDeps({ resumeRepository, resumeStorage, parseText: vi.fn().mockResolvedValue("") });
+
+      await expect(
+        uploadResume(
+          { filePath: "resumes/scanned.pdf", buffer: Buffer.from("scanned pdf"), mimeType: "application/pdf", contentHash: "hash-scan" },
+          deps,
+        ),
+      ).rejects.toThrow(DomainValidationError);
+
+      expect(resumeStorage.upload).not.toHaveBeenCalled();
+      expect(resumeRepository.create).not.toHaveBeenCalled();
+    });
+
+    it("uploads to Storage only after parsing and validation succeed, before the DB insert", async () => {
+      const calls: string[] = [];
+      const resumeStorage: ResumeStorage = {
+        upload: vi.fn().mockImplementation(async () => {
+          calls.push("storage.upload");
+        }),
+        remove: vi.fn(),
+      };
+      const resumeRepository = makeResumeRepository();
+      vi.mocked(resumeRepository.create).mockImplementation(async (input) => {
+        calls.push("repository.create");
+        return {
+          id: "resume-1",
+          filePath: input.filePath,
+          parsedText: input.parsedText,
+          skills: input.skills,
+          uploadedAt: "2026-01-01T00:00:00Z",
+          isActive: true,
+          version: 1,
+          contentHash: input.contentHash,
+        };
+      });
+      const deps = makeDeps({ resumeRepository, resumeStorage });
+
+      await uploadResume(
+        { filePath: "resumes/r1.pdf", buffer: Buffer.from("pdf bytes"), mimeType: "application/pdf", contentHash: "hash-1" },
+        deps,
+      );
+
+      expect(calls).toEqual(["storage.upload", "repository.create"]);
+    });
+
+    it("removes the uploaded Storage object when the DB insert fails after upload succeeded", async () => {
+      const resumeStorage = makeResumeStorage();
+      const resumeRepository = makeResumeRepository();
+      vi.mocked(resumeRepository.create).mockRejectedValue(new Error("set_active_resume returned no row"));
+      const deps = makeDeps({ resumeRepository, resumeStorage });
+
+      await expect(
+        uploadResume(
+          { filePath: "resumes/r1.pdf", buffer: Buffer.from("pdf bytes"), mimeType: "application/pdf", contentHash: "hash-1" },
+          deps,
+        ),
+      ).rejects.toThrow("set_active_resume returned no row");
+
+      expect(resumeStorage.upload).toHaveBeenCalledWith("resumes/r1.pdf", Buffer.from("pdf bytes"), "application/pdf");
+      expect(resumeStorage.remove).toHaveBeenCalledWith("resumes/r1.pdf");
+    });
+
+    it("still throws the original DB error even if the cleanup removal itself fails", async () => {
+      const resumeStorage = makeResumeStorage();
+      vi.mocked(resumeStorage.remove).mockRejectedValue(new Error("storage unreachable"));
+      const resumeRepository = makeResumeRepository();
+      vi.mocked(resumeRepository.create).mockRejectedValue(new Error("set_active_resume returned no row"));
+      const deps = makeDeps({ resumeRepository, resumeStorage });
+
+      await expect(
+        uploadResume(
+          { filePath: "resumes/r1.pdf", buffer: Buffer.from("pdf bytes"), mimeType: "application/pdf", contentHash: "hash-1" },
+          deps,
+        ),
+      ).rejects.toThrow("set_active_resume returned no row");
+    });
+
+    it("skips the Storage upload entirely on a parse-once cache hit only if the file was already uploaded (still uploads for a re-upload path/hash)", async () => {
+      // The cache hit skips *parsing*, not Storage -- the deterministic
+      // <sha256>.<ext> path means a re-upload's Storage call is idempotent
+      // (upsert), so it's still safe/expected to call resumeStorage.upload.
+      const cached = makeResume({ parsedText: "Cached React and Node.js resume text" });
+      const resumeStorage = makeResumeStorage();
+      const deps = makeDeps({ resumeRepository: makeResumeRepository(cached), resumeStorage });
+
+      await uploadResume(
+        { filePath: "resumes/hash-1.pdf", buffer: Buffer.from("identical bytes"), mimeType: "application/pdf", contentHash: "hash-1" },
+        deps,
+      );
+
+      expect(resumeStorage.upload).toHaveBeenCalledWith("resumes/hash-1.pdf", Buffer.from("identical bytes"), "application/pdf");
     });
   });
 });

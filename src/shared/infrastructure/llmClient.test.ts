@@ -11,6 +11,14 @@ function anthropicResponse(text: string, status = 200): Response {
   return new Response(JSON.stringify({ content: [{ type: "text", text }] }), { status });
 }
 
+function openRouterResponse(
+  content: string,
+  status = 200,
+  usage?: { prompt_tokens?: number; completion_tokens?: number },
+): Response {
+  return new Response(JSON.stringify({ choices: [{ message: { content } }], usage }), { status });
+}
+
 describe("completeLlm", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -18,10 +26,80 @@ describe("completeLlm", () => {
     delete process.env.LLM_MODEL;
     delete process.env.GEMINI_API_KEY;
     delete process.env.ANTHROPIC_API_KEY;
+    delete process.env.OPENROUTER_API_KEY;
   });
 
-  describe("gemini (default provider)", () => {
+  // AD-42: the default provider routes through the same OpenRouter client
+  // and OPENROUTER_API_KEY that scoring already requires -- no
+  // GEMINI_API_KEY needed unless the caller explicitly opts into
+  // LLM_PROVIDER=gemini.
+  describe("openrouter (default provider)", () => {
     beforeEach(() => {
+      process.env.OPENROUTER_API_KEY = "openrouter-key";
+    });
+
+    it("posts system/user as chat messages to OpenRouter and returns the response text", async () => {
+      const fetchMock = vi.fn().mockResolvedValue(openRouterResponse("hello back"));
+      vi.stubGlobal("fetch", fetchMock);
+
+      const result = await completeLlm({ system: "sys", user: "usr", maxTokens: 500 });
+
+      expect(result).toEqual({ text: "hello back", provider: "openrouter", model: "google/gemini-2.5-flash" });
+      const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+      expect(url).toBe("https://openrouter.ai/api/v1/chat/completions");
+      expect(init.headers).toMatchObject({ Authorization: "Bearer openrouter-key" });
+      const body = JSON.parse(init.body as string);
+      expect(body.model).toBe("google/gemini-2.5-flash");
+      expect(body.messages).toEqual([
+        { role: "system", content: "sys" },
+        { role: "user", content: "usr" },
+      ]);
+      expect(body.max_tokens).toBe(500);
+    });
+
+    it("uses LLM_MODEL override when set", async () => {
+      process.env.LLM_MODEL = "openrouter-custom";
+      const fetchMock = vi.fn().mockResolvedValue(openRouterResponse("ok"));
+      vi.stubGlobal("fetch", fetchMock);
+
+      const result = await completeLlm({ system: "s", user: "u", maxTokens: 100 });
+      expect(result.model).toBe("openrouter-custom");
+    });
+
+    it("requests json_object mode (not a strict schema) when jsonMode is true", async () => {
+      const fetchMock = vi.fn().mockResolvedValue(openRouterResponse("{}"));
+      vi.stubGlobal("fetch", fetchMock);
+
+      await completeLlm({ system: "s", user: "u", maxTokens: 100, jsonMode: true });
+
+      const body = JSON.parse((fetchMock.mock.calls[0]![1] as RequestInit).body as string);
+      expect(body.response_format).toEqual({ type: "json_object" });
+    });
+
+    it("throws LlmError with reason quota_exceeded on 402 (OpenRouterError reason preserved)", async () => {
+      const fetchMock = vi.fn().mockResolvedValue(new Response("insufficient credits", { status: 402 }));
+      vi.stubGlobal("fetch", fetchMock);
+
+      const err = await completeLlm({ system: "s", user: "u", maxTokens: 100 }).catch((e) => e);
+
+      expect(err).toBeInstanceOf(LlmError);
+      expect((err as LlmError).reason).toBe("quota_exceeded");
+    });
+
+    it("throws LlmError with reason malformed_response when no choices have content", async () => {
+      const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ choices: [{ message: {} }] }), { status: 200 }));
+      vi.stubGlobal("fetch", fetchMock);
+
+      const err = await completeLlm({ system: "s", user: "u", maxTokens: 100 }).catch((e) => e);
+
+      expect(err).toBeInstanceOf(LlmError);
+      expect((err as LlmError).reason).toBe("malformed_response");
+    });
+  });
+
+  describe("gemini (LLM_PROVIDER=gemini)", () => {
+    beforeEach(() => {
+      process.env.LLM_PROVIDER = "gemini";
       process.env.GEMINI_API_KEY = "gemini-key";
     });
 
@@ -134,8 +212,8 @@ describe("completeLlm", () => {
     });
   });
 
-  it("throws LlmError with reason timeout when the request aborts", async () => {
-    process.env.GEMINI_API_KEY = "gemini-key";
+  it("throws LlmError with reason timeout when the request aborts (default openrouter provider)", async () => {
+    process.env.OPENROUTER_API_KEY = "openrouter-key";
     const fetchMock = vi.fn().mockRejectedValue(new DOMException("aborted", "AbortError"));
     vi.stubGlobal("fetch", fetchMock);
 

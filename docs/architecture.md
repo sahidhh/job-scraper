@@ -132,7 +132,7 @@ graph TB
 1. User uploads PDF
 2. resume.application.uploadResume(file):
      - store file in Supabase Storage
-     - parse text (pdf-parse)
+     - parse text (pdfjs-dist)
      - extract skills via keyword-dictionary match (no AI)
      - insert resumes row, is_active=true, previous active set false
 3. User may manually edit/add skills (overrides extracted list)
@@ -185,7 +185,7 @@ Rules, in order of strictness:
 
 1. **`domain` has zero dependencies** on other layers, Supabase, or external APIs. Pure TypeScript types and interfaces only.
 2. **`application` depends only on `domain`** (interfaces, entities). It never imports `infrastructure` directly — repositories are injected as constructor/function arguments, typed by their `domain` interface.
-3. **`infrastructure` implements `domain` interfaces** and is the only layer allowed to import Supabase client, OpenRouter SDK, Telegram client, `pdf-parse`, etc.
+3. **`infrastructure` implements `domain` interfaces** and is the only layer allowed to import Supabase client, OpenRouter SDK, Telegram client, `pdfjs-dist`, etc.
 4. **`presentation` (Next.js `app/` and `scripts/*.ts`) is the composition root** — the only place where `infrastructure` classes are instantiated and passed into `application` use-cases. This keeps use-cases testable with mock repositories and keeps both runtime entrypoints (web app, cron scripts) calling identical logic.
 5. **No feature imports another feature's `infrastructure`.** Shared low-level clients (Supabase client factory, OpenRouter client, Telegram client, logger, config) live in `shared/` and are imported by any `infrastructure` module that needs them. Example: the PostgREST role-match `.or()` filter builder is in `shared/infrastructure/roleFilter.ts` so both `jobs` and `insights` repositories use it without crossing this boundary.
 6. **`shared/` has no dependency on `features/`** — it is the lowest layer, importable from anywhere.

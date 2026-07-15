@@ -71,7 +71,7 @@
 **Main Flow:**
 1. User selects a PDF or DOCX file
 2. `uploadResumeAction` receives the file, computes its sha256 content hash, and uploads it to Storage at `<hash>.<pdf|docx>`
-3. If a resume with the same content_hash already exists, its cached parsed text is reused (decisions.md AD-30); otherwise pdf-parse (PDF) or mammoth (DOCX, including table cells) extracts full text
+3. If a resume with the same content_hash already exists, its cached parsed text is reused (decisions.md AD-30); otherwise pdfjs-dist (PDF) or mammoth (DOCX, including table cells) extracts full text
 4. Skills matched against skills-dictionary
 5. `set_active_resume` RPC atomically saves new resume (with content_hash) and deactivates previous
 6. Extracted skills displayed; user can manually edit
@@ -99,7 +99,7 @@
 **Trigger:** `suggestResumeImprovementsAction(targetRole)` (no UI wired up yet — `design/limitations.md` §2.5)  
 **Precondition:** Active resume exists  
 **Main Flow:**
-1. Active resume's `parsedText` is chunked (not truncated — jobhunt bug #2) and each chunk is sent to the configured LLM (`LLM_PROVIDER`: `gemini` default, `anthropic` optional) asking for concrete, non-fabricated improvement suggestions
+1. Active resume's `parsedText` is chunked (not truncated — jobhunt bug #2) and each chunk is sent to the configured LLM (`LLM_PROVIDER`: `openrouter` default, same key as job scoring, decisions.md AD-42; `gemini`/`anthropic` direct optional) asking for concrete, non-fabricated improvement suggestions
 2. Suggestions from every chunk are merged, ids renumbered, and persisted as one new `resume_suggestions` row scoped to the exact resume version they were generated against
 3. User reviews suggestions and chooses a subset, then calls `applyResumeSuggestionsAction(suggestionSetId, chosenIds)`
 4. The chosen suggestions are applied to each chunk of the resume text by the LLM (never fabricating experience) and the rewritten chunks are concatenated
@@ -314,7 +314,7 @@
 
 **Actor:** Operator
 **Trigger:** Manual run of `npm run scrape:careers-url -- <careers-page-url>`
-**Precondition:** An active role selection exists (same precondition `scrape.ts` has); the target page is a public, static-HTML careers page (JS-rendered pages are not supported); `GEMINI_API_KEY` or `ANTHROPIC_API_KEY` is configured for `llmClient.ts`
+**Precondition:** An active role selection exists (same precondition `scrape.ts` has); the target page is a public, static-HTML careers page (JS-rendered pages are not supported); `OPENROUTER_API_KEY` is configured for `llmClient.ts`'s default provider (decisions.md AD-42), or `GEMINI_API_KEY`/`ANTHROPIC_API_KEY` if `LLM_PROVIDER` is switched away from the default
 **Main Flow:**
 1. Script fetches the given URL and strips it to plain text (`stripHtml`, script/style content removed)
 2. Text is chunked (`chunkText`) and each chunk is sent to `LlmCareersPageExtractor`, which asks the configured LLM to extract listed job postings as JSON

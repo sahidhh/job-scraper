@@ -6,7 +6,7 @@ Two-stage pipeline: cheap deterministic keyword scoring runs for every candidate
 
 1. User uploads a PDF via `/resume`.
 2. File stored in Supabase Storage; path saved to `resumes.file_path`.
-3. Text extracted via `pdf-parse` → `resumes.parsed_text` (plain text, whitespace-normalized).
+3. Text extracted via `pdfjs-dist` → `resumes.parsed_text` (plain text, whitespace-normalized).
 4. **Skill extraction** against a static **skills dictionary** (`shared/config/skills-dictionary.ts`) — a curated list of canonical skill names with aliases, e.g.:
    ```ts
    { canonical: "React", aliases: ["react", "react.js", "reactjs"] }
