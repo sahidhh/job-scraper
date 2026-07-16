@@ -57,6 +57,46 @@ Larger, structural changes — high-value but deliberately not undertaken withou
 3. **Multi-role support** — searching multiple target roles simultaneously instead of one active `role_selection`. Explicitly out of scope for v1 (`design/scope.md` §4) since it touches the single-active-selection invariant (AD-09) at its core.
 4. **Seniority-aware experience filtering** as a first-class dimension (not just raw years) — natural next step now that `jobs.seniority` exists (v1.2) but is not yet wired into the dashboard's experience filter.
 
+## Pending product decisions (spec'd this session, not built)
+
+Three items were investigated and specced but deliberately not implemented — each needs a human product/data/schema decision first, and B3/B4 need a migration (out of scope for a presentation/logic-only session). Written here as spec + finding (file:line) + the required decision + recommended approach.
+
+### PD-1 — Freshness / seen / expire lifecycle (needs a migration)
+
+**Requirements:** dashboard shows only jobs posted < N days ago; a per-job seen/opened toggle; auto-archive a job if unopened for > 1 week; an explicit lifecycle status (`new` / `seen` / `archived` / `expired`); every threshold (N days, unopened window) configurable in Settings.
+
+**Current state (finding):** jobs already carry `posted_at`, `first_seen_at`, `last_seen_at`, `is_active`, `inactive_reason` (`SupabaseJobRepository.ts:47` select list), and there is already a **user-defined status** system — `job_state.status_id` → `job_statuses(label,color)` joined in the same select (`:47`) and surfaced via `JobStatusSelect`/`listStatuses`. That existing status system is user-authored triage labels, NOT an automatic lifecycle — nothing auto-archives or expires today, and freshness is only a *sort* tiebreaker (`posted_at desc`, `:520`), never a filter that hides stale jobs.
+
+**Schema sketch (needs a forward-only migration — out of scope here):**
+- Add a machine-owned lifecycle enum distinct from the user's `job_statuses` (don't overload the user's triage labels): e.g. `jobs.lifecycle` `text`/enum in {`new`,`seen`,`archived`,`expired`} (default `new`), plus `seen_at timestamptz null` and `expires_at timestamptz null`.
+- `seen_at` set on first dashboard open (per-job toggle can also clear it back to `new`).
+- `expires_at` computed from `posted_at` + configurable N days; a cron/RPC flips `new`/`seen`→`expired` past it and `new`→`archived` when `now - first_seen_at > unopened_window` and `seen_at IS NULL`.
+- Thresholds (N days, unopened window) → a settings row, same pattern as `RankingPreferences`/notification preferences.
+
+**REQUIRED decision (blocking):** many sources leave `posted_at` null or vague (aggregators especially). Define the rule for null-`posted_at` jobs: are they **shown** (treat null as "always fresh", risks stale clutter) or **hidden** (treat null as "too old to trust", risks dropping real new jobs from feeds that just don't publish a date)? **Recommendation:** show null-date jobs but rank them below dated ones and drive their `expires_at` off `first_seen_at` instead of `posted_at`, so they still age out on our own clock rather than being hidden outright or living forever. Confirm before building.
+
+### PD-2 — Blend `embedding_score` into ranking + build an eval set (relates to AD-31, v2 Candidate #2)
+
+**Finding (confirmed from code):** `embedding_score` is computed at stage 2 (`scoreJob.ts:65`) and **persisted** via the insert RPC (`SupabaseScoreRepository.ts:28`, `p_embedding_score`), but it is **not blended into `overall_score`** — `computeOverallScore.ts:34-57` only ever reads `aiScore` plus the company/remote/salary bonuses and never references `embeddingScore`; the dashboard's default sort is on `overall_score` (`SupabaseJobRepository.ts:519`). So the signal is collected and shown informationally but does not influence ranking, exactly as AD-31 scoped it.
+
+**Plan (do NOT change the formula without measuring first):**
+1. Add a tunable weight `w` and blend, e.g. `overall = clamp(aiScore*(1-w) + embeddingScore*w) + bonuses`, `w` defaulting to 0 (behavior-preserving) and configurable in Settings.
+2. Tighten the AI scoring prompt in parallel (separate lever from the blend).
+3. Before/after **measurement**: hand-label a ~30-job eval set (job × active-resume → "good match?" ground truth) and compare ranking quality (e.g. precision@k / ordering vs. labels) for the current formula vs. candidate weights. Only ship a non-zero `w` if it measurably beats aiScore-only.
+
+**REQUIRED decision (blocking):** does blending embeddings into ranking violate AD-26's "not an ML re-ranker" promise, or is a small bounded weight acceptable? And who produces the 30-job labels? **Recommendation:** treat a small bounded `w` as a tunable heuristic (not a full ML re-ranker) so it stays within AD-26's spirit, but get explicit sign-off since v2 Candidate #2 currently lists embedding-driven ranking as deferred. Build the eval set first — the weight is meaningless without it.
+
+### PD-3 — Application CTA is wrong for ATS jobs (mailto-only, no apply-URL primary action)
+
+**Finding:** the draft dialog's only send affordance is `mailto:` (`ApplicationDraftDialog.tsx:224-227` "Open in mail client", href from `buildMailtoLink`). For the majority of jobs there is no contact email (ATS postings), so `buildMailtoLink(null, …)` correctly emits `mailto:?subject=…` (fixed this session) — but that opens a blank-recipient mail client, which is the wrong action for an apply-URL job. Jobs already carry an apply `url` (`SupabaseJobRepository.ts:47`).
+
+**Spec:** make the primary CTA context-aware —
+- Primary **"Open application"** → the job's apply `url` when present (the common ATS case).
+- **"Copy draft"** (clipboard) so the reviewed draft can be pasted into the ATS form.
+- Show **mailto** ("Open in mail client") **only** when a contact email actually exists; hide it otherwise instead of emitting a blank-recipient link.
+
+**REQUIRED decision (blocking):** when a job has BOTH an apply URL and a contact email, which is primary — the ATS apply flow or the email draft? **Recommendation:** apply URL primary (ATS is the canonical channel), email as a secondary action, mailto hidden entirely when no email exists. Scope only — no build this session; note this supersedes the "leave To-address empty" stopgap from the A1 mailto fix.
+
 ## Never Build
 
 Explicitly out of scope, would add complexity without value for this project's stated single-user, personal-tool nature (`design/scope.md` §4, CLAUDE.md):

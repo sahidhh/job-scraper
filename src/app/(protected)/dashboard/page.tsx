@@ -254,7 +254,7 @@ async function JobsSection({
         {jobStats.pendingCount > 0 && (
           <span className="text-sm">
             <span className="font-semibold tabular-nums">{jobStats.pendingCount}</span>
-            <span className="ml-1 text-muted-foreground">pending</span>
+            <span className="ml-1 text-muted-foreground">unscored</span>
           </span>
         )}
         {lastRun && (

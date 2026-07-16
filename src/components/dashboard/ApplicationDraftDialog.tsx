@@ -104,6 +104,7 @@ export function ApplicationDraftDialog({ jobId, jobTitle }: { jobId: string; job
 
   function markSent() {
     if (!application) return;
+    setError(null);
     startTransition(async () => {
       const result = await markApplicationSentAction(application.id);
       if (result.ok) {
@@ -117,6 +118,7 @@ export function ApplicationDraftDialog({ jobId, jobTitle }: { jobId: string; job
 
   function dismiss() {
     if (!application) return;
+    setError(null);
     startTransition(async () => {
       const result = await markApplicationDismissedAction(application.id);
       if (result.ok) {
