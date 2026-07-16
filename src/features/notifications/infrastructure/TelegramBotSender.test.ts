@@ -98,6 +98,41 @@ describe("TelegramBotSender", () => {
     vi.useRealTimers();
   });
 
+  it("retries once on a network-level failure (no response) and succeeds", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockRejectedValueOnce(new TypeError("fetch failed"))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    vi.useFakeTimers();
+
+    const sender = new TelegramBotSender();
+    const sendPromise = sender.sendMessage("hello");
+    await vi.advanceTimersByTimeAsync(2000);
+    await sendPromise;
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    vi.useRealTimers();
+  });
+
+  it("throws if the retry after a network-level failure also fails", async () => {
+    const fetchMock = vi.fn().mockRejectedValue(new TypeError("fetch failed"));
+    vi.stubGlobal("fetch", fetchMock);
+    vi.useFakeTimers();
+
+    const sender = new TelegramBotSender();
+    const sendPromise = sender.sendMessage("hello").catch((error: unknown) => error);
+    await vi.advanceTimersByTimeAsync(2000);
+    const error = await sendPromise;
+
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toBe("fetch failed");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    vi.useRealTimers();
+  });
+
   it("throws if the retry after a 429 also fails", async () => {
     const fetchMock = vi.fn().mockImplementation(
       () =>
