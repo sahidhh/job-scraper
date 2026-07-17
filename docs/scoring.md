@@ -33,12 +33,36 @@ For each job returned by `JobRepository.findUnscored()` (already filtered by tit
 
 This is pure set arithmetic over two string arrays — no external calls, runs for every candidate job, deterministic and free.
 
+## 2a. Eligibility Pre-Filter (`features/scoring/domain/classifyEligibility.ts`, scoring-accuracy session)
+
+Runs between the keyword gate and stage 2, on every job whose `keyword_score >= KEYWORD_THRESHOLD`.
+Deterministic, no AI call, no new columns -- operates only on `locationRaw`/`locationTags`/`description`.
+
+The candidate is India-based and needs visa sponsorship for any onsite role. A job is **hard-excluded**
+(skips stage 2 entirely, `ai_score` stays null, no tokens spent) when:
+
+- it is tagged **remote** (`locationTags` includes `"remote"`) but the text matches a
+  `GEO_LOCK_EXCLUSION_PHRASES` entry (e.g. "US residents only", "must reside in the UK") --
+  `shared/config/candidate-constraints.ts`, editable list; or
+- it is **not** tagged remote (treated as onsite, including hybrid) and the text matches a
+  `NO_SPONSORSHIP_EXCLUSION_PHRASES` entry (e.g. "not able to sponsor", "citizens only", "must have
+  work authorization") -- same config file, editable list.
+
+A remote-open job (no geo-lock phrase) and an onsite job that is merely *silent* on sponsorship both
+pass this filter -- silence is unconfirmed eligibility, not disqualification; that distinction is
+instead handled by the stage-2 prompt (§3) capping such jobs below a "strong" score.
+
+`scripts/score.ts` logs a distinct `hard-excluded` line per job (recomputing the same pure
+`classifyEligibility()` call purely for logging, not persisted) and a per-run count, separate from
+"below keyword gate" and "AI call failed".
+
 ## 3. AI Scoring Flow (`features/scoring`, stage 2 — gated)
 
-Triggered only when `keyword_score >= KEYWORD_THRESHOLD` (config default `0.25`, env-overridable).
+Triggered only when `keyword_score >= KEYWORD_THRESHOLD` (config default `0.25`, env-overridable) AND
+the job passes the eligibility pre-filter (§2a).
 
 1. Build a single OpenRouter chat completion request:
-   - **System/context:** resume `parsed_text`, capped at `OPENROUTER_MAX_RESUME_PROMPT_CHARS` (default 4000 chars, Phase 3 Task 11-12 cost control -- see `docs/research/ai-cost-optimization-phase3.md`); the skills list is not sent separately — it is already embedded in `parsed_text`.
+   - **System/context:** resume `parsed_text`, capped at `OPENROUTER_MAX_RESUME_PROMPT_CHARS` (default 4000 chars, Phase 3 Task 11-12 cost control -- see `docs/research/ai-cost-optimization-phase3.md`); the skills list is not sent separately — it is already embedded in `parsed_text`. The system prompt also injects the candidate's constraints (`shared/config/candidate-constraints.ts`: location + sponsorship need, ~years experience, primary/secondary stack) and instructs the model that a seniority mismatch, a primary-stack mismatch, or a sponsorship-silent onsite posting each caps the score below a "strong" match (`STRONG_MATCH_THRESHOLD`, `features/notifications/domain/types.ts`), regardless of skill-keyword overlap.
    - **User content:** job `title`, `company_name`, `location_raw` + `location_tags` (structured geography, e.g. `tags: singapore, remote`), `min_years` when non-null (e.g. `Experience required: 5+ years`), `description` capped at `OPENROUTER_MAX_DESCRIPTION_PROMPT_CHARS` (default 2000 chars). Only the AI prompt is truncated -- the stored `jobs.description`/`resumes.parsed_text` and the free keyword-gate stage (`extractSkills`) always see the full, untruncated text.
    - **Requested output:** structured JSON — `{ "score": number (0-1), "reasoning": string (1-3 sentences) }`, enforced via OpenRouter's JSON response-format / schema feature.
 2. Model is configurable via `OPENROUTER_MODEL` env var (pick a low-cost model suitable for short classification+reasoning tasks — exact model left as a deploy-time choice, not hardcoded).

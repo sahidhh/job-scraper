@@ -3,6 +3,7 @@ import type { Resume } from "@/features/resume/domain/types";
 import type { AiScoreProvider } from "@/features/scoring/domain/AiScoreProvider";
 import type { EmbeddingScoreProvider } from "@/features/scoring/domain/EmbeddingScoreProvider";
 import type { ScoreRepository } from "@/features/scoring/domain/ScoreRepository";
+import { classifyEligibility } from "@/features/scoring/domain/classifyEligibility";
 import type { NewJobScore, RankingPreferences } from "@/features/scoring/domain/types";
 import { validateNewJobScore } from "@/features/scoring/domain/validation";
 import { extractSkills, type SkillDictionaryEntry } from "@/shared/domain/skills";
@@ -26,8 +27,11 @@ export interface ScoreJobDeps {
  * §2-3, decisions.md AD-07). Stage 1 (keyword overlap) always runs and is
  * free. Stage 2 (AI refinement, plus the local embedding-similarity signal
  * from AD-31 when a provider is supplied) runs only if keywordScore clears
- * keywordThreshold; a null result from either provider (failed call) leaves
- * the corresponding field null without retrying.
+ * keywordThreshold AND the job passes the hard eligibility pre-filter
+ * (classifyEligibility.ts -- geo-locked-remote / sponsorship-refusing-
+ * onsite postings can never actually be applied to, so they skip stage 2
+ * regardless of skill overlap); a null result from either provider (failed
+ * call) leaves the corresponding field null without retrying.
  */
 export async function scoreJob(
   job: Job,
@@ -37,6 +41,7 @@ export async function scoreJob(
 ): Promise<NewJobScore> {
   const jobSkills = extractSkills(`${job.title}\n${job.description}`, deps.skillsDictionary);
   const keywordScore = computeKeywordScore(resume.skills, jobSkills);
+  const eligibility = classifyEligibility(job);
 
   let aiScore: number | null = null;
   let aiReasoning: string | null = null;
@@ -48,7 +53,7 @@ export async function scoreJob(
 
   let embeddingScore: number | null = null;
 
-  if (keywordScore >= deps.keywordThreshold) {
+  if (keywordScore >= deps.keywordThreshold && eligibility.eligible) {
     const result = await deps.aiScoreProvider.score({ job, resume });
     if (result) {
       aiScore = result.score;

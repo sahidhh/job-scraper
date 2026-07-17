@@ -3,6 +3,7 @@ import { SupabaseResumeRepository } from "@/features/resume/infrastructure/Supab
 import { SupabaseRoleRepository } from "@/features/roles/infrastructure/SupabaseRoleRepository";
 import { getScoringQueueReport } from "@/features/scoring/application/getScoringQueueReport";
 import { scoreJob } from "@/features/scoring/application/scoreJob";
+import { classifyEligibility } from "@/features/scoring/domain/classifyEligibility";
 import { OpenRouterAiScoreProvider } from "@/features/scoring/infrastructure/OpenRouterAiScoreProvider";
 import { SupabaseRankingPreferencesRepository } from "@/features/scoring/infrastructure/SupabaseRankingPreferencesRepository";
 import { SupabaseScoreRepository } from "@/features/scoring/infrastructure/SupabaseScoreRepository";
@@ -67,6 +68,7 @@ async function main(): Promise<void> {
 
   let scored = 0;
   let skippedBelowGate = 0;
+  let hardExcluded = 0;
   for (const job of jobs) {
     try {
       const result = await scoreJob(job, resume, roleSelection.id, {
@@ -79,11 +81,19 @@ async function main(): Promise<void> {
         rankingPreferences,
       });
 
+      // classifyEligibility is pure/cheap -- recomputed here (not persisted,
+      // no new column) purely to distinguish "hard-excluded" from "AI call
+      // failed" in the log, since both leave ai_score null on the row.
+      const eligibility = classifyEligibility(job);
+
       if (result.keywordScore < keywordThreshold) {
         skippedBelowGate += 1;
         console.log(
           `[score] job ${job.id}: skipped AI (keyword score ${result.keywordScore.toFixed(2)} < threshold ${keywordThreshold})`,
         );
+      } else if (!eligibility.eligible) {
+        hardExcluded += 1;
+        console.log(`[score] job ${job.id}: hard-excluded, skipped AI (${eligibility.reason})`);
       } else if (result.aiScore == null) {
         console.warn(
           `[score] job ${job.id}: AI provider returned null (call failed or malformed response); ai_score left null for retry`,
@@ -106,7 +116,7 @@ async function main(): Promise<void> {
   const failureSummary =
     aiStats.failed > 0 ? ` failures=${JSON.stringify(aiStats.failuresByReason)}` : "";
   console.log(
-    `[score] scored ${scored}/${jobs.length} job(s) (${skippedBelowGate} below keyword gate, ${aiStats.failed} AI call failures left for retry)`,
+    `[score] scored ${scored}/${jobs.length} job(s) (${skippedBelowGate} below keyword gate, ${hardExcluded} hard-excluded on eligibility, ${aiStats.failed} AI call failures left for retry)`,
   );
   console.log(
     `[score] AI call stats: successful=${aiStats.successful} failed=${aiStats.failed}${failureSummary}`,

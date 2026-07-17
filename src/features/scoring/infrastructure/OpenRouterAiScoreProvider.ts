@@ -1,6 +1,7 @@
 import type { Job } from "@/features/jobs/domain/types";
 import type { Resume } from "@/features/resume/domain/types";
 import type { AiScoreProvider, AiScoreResult } from "@/features/scoring/domain/AiScoreProvider";
+import { CANDIDATE_CONSTRAINTS } from "@/shared/config/candidate-constraints";
 import { optionalEnv, requireEnv } from "@/shared/infrastructure/env";
 import { type AiFailureReason, OpenRouterError, callOpenRouterJson } from "@/shared/infrastructure/openrouterClient";
 import { truncateText } from "@/shared/infrastructure/text";
@@ -49,12 +50,36 @@ const EMPTY_FAILURES: Record<AiFailureReason, number> = {
   unknown: 0,
 };
 
+// Constraint-aware scoring (scoring-accuracy session): the AI previously
+// scored purely on skill-keyword overlap with no notion of the candidate's
+// eligibility, seniority band, or primary stack, so a Singapore-based
+// Java/4+yrs posting could score as high as a genuinely applyable one just
+// because both mention "backend" and a couple of overlapping tools. These
+// rules make a "strong" (>= STRONG_MATCH_THRESHOLD, notifications/domain/
+// types.ts) score mean "the candidate could actually apply today". Hard
+// eligibility failures (geo-locked remote / sponsorship-refusing onsite)
+// never reach this prompt at all -- they're excluded earlier by
+// classifyEligibility.ts (scoreJob.ts) -- so the only onsite case the AI
+// ever sees here is sponsorship-positive or sponsorship-silent.
 function buildSystemPrompt(resume: Resume): string {
   return [
     "You are an assistant that scores how well a job posting matches a candidate's resume.",
     "Candidate resume:",
     truncateText(resume.parsedText, maxPromptChars("OPENROUTER_MAX_RESUME_PROMPT_CHARS", "4000")),
-    "Respond with score (a number from 0 to 1) and reasoning (1-3 sentences explaining the score).",
+    "",
+    "Candidate constraints (apply strictly -- do not infer around them):",
+    `- Based in ${CANDIDATE_CONSTRAINTS.location}. Requires visa sponsorship for any onsite role -- an onsite posting that never mentions sponsorship is unconfirmed eligibility, not a pass.`,
+    `- ~${CANDIDATE_CONSTRAINTS.yearsExperience} years of experience. A posting expecting meaningfully more (e.g. "4+ years", senior/lead/principal-level scope) is a seniority mismatch.`,
+    `- Primary stack: ${CANDIDATE_CONSTRAINTS.primaryStack.join(" and ")}. Secondary: ${CANDIDATE_CONSTRAINTS.secondaryStack.join(", ")}. NOT a ${CANDIDATE_CONSTRAINTS.notPrimaryStack.join("/")}-primary candidate -- a posting whose primary/core stack is one of those is a stack mismatch even when peripheral tools overlap.`,
+    `- Targeting ${CANDIDATE_CONSTRAINTS.targetRoles.join(", ")} roles.`,
+    "",
+    "Scoring rules:",
+    "- A high score (\"strong match\") must mean the candidate could genuinely apply today: right seniority band, primary stack match, and (for onsite roles) confirmed sponsorship. Do not call it strong on skill-keyword overlap alone.",
+    "- Seniority mismatch (the posting wants meaningfully more experience than the candidate has) caps the score well below a strong match, regardless of skill overlap.",
+    "- Primary-stack mismatch (the posting's core/primary stack is not the candidate's) caps the score well below a strong match, regardless of skill overlap.",
+    "- An onsite posting that is silent on sponsorship is at best worth reviewing, never strong -- eligibility is unconfirmed.",
+    "- Do not invent or assume facts not present in the job posting or resume.",
+    "Respond with score (a number from 0 to 1) and reasoning (1-3 sentences) that names which of these rules, if any, drove the score.",
   ].join("\n");
 }
 

@@ -220,9 +220,15 @@
 2. Query: jobs matching expanded_roles without a score for active role_selection
 3. For each job:
    a. `computeKeywordScore(resume.skills, job description + title)`
-   b. If score ≥ KEYWORD_THRESHOLD: call OpenRouter AI score (15s timeout, 1 retry)
+   b. If score ≥ KEYWORD_THRESHOLD: `classifyEligibility(job)` -- hard-excludes a remote job
+      geo-locked to a region the candidate fails, or an onsite job with an explicit
+      no-sponsorship/authorization signal (candidate needs sponsorship for any onsite role);
+      an eligible job then gets the OpenRouter AI score call (15s timeout, 1 retry), whose system
+      prompt carries the candidate's constraints (location/sponsorship, experience, primary/secondary
+      stack) so seniority/stack mismatches and sponsorship-silent onsite postings score below "strong"
    c. Upsert `job_scores` row
-4. AI failures leave `ai_score = null` and are retried on the next cron run
+4. AI failures and hard-excluded jobs both leave `ai_score = null`; AI failures are retried on the
+   next cron run, hard-excluded jobs are not (they will fail eligibility again)
 
 ---
 
