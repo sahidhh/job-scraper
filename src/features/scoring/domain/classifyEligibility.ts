@@ -1,8 +1,11 @@
 import {
   GEO_LOCK_EXCLUSION_PHRASES,
   NO_SPONSORSHIP_EXCLUSION_PHRASES,
+  REMOTE_OPEN_LOCATION_WORDS,
+  REMOTE_SINGLE_COUNTRY_LOCK_NAMES,
 } from "@/shared/config/candidate-constraints";
 import type { LocationTag } from "@/shared/domain/enums";
+import { containsToken } from "@/shared/domain/skills";
 
 export interface EligibilityResult {
   eligible: boolean;
@@ -20,6 +23,33 @@ function findPhrase(haystack: string, phrases: readonly string[]): string | null
   return phrases.find((phrase) => haystack.includes(phrase)) ?? null;
 }
 
+// Common ATS conventions for a country-restricted remote posting:
+// "Remote - Poland", "Remote (Germany)", "Remote, France", "Remote: Spain".
+// Only matches when "Remote" is the whole locationRaw's leading token, not
+// when it appears elsewhere in a longer free-form string (e.g. "San
+// Francisco, CA ... or Remote within Canada or United States" is NOT
+// matched here -- too free-form to safely regex-parse without false
+// positives, see design/limitations.md).
+const REMOTE_QUALIFIER_PATTERNS = [/^remote\s*[-–—:,]\s*(.+)$/i, /^remote\s*\(([^)]+)\)\s*$/i];
+
+function extractRemoteLocationQualifier(locationRaw: string): string | null {
+  const trimmed = locationRaw.trim();
+  for (const pattern of REMOTE_QUALIFIER_PATTERNS) {
+    const match = trimmed.match(pattern);
+    if (match?.[1]) return match[1].trim().toLowerCase();
+  }
+  return null;
+}
+
+// True when the qualifier names exactly one specific, non-India country
+// this candidate cannot work from -- e.g. "Poland" or "Poland or Germany",
+// but not "New Zealand or India" (an open word present) or "EMEA" (not in
+// the curated country list, so treated as unknown/open rather than locked).
+function isCountryLockedQualifier(qualifier: string): string | null {
+  if (REMOTE_OPEN_LOCATION_WORDS.some((word) => qualifier.includes(word))) return null;
+  return REMOTE_SINGLE_COUNTRY_LOCK_NAMES.find((country) => containsToken(qualifier, country)) ?? null;
+}
+
 /**
  * Hard eligibility pre-filter (scoring-accuracy session): the candidate is
  * India-based and needs visa sponsorship for any onsite role, so a
@@ -34,6 +64,15 @@ function findPhrase(haystack: string, phrases: readonly string[]): string | null
  * distinguishes hybrid/onsite for non-remote postings; remote is already a
  * LocationTag). Hybrid postings are treated as onsite for eligibility
  * purposes since they still require physical presence and sponsorship.
+ *
+ * Remote geo-lock detection covers two shapes: (1) explicit exclusion
+ * phrases anywhere in locationRaw/description (GEO_LOCK_EXCLUSION_PHRASES),
+ * and (2) a structural "Remote - <country>" style locationRaw naming a
+ * single non-India country this candidate cannot work from
+ * (REMOTE_SINGLE_COUNTRY_LOCK_NAMES) -- a common ATS payroll/residency
+ * convention that doesn't use any of the explicit-phrase wording (found via
+ * a real production job, "Remote - Poland", that passed shape (1) but was
+ * still country-restricted).
  */
 export function classifyEligibility(job: EligibilityJob): EligibilityResult {
   const haystack = `${job.locationRaw}\n${job.description}`.toLowerCase();
@@ -44,6 +83,16 @@ export function classifyEligibility(job: EligibilityJob): EligibilityResult {
     if (matched) {
       return { eligible: false, reason: `remote but geo-locked ("${matched}")` };
     }
+
+    const qualifier = extractRemoteLocationQualifier(job.locationRaw);
+    const lockedCountry = qualifier ? isCountryLockedQualifier(qualifier) : null;
+    if (lockedCountry) {
+      return {
+        eligible: false,
+        reason: `remote but restricted to a single country ("${job.locationRaw}", matched "${lockedCountry}")`,
+      };
+    }
+
     return { eligible: true, reason: null };
   }
 
