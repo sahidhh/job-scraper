@@ -54,11 +54,38 @@ export class SupabaseScoreRepository implements ScoreRepository {
       .order("scored_at", { ascending: true });
 
     if (error) throw toAppError(error);
+    const rows = data ?? [];
+    if (rows.length === 0) return [];
 
-    return (data ?? []).map((row) => ({
-      jobId: row.job_id,
-      scoredAt: row.scored_at,
-      retryCount: row.retry_count,
-    }));
+    // A job_scores row can outlive the job it references: if the job
+    // expires (jobs.is_active flips false) while still awaiting an AI
+    // score, it can never be retried again -- findUnscored() only ever
+    // considers active jobs (jobs.is_active = true,
+    // SupabaseJobRepository.ts:358) -- so it would otherwise show up here
+    // as permanently "stuck" with no cron run able to resolve it. Exclude
+    // rows whose job is no longer active, chunked the same way
+    // findUnscored's own candidate query is (8 KB gateway URL limit guard,
+    // docs/reports/findUnscored-regression-fix.md).
+    const jobIds = rows.map((row) => row.job_id);
+    const activeIdSet = new Set<string>();
+    const CHUNK_SIZE = 100;
+    for (let i = 0; i < jobIds.length; i += CHUNK_SIZE) {
+      const chunk = jobIds.slice(i, i + CHUNK_SIZE);
+      const { data: activeRows, error: activeError } = await this.client
+        .from("jobs")
+        .select("id")
+        .eq("is_active", true)
+        .in("id", chunk);
+      if (activeError) throw toAppError(activeError);
+      for (const row of activeRows ?? []) activeIdSet.add(row.id);
+    }
+
+    return rows
+      .filter((row) => activeIdSet.has(row.job_id))
+      .map((row) => ({
+        jobId: row.job_id,
+        scoredAt: row.scored_at,
+        retryCount: row.retry_count,
+      }));
   }
 }

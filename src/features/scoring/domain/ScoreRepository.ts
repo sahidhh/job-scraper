@@ -19,7 +19,11 @@ export interface ScoreRepository {
    * job_scores rows for (roleSelectionId, resumeVersion) that passed the
    * keyword gate but have no ai_score yet -- the AI-retry queue -- ordered
    * oldest scoredAt first (Phase 1 Task 6, feeds
-   * computeScoringQueueSummary/getScoringQueueReport).
+   * computeScoringQueueSummary/getScoringQueueReport). Excludes rows whose
+   * underlying job has since gone inactive (expired) -- such a row can
+   * never be picked up again by findUnscored (which only ever considers
+   * active jobs), so it would otherwise report as permanently, unfixably
+   * "stuck" instead of just not being retried.
    */
   findAwaitingAi(roleSelectionId: string, resumeVersion: number, keywordThreshold: number): Promise<AwaitingScoreJob[]>;
 }
