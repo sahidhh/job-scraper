@@ -42,8 +42,11 @@ The candidate is India-based and needs visa sponsorship for any onsite role. A j
 (skips stage 2 entirely, `ai_score` stays null, no tokens spent) when:
 
 - it is tagged **remote** (`locationTags` includes `"remote"`) but the text matches a
-  `GEO_LOCK_EXCLUSION_PHRASES` entry (e.g. "US residents only", "must reside in the UK") --
-  `shared/config/candidate-constraints.ts`, editable list; or
+  `GEO_LOCK_EXCLUSION_PHRASES` entry (e.g. "US residents only", "must reside in the UK"), OR
+  `locationRaw` matches the structural "Remote - &lt;Country&gt;" / "Remote (&lt;Country&gt;)" ATS
+  convention naming a single non-India country (`REMOTE_SINGLE_COUNTRY_LOCK_NAMES`, curated,
+  non-exhaustive -- `docs/decisions.md` AD-46) -- `shared/config/candidate-constraints.ts`, editable
+  lists; or
 - it is **not** tagged remote (treated as onsite, including hybrid) and the text matches a
   `NO_SPONSORSHIP_EXCLUSION_PHRASES` entry (e.g. "not able to sponsor", "citizens only", "must have
   work authorization") -- same config file, editable list.

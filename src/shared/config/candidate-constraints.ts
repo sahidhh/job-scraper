@@ -66,6 +66,81 @@ export const GEO_LOCK_EXCLUSION_PHRASES: readonly string[] = [
   "north america only",
 ];
 
+// Words/phrases in a "Remote - <X>" style qualifier that indicate the
+// posting is genuinely open (to India, globally, or unspecified) rather
+// than restricted to one place. Checked before REMOTE_SINGLE_COUNTRY_LOCK_NAMES
+// below, so e.g. "Remote - New Zealand or India" is never excluded.
+export const REMOTE_OPEN_LOCATION_WORDS: readonly string[] = [
+  "india",
+  "anywhere",
+  "global",
+  "worldwide",
+  "world",
+  "remote-first",
+  "distributed",
+  "multiple locations",
+  "various locations",
+  "flexible",
+];
+
+// Single-country names that, when they appear in a remote job's locationRaw
+// immediately after "Remote" (e.g. "Remote - Poland", "Remote (Germany)"),
+// indicate the posting is restricted to workers based in that one
+// country -- a common ATS convention for payroll/legal residency
+// requirements, distinct from genuinely open remote postings. Matched as
+// whole words (containsToken, shared/domain/skills.ts) so short codes like
+// "us"/"uk" don't false-match inside "Russia"/"Ukraine". Curated, not
+// exhaustive -- add more as they're discovered (same "known gaps,
+// deliberately not handled" philosophy as extractJobAttributes.ts; see
+// design/limitations.md for what this deliberately does NOT cover, e.g.
+// free-form multi-location strings and region names like "EMEA"/"APAC").
+// Deliberately excludes India.
+export const REMOTE_SINGLE_COUNTRY_LOCK_NAMES: readonly string[] = [
+  "us",
+  "usa",
+  "united states",
+  "uk",
+  "united kingdom",
+  "canada",
+  "australia",
+  "poland",
+  "germany",
+  "france",
+  "netherlands",
+  "spain",
+  "italy",
+  "ireland",
+  "portugal",
+  "sweden",
+  "norway",
+  "denmark",
+  "finland",
+  "switzerland",
+  "austria",
+  "belgium",
+  "czech republic",
+  "romania",
+  "ukraine",
+  "mexico",
+  "brazil",
+  "argentina",
+  "japan",
+  "south korea",
+  "china",
+  "philippines",
+  "vietnam",
+  "indonesia",
+  "malaysia",
+  "thailand",
+  "south africa",
+  "nigeria",
+  "kenya",
+  "egypt",
+  "israel",
+  "turkey",
+  "new zealand",
+];
+
 // An onsite job with an explicit no-sponsorship / authorization-required signal.
 export const NO_SPONSORSHIP_EXCLUSION_PHRASES: readonly string[] = [
   "no sponsorship",

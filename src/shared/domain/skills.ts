@@ -28,7 +28,11 @@ export function extractSkills(
   return found;
 }
 
-function containsToken(text: string, token: string): boolean {
+// Exported for reuse anywhere else "does this text contain X as a whole
+// word/token, not a substring of something else" is needed (e.g.
+// classifyEligibility.ts's remote-country-lock detection) -- same
+// word-boundary rule, no need to re-derive it per caller.
+export function containsToken(text: string, token: string): boolean {
   const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   // [a-z0-9+#] excludes +/# so "c" won't match inside "c++" or "c#"
   const pattern = new RegExp(`(?<![a-z0-9+#])${escaped}(?![a-z0-9+#])`, "i");
