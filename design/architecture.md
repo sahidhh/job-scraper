@@ -263,12 +263,12 @@ match, regardless of skill-keyword overlap.
 
 Every save goes through the `upsert_job_score` RPC (erd.md), which atomically increments `retry_count`
 whenever the write leaves `ai_score` null. After each `score.ts` run, `getScoringQueueReport()` (Phase 1
-Task 6) queries `ScoreRepository.findAwaitingAi` (keyword gate passed, `ai_score IS NULL`, ordered
-oldest `scored_at` first) and computes `{ awaitingAiCount, oldestPendingAgeHours, stuckJobs,
-maxRetryCount, avgRetryCount }` via the pure `computeScoringQueueSummary`. "Stuck" jobs (waiting past
-`SCORING_STUCK_THRESHOLD_HOURS`, default 48h) are logged as a warning -- AD-14 already retries
-indefinitely, so this is visibility, not a new retry mechanism. `getScoringQueueReport()` is
-surfaced on `/analytics` (Phase 4 Task 13).
+Task 6) queries `ScoreRepository.findAwaitingAi` (keyword gate passed, `ai_score IS NULL`, underlying
+job still `is_active` -- `docs/decisions.md` AD-45 -- ordered oldest `scored_at` first) and computes
+`{ awaitingAiCount, oldestPendingAgeHours, stuckJobs, maxRetryCount, avgRetryCount }` via the pure
+`computeScoringQueueSummary`. "Stuck" jobs (waiting past `SCORING_STUCK_THRESHOLD_HOURS`, default 48h)
+are logged as a warning -- AD-14 already retries indefinitely, so this is visibility, not a new retry
+mechanism. `getScoringQueueReport()` is surfaced on `/analytics` (Phase 4 Task 13).
 
 **Composite ranking score** (`computeOverallScore.ts`, Theme 1 continuous-improvement pass):
 whenever `ai_score` is set, `overall_score = ai_score` plus small additive bonuses -- preferred

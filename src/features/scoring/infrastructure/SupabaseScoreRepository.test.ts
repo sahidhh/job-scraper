@@ -108,20 +108,21 @@ describe("SupabaseScoreRepository", () => {
 
   describe("findAwaitingAi", () => {
     it("filters by role/version/keyword gate, excludes scored jobs, and orders oldest first", async () => {
-      const { client, builder } = mockSupabaseClient({
-        data: [{ job_id: "job-1", scored_at: "2026-01-01T00:00:00Z", retry_count: 3 }],
-        error: null,
-      });
+      const { client, builders } = queuedSupabaseClient([
+        { data: [{ job_id: "job-1", scored_at: "2026-01-01T00:00:00Z", retry_count: 3 }], error: null },
+        { data: [{ id: "job-1" }], error: null },
+      ]);
       const repo = new SupabaseScoreRepository(client);
 
       const result = await repo.findAwaitingAi("role-selection-1", 1, 0.25);
 
       expect(result).toEqual([{ jobId: "job-1", scoredAt: "2026-01-01T00:00:00Z", retryCount: 3 }]);
-      expect(builder.eq).toHaveBeenCalledWith("role_selection_id", "role-selection-1");
-      expect(builder.eq).toHaveBeenCalledWith("resume_version", 1);
-      expect(builder.gte).toHaveBeenCalledWith("keyword_score", 0.25);
-      expect(builder.is).toHaveBeenCalledWith("ai_score", null);
-      expect(builder.order).toHaveBeenCalledWith("scored_at", { ascending: true });
+      const [scoresBuilder] = builders;
+      expect(scoresBuilder!.eq).toHaveBeenCalledWith("role_selection_id", "role-selection-1");
+      expect(scoresBuilder!.eq).toHaveBeenCalledWith("resume_version", 1);
+      expect(scoresBuilder!.gte).toHaveBeenCalledWith("keyword_score", 0.25);
+      expect(scoresBuilder!.is).toHaveBeenCalledWith("ai_score", null);
+      expect(scoresBuilder!.order).toHaveBeenCalledWith("scored_at", { ascending: true });
     });
 
     it("returns an empty array when nothing is awaiting AI", async () => {
@@ -129,6 +130,27 @@ describe("SupabaseScoreRepository", () => {
       const repo = new SupabaseScoreRepository(client);
 
       expect(await repo.findAwaitingAi("role-selection-1", 1, 0.25)).toEqual([]);
+    });
+
+    it("excludes a row whose underlying job has gone inactive (expired) -- it can never be retried by findUnscored, so it must not report as stuck", async () => {
+      const { client, builders } = queuedSupabaseClient([
+        {
+          data: [
+            { job_id: "active-job", scored_at: "2026-01-01T00:00:00Z", retry_count: 1 },
+            { job_id: "expired-job", scored_at: "2025-12-01T00:00:00Z", retry_count: 5 },
+          ],
+          error: null,
+        },
+        { data: [{ id: "active-job" }], error: null }, // only the active job comes back from the is_active=true query
+      ]);
+      const repo = new SupabaseScoreRepository(client);
+
+      const result = await repo.findAwaitingAi("role-selection-1", 1, 0.25);
+
+      expect(result).toEqual([{ jobId: "active-job", scoredAt: "2026-01-01T00:00:00Z", retryCount: 1 }]);
+      const [, activeJobsBuilder] = builders;
+      expect(activeJobsBuilder!.eq).toHaveBeenCalledWith("is_active", true);
+      expect(activeJobsBuilder!.in).toHaveBeenCalledWith("id", ["active-job", "expired-job"]);
     });
   });
 });
