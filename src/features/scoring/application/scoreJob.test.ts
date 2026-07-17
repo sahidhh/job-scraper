@@ -225,6 +225,71 @@ describe("scoreJob", () => {
     expect(result.embeddingScore).toBeNull();
   });
 
+  it("hard-excludes a remote job geo-locked to a region the candidate fails, skipping AI even when keyword score clears the threshold", async () => {
+    const job = makeJob({
+      locationRaw: "Remote (US)",
+      locationTags: ["remote"],
+      description: "Build UI with React and Node.js. US residents only.",
+    });
+    const resume = makeResume({ skills: ["React", "Node.js"] });
+    const scoreRepository = makeScoreRepository();
+    const aiScoreProvider = makeAiProvider({ score: 0.9, reasoning: "should not be called", model: "x", tokensInput: null, tokensOutput: null });
+
+    const result = await scoreJob(job, resume, "role-selection-1", {
+      scoreRepository,
+      aiScoreProvider,
+      skillsDictionary: dictionary,
+      keywordThreshold: 0.5,
+    });
+
+    expect(result.keywordScore).toBe(1);
+    expect(result.aiScore).toBeNull();
+    expect(aiScoreProvider.score).not.toHaveBeenCalled();
+  });
+
+  it("hard-excludes an onsite job with an explicit no-sponsorship signal, skipping AI even when keyword score clears the threshold", async () => {
+    const job = makeJob({
+      locationRaw: "Austin, TX",
+      locationTags: [],
+      description: "Build UI with React and Node.js. We are not able to sponsor visas for this role.",
+    });
+    const resume = makeResume({ skills: ["React", "Node.js"] });
+    const scoreRepository = makeScoreRepository();
+    const aiScoreProvider = makeAiProvider({ score: 0.9, reasoning: "should not be called", model: "x", tokensInput: null, tokensOutput: null });
+
+    const result = await scoreJob(job, resume, "role-selection-1", {
+      scoreRepository,
+      aiScoreProvider,
+      skillsDictionary: dictionary,
+      keywordThreshold: 0.5,
+    });
+
+    expect(result.keywordScore).toBe(1);
+    expect(result.aiScore).toBeNull();
+    expect(aiScoreProvider.score).not.toHaveBeenCalled();
+  });
+
+  it("does not exclude an onsite job that is merely silent on sponsorship", async () => {
+    const job = makeJob({
+      locationRaw: "Singapore",
+      locationTags: ["singapore"],
+      description: "Build UI with React and Node.js in our Singapore office.",
+    });
+    const resume = makeResume({ skills: ["React", "Node.js"] });
+    const scoreRepository = makeScoreRepository();
+    const aiScoreProvider = makeAiProvider({ score: 0.6, reasoning: "worth a look", model: "x", tokensInput: null, tokensOutput: null });
+
+    const result = await scoreJob(job, resume, "role-selection-1", {
+      scoreRepository,
+      aiScoreProvider,
+      skillsDictionary: dictionary,
+      keywordThreshold: 0.5,
+    });
+
+    expect(aiScoreProvider.score).toHaveBeenCalledWith({ job, resume });
+    expect(result.aiScore).toBe(0.6);
+  });
+
   it("leaves embeddingScore null when no embedding provider is supplied", async () => {
     const job = makeJob();
     const resume = makeResume({ skills: ["React", "Node.js"] });

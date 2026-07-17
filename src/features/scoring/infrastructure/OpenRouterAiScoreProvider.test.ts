@@ -331,6 +331,36 @@ describe("OpenRouterAiScoreProvider", () => {
     delete process.env.OPENROUTER_MAX_DESCRIPTION_PROMPT_CHARS;
   });
 
+  it("includes the candidate's eligibility, seniority, and stack constraints in the system prompt", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(chatResponse({ score: 0.8, reasoning: "ok" }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const provider = new OpenRouterAiScoreProvider();
+    await provider.score({ job, resume });
+
+    const body = JSON.parse((fetchMock.mock.calls[0]![1] as RequestInit).body as string);
+    const systemPrompt = body.messages[0].content as string;
+    expect(systemPrompt).toContain("Chennai, India");
+    expect(systemPrompt).toContain("visa sponsorship");
+    expect(systemPrompt).toContain("~2 years");
+    expect(systemPrompt).toContain("Python and TypeScript");
+    expect(systemPrompt).toContain("NOT a Java-primary candidate");
+  });
+
+  it("instructs the model that seniority/stack mismatch and sponsorship-silent onsite roles cap the score below strong", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(chatResponse({ score: 0.8, reasoning: "ok" }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const provider = new OpenRouterAiScoreProvider();
+    await provider.score({ job, resume });
+
+    const body = JSON.parse((fetchMock.mock.calls[0]![1] as RequestInit).body as string);
+    const systemPrompt = body.messages[0].content as string;
+    expect(systemPrompt).toContain("Seniority mismatch");
+    expect(systemPrompt).toContain("Primary-stack mismatch");
+    expect(systemPrompt).toContain("silent on sponsorship");
+  });
+
   it("does not truncate text within the default caps", async () => {
     const fetchMock = vi.fn().mockResolvedValue(chatResponse({ score: 0.8, reasoning: "ok" }));
     vi.stubGlobal("fetch", fetchMock);

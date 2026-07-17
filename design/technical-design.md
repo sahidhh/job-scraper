@@ -99,14 +99,27 @@ sequenceDiagram
         GHA->>APP: computeKeywordScore(resume.skills, job)
         APP-->>GHA: keywordScore [0–1]
         alt keywordScore ≥ KEYWORD_THRESHOLD
-            GHA->>OR: POST /chat/completions (15s timeout, 1 retry)
-            OR-->>GHA: { score, reasoning }
-            GHA->>DB: UPSERT job_scores (keyword + ai + reasoning)
+            GHA->>APP: classifyEligibility(job)
+            APP-->>GHA: { eligible, reason }
+            alt eligible
+                GHA->>OR: POST /chat/completions (15s timeout, 1 retry)
+                OR-->>GHA: { score, reasoning }
+                GHA->>DB: UPSERT job_scores (keyword + ai + reasoning)
+            else hard-excluded (geo-locked remote / no-sponsorship onsite)
+                GHA->>DB: UPSERT job_scores (keyword only, ai_score = null, no AI call)
+            end
         else
             GHA->>DB: UPSERT job_scores (keyword only, ai_score = null)
         end
     end
 ```
+
+`classifyEligibility()` (`src/features/scoring/domain/classifyEligibility.ts`) is a pure, deterministic
+function over `locationRaw`/`locationTags`/`description` -- no new call, no new table. The OpenRouter
+system prompt built by `OpenRouterAiScoreProvider.buildSystemPrompt()` now also injects the candidate's
+constraints from `shared/config/candidate-constraints.ts` (location/sponsorship need, ~years
+experience, primary/secondary stack) so the model itself penalizes seniority and stack mismatches, and
+treats a sponsorship-silent onsite posting as at most "worth reviewing".
 
 ### 6.3 Notification Pipeline
 

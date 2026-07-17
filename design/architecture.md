@@ -234,7 +234,9 @@ flowchart TD
     EACH --> KW["computeKeywordScore()\nskill overlap → 0–1"]
     KW --> GATE{keyword_score\n≥ threshold?}
     GATE -- No --> SAVE_KW["Save keyword score only\n(ai_score = null)"]
-    GATE -- Yes --> AI["OpenRouter AI call\n15s timeout, 1 retry"]
+    GATE -- Yes --> ELIG{classifyEligibility()\nhard-excluded?}
+    ELIG -- Yes --> SAVE_KW["Save keyword score only\n(ai_score = null, no AI call)"]
+    ELIG -- No --> AI["OpenRouter AI call\n15s timeout, 1 retry"]
     AI --> AI_OK{Success?}
     AI_OK -- Yes --> OVERALL["computeOverallScore()\nai_score + configurable bonuses"]
     OVERALL --> SAVE_AI["Save keyword + ai_score\n+ ai_reasoning + overall_score"]
@@ -244,6 +246,20 @@ flowchart TD
     SAVE_KW2 --> NEXT
     NEXT["Next job"] --> EACH
 ```
+
+**Eligibility pre-filter** (`classifyEligibility.ts`, scoring-accuracy session): a deterministic gate
+between the keyword gate and the AI call. The candidate is India-based and needs visa sponsorship for
+any onsite role, so a job is hard-excluded (skips the AI call, no tokens spent) when it is either a
+**remote** posting geo-locked to a region the candidate does not qualify for (e.g. "US residents
+only"), or an **onsite** posting with an explicit no-sponsorship/authorization-required signal (e.g.
+"not able to sponsor", "citizens only"). Both phrase lists are editable config
+(`shared/config/candidate-constraints.ts`) matched case-insensitively against `locationRaw` +
+`description` -- no new columns. Onsite postings that are merely *silent* on sponsorship are **not**
+excluded here (unconfirmed, not disqualified) -- they still reach the AI call, whose system prompt
+(`OpenRouterAiScoreProvider.ts`) now also carries the candidate's constraints (location/sponsorship
+need, ~years of experience, primary/secondary stack) and instructs the model that a sponsorship-silent
+onsite posting, a seniority mismatch, or a primary-stack mismatch each caps the score below a "strong"
+match, regardless of skill-keyword overlap.
 
 Every save goes through the `upsert_job_score` RPC (erd.md), which atomically increments `retry_count`
 whenever the write leaves `ai_score` null. After each `score.ts` run, `getScoringQueueReport()` (Phase 1
