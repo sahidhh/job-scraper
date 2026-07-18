@@ -797,6 +797,8 @@ export type Database = {
         | "ashby"
         | "wellfound"
         | "remoteok"
+        | "remotive"
+        | "himalayas"
         | "mycareersfuture"
         | "jsearch"
         | "adzuna"
@@ -938,6 +940,8 @@ export const Constants = {
         "ashby",
         "wellfound",
         "remoteok",
+        "remotive",
+        "himalayas",
         "mycareersfuture",
         "jsearch",
         "adzuna",

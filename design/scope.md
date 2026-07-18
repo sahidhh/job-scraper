@@ -21,7 +21,7 @@ A single technical professional (software engineer, data scientist, or similar) 
 | Resume upload & skill extraction | Upload PDF or DOCX, extract text (sha256 parse-once cache), tag skills from dictionary |
 | Role selection & AI expansion | Define target role; expand to related roles via LLM or cache |
 | Role Packs | Pre-defined curated role groups; click to instantly activate without AI call |
-| Multi-source job scraping | Greenhouse, Lever, Ashby (per board_token), Wellfound, RemoteOK, MyCareersFuture, JSearch, Adzuna (merge-workspace Phase 5) |
+| Multi-source job scraping | Greenhouse, Lever, Ashby (per board_token), Wellfound, RemoteOK, Remotive, Himalayas, MyCareersFuture, JSearch, Adzuna (merge-workspace Phase 5; Remotive/Himalayas added in the remote/visa-sponsorship refocus) |
 | Location filtering | Tag jobs by India / Singapore / UAE / Remote; drop untagged |
 | Two-stage scoring | Keyword score (free) → AI score (gated) per job |
 | Telegram notifications | Push alert for jobs above AI score threshold |
@@ -217,7 +217,7 @@ P4 — Future
 
 ### Data Scope
 
-- **Job sources:** Only the eight cron-driven integrated sources (Greenhouse, Lever, Ashby, Wellfound, RemoteOK, MyCareersFuture, JSearch, Adzuna) plus one manual-trigger-only source (the static careers-URL fetcher, `careers_url`). New cron sources require a new adapter implementing the `JobSourceScraper` interface and registration in `registry.ts`.
+- **Job sources:** Only the ten cron-driven integrated sources (Greenhouse, Lever, Ashby, Wellfound, RemoteOK, Remotive, Himalayas, MyCareersFuture, JSearch, Adzuna) plus one manual-trigger-only source (the static careers-URL fetcher, `careers_url`). New cron sources require a new adapter implementing the `JobSourceScraper` interface and registration in `registry.ts`.
 - **Geographies:** India, Singapore, UAE, Remote. Adding a new geography requires a migration to extend the `location_tag` enum and updating the `tagLocations()` function.
 - **Skill dictionary:** Fixed canonical list. New skills require updating `src/shared/domain/skillsDictionary.ts`.
 

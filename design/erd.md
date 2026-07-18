@@ -298,7 +298,7 @@ Atomic single-round-trip write + conditional counter increment (Phase 1 Task 6) 
 ## Enum Values
 
 ```
-job_source           → greenhouse, lever, ashby, wellfound, remoteok, mycareersfuture, jsearch, adzuna, careers_url
+job_source           → greenhouse, lever, ashby, wellfound, remoteok, remotive, himalayas, mycareersfuture, jsearch, adzuna, careers_url
 location_tag         → india, singapore, uae, remote
 role_map_source      → seed, ai
 scrape_run_status    → success, partial, failed
@@ -306,7 +306,8 @@ source_health_status → active, unhealthy, disabled
 ```
 
 `jsearch`/`adzuna`/`careers_url` added in `20260715000001_jsearch_adzuna_careers_url_sources.sql`
-(merge-workspace Phase 5). `careers_url` is a valid enum value (jobs sourced from it need a real
+(merge-workspace Phase 5); `remotive`/`himalayas` added in
+`20260718000001_remote_board_sources.sql` (remote/visa-sponsorship refocus). `careers_url` is a valid enum value (jobs sourced from it need a real
 `jobs.source`) but is deliberately excluded from the TS-level `JOB_SOURCES` array
 (`src/shared/domain/enums.ts`) used for source-health iteration and notification-preference
 validation -- see `docs/decisions.md` AD-35.

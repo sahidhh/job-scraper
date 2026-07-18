@@ -7,7 +7,7 @@
 | **User** | The single authenticated human operator of the platform |
 | **Cron (GitHub Actions)** | Automated scheduler that runs scrape/score/notify pipelines |
 | **ATS Board API** | External Greenhouse / Lever / Ashby job board APIs |
-| **Public Job Board** | Wellfound feed, RemoteOK RSS, MyCareersFuture API |
+| **Public Job Board** | Wellfound feed, RemoteOK RSS, Remotive API, Himalayas API, MyCareersFuture API |
 | **OpenRouter** | LLM gateway for role expansion and AI job scoring |
 | **Telegram Bot API** | Notification delivery service |
 | **Operator** | Person running the validate-sources script manually or via `workflow_dispatch` |
@@ -40,9 +40,10 @@
 1. Page fetches jobs joined with scores (active role_selection) and job_state
 2. Jobs displayed in table sorted by overall_score descending (ai_score + configurable ranking
    bonuses, see UC-06b), then posted_at descending as tiebreaker
-3. User can filter by location, source, status, min/max score, max experience, and a free-text
-   search over title/company; muted companies, employment types, and keywords (UC-13) are always
-   excluded
+3. User can filter by location, source, status, min/max score, max experience, a free-text
+   search over title/company, a "remote only" toggle (jobs tagged `remote`), and a "sponsoring"
+   toggle (only jobs whose `visa_sponsorship` is an explicit yes); muted companies, employment
+   types, and keywords (UC-13) are always excluded
 4. Pagination loads next page on demand
 
 **Postcondition:** User sees paginated, filtered job list with scores, ranking-bonus reasons, and statuses

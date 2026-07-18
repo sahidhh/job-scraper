@@ -27,6 +27,8 @@ type DashboardSearchParams = {
   archived?: string;
   maxYears?: string;
   q?: string;
+  remote?: string;
+  sponsoring?: string;
   limit?: string;
 };
 
@@ -64,6 +66,12 @@ function parseFilters(params: DashboardSearchParams): JobFilters {
   if (params.q && params.q.trim().length > 0) {
     filters.search = params.q.trim();
   }
+  if (params.remote === "1") {
+    filters.remoteOnly = true;
+  }
+  if (params.sponsoring === "1") {
+    filters.sponsoringOnly = true;
+  }
 
   return filters;
 }
@@ -83,6 +91,8 @@ function loadMoreHref(params: DashboardSearchParams, currentLimit: number): stri
   if (params.archived) next.set("archived", params.archived);
   if (params.maxYears) next.set("maxYears", params.maxYears);
   if (params.q) next.set("q", params.q);
+  if (params.remote) next.set("remote", params.remote);
+  if (params.sponsoring) next.set("sponsoring", params.sponsoring);
   next.set("limit", String(currentLimit + DEFAULT_JOBS_LIMIT));
   return `/dashboard?${next.toString()}`;
 }

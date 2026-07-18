@@ -140,6 +140,13 @@ export interface UpdateStatusInput {
 export interface JobFilters {
   locationTags?: LocationTag[];
   sources?: JobSource[];
+  // Keep only jobs tagged "remote" (hard narrowing; ANDs with locationTags).
+  remoteOnly?: boolean;
+  // Keep only jobs that explicitly offer visa sponsorship
+  // (visa_sponsorship === true). Unlike the soft employment-type/maxYears
+  // filters, "unknown" (null) and false are excluded -- the user is asking to
+  // see sponsors only.
+  sponsoringOnly?: boolean;
   minAiScore?: number;
   // Restrict to jobs whose current status is one of these ids.
   statusIds?: string[];

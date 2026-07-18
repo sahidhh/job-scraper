@@ -86,6 +86,8 @@ These are explicitly banned by the project rules (CLAUDE.md):
 | `SOURCE_STALE_HOURS` | `6` | Hours since a source's last scrape_runs row (of any status) before it's flagged `isStale` on `/analytics` -- distinct from an actively-failing source |
 | `JOB_EXPIRATION_DAYS` | `14` | Days since `last_seen_at` before `scrape.ts` soft-deactivates a job (`is_active = false`, `inactive_reason = 'expired'`) |
 | `REMOTEOK_DISABLED` | _(unset)_ | Set `true` or `1` to explicitly disable RemoteOK ingestion (set in `scrape.yml` — RemoteOK's near-zero yield made it not worth probing on every run, see `docs/remoteok-evaluation.md`) |
+| `REMOTIVE_DISABLED` | _(unset)_ | Set `true` or `1` to explicitly disable Remotive ingestion (remote-global board, public JSON API) |
+| `HIMALAYAS_DISABLED` | _(unset)_ | Set `true` or `1` to explicitly disable Himalayas ingestion (remote-global board, public JSON API) |
 | `LLM_PROVIDER` | `openrouter` | `llmClient.ts` provider switch: `openrouter` (default, routes through `OPENROUTER_API_KEY`/`openrouterClient.ts`), `gemini`, or `anthropic` (decisions.md AD-32, AD-42 — supersedes AD-32's Gemini-default for the default case; direct Gemini/Anthropic REST stays available for anyone who wants a different key/provider than scoring) |
 | `LLM_MODEL` | per-provider (`google/gemini-2.5-flash` / `gemini-2.5-flash` / `claude-haiku-4-5`) | Overrides the default model for the active `LLM_PROVIDER` |
 | `GEMINI_API_KEY` | _(unset)_ | Google AI Studio key for `llmClient.ts`'s direct-Gemini path; required only when `LLM_PROVIDER=gemini` (decisions.md AD-42 — no longer required by default) |

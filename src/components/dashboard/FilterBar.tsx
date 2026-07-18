@@ -55,6 +55,17 @@ export function FilterBar({
     router.push(`/dashboard?${params.toString()}`);
   }
 
+  // Generic "1"/absent boolean toggle (remote, sponsoring).
+  function toggleFlag(key: string, checked: boolean) {
+    const params = new URLSearchParams(searchParams.toString());
+    if (checked) {
+      params.set(key, "1");
+    } else {
+      params.delete(key);
+    }
+    router.push(`/dashboard?${params.toString()}`);
+  }
+
   // Score stored as 0–1 decimal in URL, shown as 0–100 integer in the input
   function updateMinScore(pct: string) {
     const params = new URLSearchParams(searchParams.toString());
@@ -82,6 +93,8 @@ export function FilterBar({
     searchParams.get("maxYears"),
     searchParams.get("q"),
     searchParams.get("archived") === "1" ? "1" : null,
+    searchParams.get("remote") === "1" ? "1" : null,
+    searchParams.get("sponsoring") === "1" ? "1" : null,
   ].filter(Boolean).length;
 
   function clearAll() {
@@ -185,6 +198,26 @@ export function FilterBar({
           <span className="pointer-events-none absolute right-3 text-sm text-muted-foreground">yrs</span>
         </div>
       </FilterField>
+
+      <label className="flex cursor-pointer items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          checked={searchParams.get("remote") === "1"}
+          onChange={(e) => toggleFlag("remote", e.target.checked)}
+          className="size-4 accent-primary"
+        />
+        <span>Remote only</span>
+      </label>
+
+      <label className="flex cursor-pointer items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          checked={searchParams.get("sponsoring") === "1"}
+          onChange={(e) => toggleFlag("sponsoring", e.target.checked)}
+          className="size-4 accent-primary"
+        />
+        <span>Offers visa sponsorship</span>
+      </label>
 
       <label className="flex cursor-pointer items-center gap-2 text-sm">
         <input
@@ -343,6 +376,29 @@ export function FilterBar({
           />
           <span className="pointer-events-none absolute right-3 text-sm text-muted-foreground">yrs</span>
         </div>
+
+        <label className="flex cursor-pointer items-center gap-1.5 text-sm text-muted-foreground">
+          <input
+            type="checkbox"
+            checked={searchParams.get("remote") === "1"}
+            onChange={(e) => toggleFlag("remote", e.target.checked)}
+            className="size-4 accent-primary"
+          />
+          Remote
+        </label>
+
+        <label
+          className="flex cursor-pointer items-center gap-1.5 text-sm text-muted-foreground"
+          title="Only jobs that explicitly offer visa sponsorship"
+        >
+          <input
+            type="checkbox"
+            checked={searchParams.get("sponsoring") === "1"}
+            onChange={(e) => toggleFlag("sponsoring", e.target.checked)}
+            className="size-4 accent-primary"
+          />
+          Sponsoring
+        </label>
 
         <label className="flex cursor-pointer items-center gap-1.5 text-sm text-muted-foreground">
           <input

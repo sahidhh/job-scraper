@@ -7,6 +7,8 @@ export type JobSource =
   | "ashby"
   | "wellfound"
   | "remoteok"
+  | "remotive"
+  | "himalayas"
   | "mycareersfuture"
   | "jsearch"
   | "adzuna"
@@ -27,6 +29,8 @@ export const JOB_SOURCES: readonly JobSource[] = [
   "ashby",
   "wellfound",
   "remoteok",
+  "remotive",
+  "himalayas",
   "mycareersfuture",
   "jsearch",
   "adzuna",

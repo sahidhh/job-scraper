@@ -108,6 +108,8 @@ your AI relevance score plus any ranking bonuses you've configured (see "Ranking
 - **Status:** Filter by workflow status
 - **Score range:** Set a min AI score
 - **Max experience:** Hide jobs requiring more years than this (unknown requirement always shown)
+- **Remote:** Show only jobs tagged `remote`
+- **Sponsoring:** Show only jobs that *explicitly* offer visa sponsorship (jobs where sponsorship is unknown/unstated are hidden while this is on — most postings don't say either way, so expect a short list)
 - **Show archived jobs:** Off by default
 - Companies you've muted (Notification preferences, §9) never appear here either
 
@@ -122,6 +124,7 @@ The dashboard's overall score is your AI score plus small bonuses:
 - **Preferred companies:** list company names (comma-separated); a match adds the company bonus (default +5%)
 - **Prefer remote:** when on, jobs tagged Remote add the remote bonus (default +3%)
 - **Salary disclosed:** any job with a parsed salary automatically adds the salary bonus (default +2%) — no setting needed
+- **Offers visa sponsorship:** any job that *explicitly* states it sponsors a visa automatically adds the sponsorship bonus (default +4%) — no setting needed. This floats confirmed-sponsoring roles toward the top, which matters most for onsite-abroad targets.
 - Each bonus amount is editable; leave a bonus field blank to use its default
 
 Freshness isn't a separate bonus — the dashboard already breaks ties by posting date, so it's covered

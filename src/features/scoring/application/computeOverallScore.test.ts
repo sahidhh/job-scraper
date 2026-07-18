@@ -2,12 +2,15 @@ import { describe, expect, it } from "vitest";
 import type { Job } from "@/features/jobs/domain/types";
 import { computeOverallScore } from "./computeOverallScore";
 
-function makeJob(overrides: Partial<Job> = {}): Pick<Job, "canonicalCompanyName" | "locationTags" | "salaryMin" | "salaryMax"> {
+function makeJob(
+  overrides: Partial<Job> = {},
+): Pick<Job, "canonicalCompanyName" | "locationTags" | "salaryMin" | "salaryMax" | "visaSponsorship"> {
   return {
     canonicalCompanyName: "Acme",
     locationTags: ["india"],
     salaryMin: null,
     salaryMax: null,
+    visaSponsorship: null,
     ...overrides,
   };
 }
@@ -48,11 +51,31 @@ describe("computeOverallScore", () => {
     expect(computeOverallScore(makeJob(), 0.7, {}).reasons).toEqual([]);
   });
 
+  it("applies the sponsorship bonus only when visaSponsorship is explicitly true", () => {
+    expect(computeOverallScore(makeJob({ visaSponsorship: true }), 0.7, {}).reasons).toEqual([
+      "offers visa sponsorship",
+    ]);
+    expect(computeOverallScore(makeJob({ visaSponsorship: true }), 0.7, {}).overallScore).toBeCloseTo(0.74, 5);
+    // null ("unknown") and false must not earn the bonus.
+    expect(computeOverallScore(makeJob({ visaSponsorship: null }), 0.7, {}).reasons).toEqual([]);
+    expect(computeOverallScore(makeJob({ visaSponsorship: false }), 0.7, {}).reasons).toEqual([]);
+  });
+
+  it("respects a custom sponsorshipBonus amount", () => {
+    const result = computeOverallScore(makeJob({ visaSponsorship: true }), 0.7, { sponsorshipBonus: 0.1 });
+    expect(result.overallScore).toBeCloseTo(0.8, 5);
+  });
+
   it("stacks all applicable bonuses", () => {
-    const job = makeJob({ canonicalCompanyName: "Acme", locationTags: ["remote"], salaryMin: 100000 });
+    const job = makeJob({
+      canonicalCompanyName: "Acme",
+      locationTags: ["remote"],
+      salaryMin: 100000,
+      visaSponsorship: true,
+    });
     const result = computeOverallScore(job, 0.6, { preferredCompanies: ["acme"], preferRemote: true });
-    expect(result.overallScore).toBeCloseTo(0.6 + 0.05 + 0.03 + 0.02, 5);
-    expect(result.reasons).toEqual(["preferred company", "remote", "salary disclosed"]);
+    expect(result.overallScore).toBeCloseTo(0.6 + 0.05 + 0.03 + 0.02 + 0.04, 5);
+    expect(result.reasons).toEqual(["preferred company", "remote", "offers visa sponsorship", "salary disclosed"]);
   });
 
   it("respects custom bonus amounts", () => {
