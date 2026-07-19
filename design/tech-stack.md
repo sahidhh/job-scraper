@@ -161,6 +161,7 @@ These are explicitly banned by the project rules (CLAUDE.md):
 | `check:service-role-boundary` | `tsx scripts/checkServiceRoleBoundary.ts` | CI safety gate — ensures service role key not used in app/ |
 | `scrape` | `tsx scripts/scrape.ts` | Manual scrape run |
 | `score` | `tsx scripts/score.ts` | Manual scoring run |
+| `rescore` | `tsx scripts/rescore.ts` | Clears every `job_scores` row for the active role selection + resume version so the next `score` run rebuilds them under the current prompt/constraints (decisions.md AD-50). Delete-only; run `score` after, or use the `rescore.yml` workflow which chains both |
 | `notify` | `tsx scripts/notify.ts` | Manual notification run |
 | `doctor` | `tsx scripts/doctor.ts` | (v1.2) Checks required/optional env vars are set and does a live Supabase + Telegram connectivity check; exit 1 if anything required is missing or unreachable |
 | `verify:production` | `tsx scripts/verify-production.ts --format=all` | (v1.4) Runs the 24-check production verification framework; writes `verification-reports/latest.{md,json}` + console; exit 1 only on a critical-severity ("not ready") failure |
@@ -185,6 +186,7 @@ These are explicitly banned by the project rules (CLAUDE.md):
 |---|---|---|
 | `ci.yml` | Push / PR to main | `typecheck` → `lint` → `test` → `build`; separate `check:service-role-boundary` job |
 | `scrape.yml` | Cron (every 6h) or `workflow_dispatch` | `scrape.ts` → `score.ts` → `notify.ts` |
+| `rescore.yml` | `workflow_dispatch` only | `rescore.ts` (clears active scores) → `score.ts` (rebuilds). Shares the `scrape-pipeline` concurrency group so it never overlaps a scheduled scrape. Use after a scoring prompt/constraint change to re-rank the existing corpus (decisions.md AD-50) |
 | `validate-sources.yml` | `workflow_dispatch` only | `validate-sources.ts` — probe ATS boards, exit 1 only on new failures or sub-minimum healthy count |
 | `verify-production.yml` | `workflow_dispatch` only (v1.4, no schedule) | `verify-production.ts` — 24-check operational health report, uploads `verification-reports/` as a build artifact, exit 1 only on a critical-severity failure |
 

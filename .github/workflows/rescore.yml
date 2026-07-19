@@ -1,0 +1,42 @@
+name: Rescore
+
+# Manual-only: force a full re-score of the active corpus under the current
+# scoring prompt/constraints. Clears every job_scores row for the active role
+# selection + resume version (npm run rescore), then rebuilds them (npm run
+# score). Needed because score.ts only (re)scores jobs with NO score row for
+# the active (role_selection, resume_version), so a prompt/constraint change
+# (e.g. decisions.md AD-50) does not affect already-scored jobs until this runs.
+on:
+  workflow_dispatch: {}
+
+# Share the scrape pipeline's concurrency group so a rescore never overlaps a
+# scheduled scrape's own scoring step (both write job_scores).
+concurrency:
+  group: scrape-pipeline
+  cancel-in-progress: false
+
+jobs:
+  rescore:
+    runs-on: ubuntu-latest
+    environment: Production
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - run: npm ci
+
+      - run: npm run rescore
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+      - run: npm run score
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          OPENROUTER_MODEL: ${{ secrets.OPENROUTER_MODEL }}
+          KEYWORD_THRESHOLD: ${{ vars.KEYWORD_THRESHOLD || '0.25' }}

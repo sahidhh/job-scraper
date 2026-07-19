@@ -85,6 +85,25 @@ describe("SupabaseScoreRepository", () => {
     );
   });
 
+  it("deleteScores removes rows for the role selection + resume version and returns the count", async () => {
+    const { client, builder } = mockSupabaseClient({ data: null, error: null, count: 7 });
+    const repo = new SupabaseScoreRepository(client);
+
+    const deleted = await repo.deleteScores("role-selection-1", 3);
+
+    expect(deleted).toBe(7);
+    expect(builder.delete).toHaveBeenCalledWith({ count: "exact" });
+    expect(builder.eq).toHaveBeenCalledWith("role_selection_id", "role-selection-1");
+    expect(builder.eq).toHaveBeenCalledWith("resume_version", 3);
+  });
+
+  it("deleteScores returns 0 when the driver reports a null count", async () => {
+    const { client } = mockSupabaseClient({ data: null, error: null });
+    const repo = new SupabaseScoreRepository(client);
+
+    expect(await repo.deleteScores("role-selection-1", 1)).toBe(0);
+  });
+
   it("hasScore returns true when count > 0 and filters by all three key columns", async () => {
     const { client, builder } = mockSupabaseClient({ data: null, error: null, count: 1 });
     const repo = new SupabaseScoreRepository(client);
