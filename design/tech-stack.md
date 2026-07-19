@@ -169,6 +169,7 @@ These are explicitly banned by the project rules (CLAUDE.md):
 | `diagnose` | `tsx scripts/report-sources.ts && tsx scripts/filter-analysis.ts` | (v1.2) Combined pipeline diagnostic: recent-run/failure report + fetch→location-filter→ingest funnel |
 | `analytics` | `tsx scripts/source-analytics.ts` | (v1.2) 30-day per-source quality report (keep rate, low performers) |
 | `report:sources` | `tsx scripts/report-sources.ts` | (v1.2) Explicit name for the last-run/recent-failures report (previously unwired) |
+| `report:matches` | `tsx scripts/report-top-matches.ts [N]` | Read-only terminal report of the top N (default 10) scored jobs for the active role selection + resume version, ordered by overall score — the same ranking `/dashboard` shows |
 | `validate-sources` | `tsx scripts/validate-sources.ts` | Probe all configured ATS boards; exit 1 only on new failures or healthy count below minimum |
 | `backfill:fingerprints` | `tsx scripts/backfill-fingerprints.ts` | One-off backfill of `jobs.fingerprint` for rows inserted before cross-source dedup (Phase 1 Task 1) |
 | `backfill:min-years` | `tsx scripts/backfill-min-years.ts` | (v1.2) Explicit name for the one-off `min_years` backfill (previously unwired) |
