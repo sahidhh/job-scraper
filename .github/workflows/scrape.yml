@@ -52,6 +52,16 @@ jobs:
           # AD-10/docs/scrapers.md §5 -- optional; if unset, Wellfound
           # adapter degrades to zero jobs per run (not a failure).
           WELLFOUND_FEED_URL: ${{ secrets.WELLFOUND_FEED_URL }}
+          # Aggregator APIs (AD-35). Each adapter auto-disables cleanly when its
+          # key is unset, so passing an empty secret through here is harmless --
+          # the source simply skips until the secret exists. JSearch is the only
+          # UAE-reachable aggregator; Adzuna covers in/sg only (no UAE).
+          RAPIDAPI_KEY: ${{ secrets.RAPIDAPI_KEY }}
+          JSEARCH_COUNTRIES: ${{ vars.JSEARCH_COUNTRIES || 'in,sg,ae' }}
+          ADZUNA_APP_ID: ${{ secrets.ADZUNA_APP_ID }}
+          ADZUNA_APP_KEY: ${{ secrets.ADZUNA_APP_KEY }}
+          ADZUNA_COUNTRIES: ${{ vars.ADZUNA_COUNTRIES || 'in,sg' }}
+          # Remotive/Himalayas (AD-47) need no secrets and are enabled by default.
 
       - run: npm run score
         env:
