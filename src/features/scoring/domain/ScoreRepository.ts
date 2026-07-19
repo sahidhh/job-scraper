@@ -16,6 +16,17 @@ export interface ScoreRepository {
   hasScore(jobId: string, roleSelectionId: string, resumeVersion: number): Promise<boolean>;
 
   /**
+   * Delete every job_scores row for (roleSelectionId, resumeVersion) and
+   * return how many were removed. Used by the rescore script
+   * (scripts/rescore.ts) to force a full re-score of the active corpus after a
+   * scoring-prompt/constraint change: score.ts only (re)scores jobs that have
+   * NO score row for the active (role_selection, resume_version), so the
+   * existing rows must be cleared first for the new prompt to take effect on
+   * already-scored jobs (see decisions.md AD-50, limitations.md §3.5).
+   */
+  deleteScores(roleSelectionId: string, resumeVersion: number): Promise<number>;
+
+  /**
    * job_scores rows for (roleSelectionId, resumeVersion) that passed the
    * keyword gate but have no ai_score yet -- the AI-retry queue -- ordered
    * oldest scoredAt first (Phase 1 Task 6, feeds

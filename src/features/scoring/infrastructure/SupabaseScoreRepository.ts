@@ -43,6 +43,17 @@ export class SupabaseScoreRepository implements ScoreRepository {
     return (count ?? 0) > 0;
   }
 
+  async deleteScores(roleSelectionId: string, resumeVersion: number): Promise<number> {
+    const { count, error } = await this.client
+      .from("job_scores")
+      .delete({ count: "exact" })
+      .eq("role_selection_id", roleSelectionId)
+      .eq("resume_version", resumeVersion);
+
+    if (error) throw toAppError(error);
+    return count ?? 0;
+  }
+
   async findAwaitingAi(roleSelectionId: string, resumeVersion: number, keywordThreshold: number): Promise<AwaitingScoreJob[]> {
     const { data, error } = await this.client
       .from("job_scores")
