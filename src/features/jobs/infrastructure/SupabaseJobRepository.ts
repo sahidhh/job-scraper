@@ -87,6 +87,27 @@ function toJob(row: JobRow): Job {
   };
 }
 
+// PostgREST cannot order the parent `jobs` rows by the embedded one-to-many
+// `job_scores.overall_score` column -- a `.order(..., { foreignTable })` on it
+// is a silent no-op that left the dashboard effectively posted_at-ordered
+// (freshness) instead of score-ranked. findForDashboard therefore fetches the
+// filtered set (bounded by DASHBOARD_FETCH_CAP -- single-user scale, see
+// design/limitations.md for the ceiling + the RPC follow-up) ordered by
+// posted_at, then applies the real ranking in memory with this comparator:
+// overall_score desc, nulls last, posted_at desc as the tiebreaker.
+const DASHBOARD_FETCH_CAP = 1000;
+
+function byOverallScoreDescThenPostedAt(a: JobWithScore, b: JobWithScore): number {
+  if (a.overallScore !== b.overallScore) {
+    if (a.overallScore === null) return 1; // nulls (unscored) last
+    if (b.overallScore === null) return -1;
+    return b.overallScore - a.overallScore; // higher score first
+  }
+  const pa = a.postedAt ?? "";
+  const pb = b.postedAt ?? "";
+  return pa < pb ? 1 : pa > pb ? -1 : 0; // newer posted_at first
+}
+
 function toDashboardJob(row: DashboardJobRow): JobWithScore {
   const score = row.job_scores[0] as DashboardJobRow["job_scores"][number] | undefined;
   const status = row.job_state?.[0]?.job_statuses ?? null;
@@ -521,22 +542,23 @@ export class SupabaseJobRepository implements JobRepository {
     }
 
     query = query
-      // Composite ranking score (aiScore + configurable bonuses, Theme 1)
-      // drives the default sort; posted_at remains the tiebreaker, which
-      // already covers "freshness" without double-weighting it into the
-      // bonus formula itself. Rows written before this column existed are
-      // backfilled to overall_score = ai_score (migration 20260704000003),
-      // so this never silently demotes older scored jobs.
-      .order("overall_score", { ascending: false, nullsFirst: false, foreignTable: "job_scores" })
+      // Fetch the filtered set ordered by posted_at as a stable secondary key;
+      // the real overall_score-desc ranking (Theme 1 composite score: aiScore +
+      // configurable bonuses) is applied in memory below, because PostgREST
+      // can't order parent rows by the embedded job_scores column. posted_at is
+      // the tiebreaker for equal/absent scores, covering "freshness" without
+      // double-weighting it into the bonus formula. Rows written before the
+      // overall_score column existed are backfilled to overall_score = ai_score
+      // (migration 20260704000003), so older scored jobs are never demoted.
       .order("posted_at", { ascending: false })
-      .limit(limit + 1);
+      .limit(DASHBOARD_FETCH_CAP);
 
     const { data, error } = await query.returns<DashboardJobRow[]>();
     if (error) throw toAppError(error);
 
-    const rows = data ?? [];
-    const hasMore = rows.length > limit;
-    const jobs = rows.slice(0, limit).map(toDashboardJob);
+    const ranked = (data ?? []).map(toDashboardJob).sort(byOverallScoreDescThenPostedAt);
+    const hasMore = ranked.length > limit;
+    const jobs = ranked.slice(0, limit);
 
     return { jobs, hasMore };
   }
