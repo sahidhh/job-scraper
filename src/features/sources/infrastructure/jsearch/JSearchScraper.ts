@@ -93,8 +93,37 @@ function isJobEntry(job: JSearchJob): job is JSearchJob & { job_id: string; job_
   );
 }
 
-function toRawJob(job: JSearchJob & { job_id: string; job_apply_link: string; job_title: string }): RawJob {
-  const location = [job.job_city, job.job_country].filter((part): part is string => Boolean(part)).join(", ");
+// JSearch returns `job_country` as a 2-letter ISO code ("IN"), which the
+// location filter's keyword rules (india/singapore/uae in
+// shared/config/location-keywords.ts) don't recognise -- a job whose city is
+// also absent or outside the curated city list would be dropped by
+// tagLocations despite being in a target country (observed live: 29 found, 0
+// kept). Map the target codes to the full country name so the location tag
+// always resolves. A code we don't recognise (e.g. a "US" remote job
+// cross-listed into an AE search) is left as-is, so it's correctly filtered
+// out as a non-target geography; an absent country falls back to the country
+// we actually queried.
+const COUNTRY_CODE_TO_NAME: Record<string, string> = {
+  in: "India",
+  sg: "Singapore",
+  ae: "United Arab Emirates",
+};
+
+function resolveCountryName(jobCountry: string | undefined, queryCountry: string): string {
+  const code = (jobCountry ?? "").trim().toLowerCase();
+  if (code) {
+    return COUNTRY_CODE_TO_NAME[code] ?? jobCountry ?? queryCountry;
+  }
+  return COUNTRY_CODE_TO_NAME[queryCountry] ?? queryCountry;
+}
+
+function toRawJob(
+  job: JSearchJob & { job_id: string; job_apply_link: string; job_title: string },
+  queryCountry: string,
+): RawJob {
+  const location = [job.job_city, resolveCountryName(job.job_country, queryCountry)]
+    .filter((part): part is string => Boolean(part))
+    .join(", ");
   return {
     source: "jsearch",
     sourceJobId: job.job_id,
@@ -145,19 +174,26 @@ export const jsearchScraper: JobSourceScraper = {
 
     const combos = searchTerms.flatMap((term) => config.countries.map((country) => ({ term, country })));
 
-    const results = await Promise.all(combos.map(({ term, country }) => fetchByTermAndCountry(term, country, config.apiKey)));
+    // Carry the queried country alongside each batch so toRawJob can resolve a
+    // full country name (JSearch's job_country is a bare ISO code).
+    const results = await Promise.all(
+      combos.map(async ({ term, country }) => ({
+        country,
+        jobs: await fetchByTermAndCountry(term, country, config.apiKey),
+      })),
+    );
 
     const seen = new Set<string>();
-    const deduped: (JSearchJob & { job_id: string; job_apply_link: string; job_title: string })[] = [];
-    for (const batch of results) {
-      for (const job of batch) {
+    const deduped: RawJob[] = [];
+    for (const { country, jobs } of results) {
+      for (const job of jobs) {
         if (isJobEntry(job) && !seen.has(job.job_id)) {
           seen.add(job.job_id);
-          deduped.push(job);
+          deduped.push(toRawJob(job, country));
         }
       }
     }
 
-    return deduped.map(toRawJob).filter((job) => jobMatchesRoles(job, roles));
+    return deduped.filter((job) => jobMatchesRoles(job, roles));
   },
 };
