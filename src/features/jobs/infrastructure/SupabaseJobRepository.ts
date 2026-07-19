@@ -462,6 +462,17 @@ export class SupabaseJobRepository implements JobRepository {
     if (filters.sources && filters.sources.length > 0) {
       query = query.in("source", filters.sources);
     }
+    if (filters.remoteOnly) {
+      // Narrow to postings tagged remote. ANDs with any locationTags filter
+      // (two overlaps) -- intentional: "remote only" is a hard narrowing.
+      query = query.overlaps("location_tags", ["remote"]);
+    }
+    if (filters.sponsoringOnly) {
+      // Only jobs with an explicit "yes" sponsorship signal (extracted at
+      // ingest). Deliberately excludes null ("unknown") and false, unlike the
+      // soft employment-type filter -- the user asked to *see only* sponsors.
+      query = query.eq("visa_sponsorship", true);
+    }
     if (filters.minAiScore !== undefined) {
       query = query.gte("job_scores.ai_score", filters.minAiScore);
     }

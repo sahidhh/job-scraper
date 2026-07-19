@@ -4,7 +4,19 @@
 // and the AI scoring prompt (OpenRouterAiScoreProvider.ts) -- edit here, not
 // inline at either call site.
 export const CANDIDATE_CONSTRAINTS = {
-  location: "Chennai, India",
+  // Actual residence -- Bangalore/Chennai onsite roles are the India "safety
+  // net". Kept as the literal "…Chennai, India" the AI prompt reads as
+  // "Based in <location>".
+  location: "Bangalore or Chennai, India",
+  // Where the candidate actively wants to land (soft preference, not a hard
+  // filter): visa-sponsored roles abroad or remote roles open to India. Onsite
+  // India (Bangalore/Chennai) is an acceptable fallback. Surfaced to the AI
+  // prompt so a target-location role isn't penalised for its geography.
+  targetLocations: [
+    "UAE (Abu Dhabi / Dubai)",
+    "Singapore",
+    "remote roles open to India",
+  ],
   yearsExperience: 2,
   primaryStack: ["Python", "TypeScript"],
   secondaryStack: [".NET"],

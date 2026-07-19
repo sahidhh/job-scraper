@@ -81,4 +81,12 @@ export interface RankingPreferences {
   remoteBonus?: number;
   /** Added when the job has a parsed salary (min or max). Default 0.02. */
   salaryBonus?: number;
+  /**
+   * Added when the job explicitly offers visa sponsorship
+   * (jobs.visa_sponsorship === true, extracted at ingest). For an
+   * India-based candidate targeting abroad roles, an explicit sponsorship
+   * signal is a strong positive the AI match score doesn't already weight.
+   * Default 0.04.
+   */
+  sponsorshipBonus?: number;
 }

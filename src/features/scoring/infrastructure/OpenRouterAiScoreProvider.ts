@@ -72,6 +72,7 @@ function buildSystemPrompt(resume: Resume): string {
     `- ~${CANDIDATE_CONSTRAINTS.yearsExperience} years of experience. A posting expecting meaningfully more (e.g. "4+ years", senior/lead/principal-level scope) is a seniority mismatch.`,
     `- Primary stack: ${CANDIDATE_CONSTRAINTS.primaryStack.join(" and ")}. Secondary: ${CANDIDATE_CONSTRAINTS.secondaryStack.join(", ")}. NOT a ${CANDIDATE_CONSTRAINTS.notPrimaryStack.join("/")}-primary candidate -- a posting whose primary/core stack is one of those is a stack mismatch even when peripheral tools overlap.`,
     `- Targeting ${CANDIDATE_CONSTRAINTS.targetRoles.join(", ")} roles.`,
+    `- Actively wants to land in: ${CANDIDATE_CONSTRAINTS.targetLocations.join(", ")} (onsite India in Bangalore/Chennai is an acceptable fallback). Treat a role in one of these target locations as a positive fit for location -- do NOT penalise it for its geography. This is a preference, not a hard requirement: never raise a score on location alone.`,
     "",
     "Scoring rules:",
     "- A high score (\"strong match\") must mean the candidate could genuinely apply today: right seniority band, primary stack match, and (for onsite roles) confirmed sponsorship. Do not call it strong on skill-keyword overlap alone.",

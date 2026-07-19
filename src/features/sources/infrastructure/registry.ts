@@ -2,10 +2,12 @@ import type { JobSourceScraper } from "@/features/sources/domain/JobSourceScrape
 import { adzunaScraper } from "./adzuna/AdzunaScraper";
 import { ashbyScraper } from "./ashby/AshbyScraper";
 import { greenhouseScraper } from "./greenhouse/GreenhouseScraper";
+import { himalayasScraper } from "./himalayas/HimalayasScraper";
 import { jsearchScraper } from "./jsearch/JSearchScraper";
 import { leverScraper } from "./lever/LeverScraper";
 import { myCareersFutureScraper } from "./mycareersfuture/MyCareersFutureScraper";
 import { remoteokScraper } from "./remoteok/RemoteOkScraper";
+import { remotiveScraper } from "./remotive/RemotiveScraper";
 import { wellfoundScraper } from "./wellfound/WellfoundScraper";
 
 // The only place that knows about every cron-driven adapter (scrapers.md
@@ -20,6 +22,8 @@ export const sourceScrapers: readonly JobSourceScraper[] = [
   ashbyScraper,
   wellfoundScraper,
   remoteokScraper,
+  remotiveScraper,
+  himalayasScraper,
   myCareersFutureScraper,
   jsearchScraper,
   adzunaScraper,

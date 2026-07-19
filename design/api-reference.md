@@ -645,6 +645,18 @@ Buttons: `[← Prev]` `[Next →]` (conditional) · `[📊 Dashboard]`
 **Auth:** None (public)  
 **Returns:** `RemoteOkJob[]` (RSS-style JSON)
 
+#### Remotive
+**Endpoint:** `GET https://remotive.com/api/remote-jobs`  
+**Auth:** None (public)  
+**Returns:** `{ jobs: RemotiveJob[] }` — the envelope also carries two leading string notices (`0-legal-notice`, `00-warning`), which the adapter ignores.  
+**Notes:** Remote-global board. The adapter pulls the full feed once per run (Remotive asks callers to fetch ≤ a few times/day and to keep the posting `url` + "Remotive" attribution, both honoured) and filters client-side by role. `candidate_required_location` is normalized to a `"Remote - <X>"` `locationRaw` so single-country-locked postings are geo-excluded downstream (`classifyEligibility`).
+
+#### Himalayas
+**Endpoint:** `GET https://himalayas.app/jobs/api?limit=1000&offset=0`  
+**Auth:** None (public)  
+**Returns:** `{ jobs: HimalayasJob[] }` — each job's stable id/URL is `guid`; `pubDate` is a Unix timestamp in **seconds**.  
+**Notes:** Remote-global board. The API ignores `search`, so the adapter pulls one recent page and filters client-side by role. `locationRestrictions[]` is joined and normalized to `"Remote - <X>"`, same downstream geo-lock handling as Remotive.
+
 #### MyCareersFuture
 **Endpoint:** `GET https://api.mycareersfuture.gov.sg/v2/jobs`  
 **Auth:** None (public)  
