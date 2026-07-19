@@ -37,9 +37,21 @@ async function main(): Promise<void> {
   const activeResume = await resumeRepository.getActive();
   const resumeVersion = activeResume?.version ?? 0;
 
-  // minAiScore: 0 -> only scored jobs (inner join), ordered by overall_score
-  // desc then posted_at desc (findForDashboard's default sort).
-  const { jobs } = await jobRepository.findForDashboard(roleSelection.id, { minAiScore: 0 }, limit, resumeVersion);
+  // findForDashboard's DB-side `.order("overall_score", { foreignTable })` is a
+  // no-op: PostgREST can't order the parent `jobs` rows by an embedded
+  // one-to-many (job_scores) column, so its results come back effectively
+  // posted_at-ordered, NOT score-ordered. Fetch the full scored set (the
+  // corpus is a few hundred rows, well under PostgREST's max-rows) and sort
+  // client-side to get a genuine top-N by score. NOTE: /dashboard's default
+  // sort has the same root cause -- tracked as a separate follow-up.
+  const FETCH_CAP = 1000;
+  const { jobs: scored } = await jobRepository.findForDashboard(
+    roleSelection.id,
+    { minAiScore: 0 },
+    FETCH_CAP,
+    resumeVersion,
+  );
+  const jobs = [...scored].sort((a, b) => (b.overallScore ?? 0) - (a.overallScore ?? 0)).slice(0, limit);
 
   console.log(`\nTop ${limit} matches — role "${roleSelection.primaryRole}", resume v${resumeVersion}`);
   console.log(`Generated: ${new Date().toISOString()}`);
