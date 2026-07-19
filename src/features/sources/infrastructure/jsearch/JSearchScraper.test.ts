@@ -108,12 +108,44 @@ describe("jsearchScraper", () => {
         companyId: null,
         companyName: "Acme Corp",
         title: "Software Engineer",
-        locationRaw: "Bangalore, IN",
+        locationRaw: "Bangalore, India",
         description: "Build things.",
         url: "https://example.com/apply/1",
         postedAt: new Date("2026-07-01T00:00:00Z").toISOString(),
       },
     ]);
+  });
+
+  it("maps the ISO country code to a full name so the location filter can tag it, even with no city", async () => {
+    process.env.JSEARCH_COUNTRIES = "ae";
+    const cityless = { ...SAMPLE_JOB, job_city: undefined, job_country: "AE" };
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ data: [cityless] }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await jsearchScraper.fetchJobs([], ["Software Engineer"]);
+
+    expect(result[0]?.locationRaw).toBe("United Arab Emirates");
+  });
+
+  it("falls back to the queried country when job_country is absent", async () => {
+    process.env.JSEARCH_COUNTRIES = "sg";
+    const noCountry = { ...SAMPLE_JOB, job_city: undefined, job_country: undefined };
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ data: [noCountry] }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await jsearchScraper.fetchJobs([], ["Software Engineer"]);
+
+    expect(result[0]?.locationRaw).toBe("Singapore");
+  });
+
+  it("leaves a non-target country code as-is (so it's filtered out downstream as non-target)", async () => {
+    const usJob = { ...SAMPLE_JOB, job_city: "Austin", job_country: "US" };
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ data: [usJob] }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await jsearchScraper.fetchJobs([], ["Software Engineer"]);
+
+    expect(result[0]?.locationRaw).toBe("Austin, US");
   });
 
   it("rejects entries with no job_id and does not fall back to job_apply_link (jobhunt bug #4)", async () => {
