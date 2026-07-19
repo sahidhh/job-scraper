@@ -34,7 +34,7 @@ export function JobStatusSelect({
 
   return (
     <Select value={statusId ?? undefined} onValueChange={onChange} disabled={isPending}>
-      <SelectTrigger className="h-8 w-36">
+      <SelectTrigger className="h-8 w-full min-w-0">
         <SelectValue placeholder="Set status" />
       </SelectTrigger>
       <SelectContent>

@@ -113,6 +113,13 @@ your AI relevance score plus any ranking bonuses you've configured (see "Ranking
 - **Show archived jobs:** Off by default
 - Companies you've muted (Notification preferences, §9) never appear here either
 
+Applying a filter re-runs the query on the server. While it's in flight the job
+list dims and an "Updating…" indicator appears next to the filters, so a filter
+change reads as "loading" rather than a frozen page. On desktop the job table is
+sized to fit the window — long titles, company names, and sources are truncated
+with an ellipsis (hover to see the full value) instead of forcing a horizontal
+scrollbar.
+
 ### Sorting
 Sorted by overall score descending, then posted date descending as a tiebreaker. There's no
 column-header sort yet — adjust ranking bonuses (below) or filters above to change what surfaces first.

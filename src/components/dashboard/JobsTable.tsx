@@ -5,13 +5,16 @@ import { useMemo, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { cn } from "@/lib/utils";
 import { setJobStatusAction } from "@/features/jobs/actions";
 import type { JobStatus, JobWithScore } from "@/features/jobs/domain/types";
+import { useDashboardNavigation } from "./DashboardNavigationProvider";
 import { JobCard } from "./JobCard";
 import { JobRow } from "./JobRow";
 
 export function JobsTable({ jobs, statuses }: { jobs: JobWithScore[]; statuses: JobStatus[] }) {
   const router = useRouter();
+  const { isPending: isNavPending } = useDashboardNavigation();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkStatusId, setBulkStatusId] = useState<string>("");
   const [isPending, startTransition] = useTransition();
@@ -84,63 +87,72 @@ export function JobsTable({ jobs, statuses }: { jobs: JobWithScore[]; statuses: 
     <div className="space-y-3">
       {bulkBar}
 
-      {/* Mobile card list */}
-      <div className="flex flex-col gap-2.5 md:hidden">
-        {jobs.length === 0
-          ? emptyState
-          : jobs.map((job) => (
-              <JobCard
-                key={job.id}
-                job={job}
-                statuses={statuses}
-                selected={selected.has(job.id)}
-                onToggleSelect={toggleSelect}
-              />
-            ))}
-      </div>
-
-      {/* Desktop table */}
-      <div className="hidden md:block">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-8">
-                <input
-                  type="checkbox"
-                  checked={allSelected}
-                  onChange={toggleSelectAll}
-                  aria-label="Select all jobs"
-                  className="size-4 accent-primary"
+      {/* Results dim + block interaction while a filter navigation is in flight */}
+      <div
+        className={cn(
+          "transition-opacity",
+          isNavPending && "pointer-events-none opacity-60",
+        )}
+        aria-busy={isNavPending}
+      >
+        {/* Mobile card list */}
+        <div className="flex flex-col gap-2.5 md:hidden">
+          {jobs.length === 0
+            ? emptyState
+            : jobs.map((job) => (
+                <JobCard
+                  key={job.id}
+                  job={job}
+                  statuses={statuses}
+                  selected={selected.has(job.id)}
+                  onToggleSelect={toggleSelect}
                 />
-              </TableHead>
-              <TableHead>Title</TableHead>
-              <TableHead>Company</TableHead>
-              <TableHead className="hidden md:table-cell">Location</TableHead>
-              <TableHead className="hidden md:table-cell">Source</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Score</TableHead>
-              <TableHead>Link</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {jobs.map((job) => (
-              <JobRow
-                key={job.id}
-                job={job}
-                statuses={statuses}
-                selected={selected.has(job.id)}
-                onToggleSelect={toggleSelect}
-              />
-            ))}
-            {jobs.length === 0 && (
+              ))}
+        </div>
+
+        {/* Desktop table */}
+        <div className="hidden md:block">
+          <Table className="table-fixed">
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={8} className="text-center text-muted-foreground">
-                  No jobs match the current filters.
-                </TableCell>
+                <TableHead className="w-10">
+                  <input
+                    type="checkbox"
+                    checked={allSelected}
+                    onChange={toggleSelectAll}
+                    aria-label="Select all jobs"
+                    className="size-4 accent-primary"
+                  />
+                </TableHead>
+                <TableHead className="w-[26%]">Title</TableHead>
+                <TableHead className="w-[16%]">Company</TableHead>
+                <TableHead className="hidden w-[13%] md:table-cell">Location</TableHead>
+                <TableHead className="hidden w-[10%] md:table-cell">Source</TableHead>
+                <TableHead className="w-[15%]">Status</TableHead>
+                <TableHead className="w-[12%]">Score</TableHead>
+                <TableHead className="w-16">Link</TableHead>
               </TableRow>
-            )}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {jobs.map((job) => (
+                <JobRow
+                  key={job.id}
+                  job={job}
+                  statuses={statuses}
+                  selected={selected.has(job.id)}
+                  onToggleSelect={toggleSelect}
+                />
+              ))}
+              {jobs.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center text-muted-foreground">
+                    No jobs match the current filters.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </div>
     </div>
   );
