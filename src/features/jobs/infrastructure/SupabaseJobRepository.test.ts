@@ -457,24 +457,18 @@ describe("SupabaseJobRepository", () => {
       expect(builder.eq).toHaveBeenCalledWith("job_scores.resume_version", 1);
       expect(builder.overlaps).toHaveBeenCalledWith("location_tags", ["remote"]);
       expect(builder.in).toHaveBeenCalledWith("source", ["greenhouse"]);
-      expect(builder.limit).toHaveBeenCalledWith(51);
+      // Fetches the bounded set (DASHBOARD_FETCH_CAP), then ranks in memory.
+      expect(builder.limit).toHaveBeenCalledWith(1000);
     });
 
-    it("sorts by overall_score (not ai_score) and maps overallScore/overallScoreReasons", async () => {
+    it("ranks by overall_score desc (nulls last), in memory, regardless of DB row order", async () => {
       const { client, builder } = mockSupabaseClient({
+        // Deliberately out of score order to prove the in-memory sort, not DB order.
         data: [
-          {
-            ...jobRow,
-            job_scores: [
-              {
-                keyword_score: 1,
-                ai_score: 0.85,
-                ai_reasoning: "Strong match",
-                overall_score: 0.9,
-                overall_score_reasons: ["preferred company"],
-              },
-            ],
-          },
+          { ...jobRow, id: "mid", job_scores: [{ keyword_score: 1, ai_score: 0.4, overall_score: 0.4, overall_score_reasons: [] }] },
+          { ...jobRow, id: "top", job_scores: [{ keyword_score: 1, ai_score: 0.85, overall_score: 0.9, overall_score_reasons: ["preferred company"] }] },
+          { ...jobRow, id: "unscored", job_scores: [] },
+          { ...jobRow, id: "high", job_scores: [{ keyword_score: 1, ai_score: 0.7, overall_score: 0.7, overall_score_reasons: [] }] },
         ],
         error: null,
       });
@@ -482,14 +476,33 @@ describe("SupabaseJobRepository", () => {
 
       const result = await repo.findForDashboard("role-selection-1", {}, 50, 1);
 
-      expect(result.jobs).toEqual([
+      // overall_score desc, unscored (null) last.
+      expect(result.jobs.map((j) => j.id)).toEqual(["top", "high", "mid", "unscored"]);
+      expect(result.jobs[0]).toEqual(
         expect.objectContaining({ overallScore: 0.9, overallScoreReasons: ["preferred company"] }),
-      ]);
-      expect(builder.order).toHaveBeenCalledWith("overall_score", {
-        ascending: false,
-        nullsFirst: false,
-        foreignTable: "job_scores",
+      );
+      // posted_at is the DB-side fetch order / tiebreaker; the broken
+      // foreignTable overall_score order must NOT be used.
+      expect(builder.order).toHaveBeenCalledWith("posted_at", { ascending: false });
+      expect(builder.order).not.toHaveBeenCalledWith(
+        "overall_score",
+        expect.objectContaining({ foreignTable: "job_scores" }),
+      );
+    });
+
+    it("breaks ties on equal overall_score by posted_at desc", async () => {
+      const { client } = mockSupabaseClient({
+        data: [
+          { ...jobRow, id: "older", posted_at: "2026-01-01T00:00:00Z", job_scores: [{ keyword_score: 1, ai_score: 0.5, overall_score: 0.5, overall_score_reasons: [] }] },
+          { ...jobRow, id: "newer", posted_at: "2026-02-01T00:00:00Z", job_scores: [{ keyword_score: 1, ai_score: 0.5, overall_score: 0.5, overall_score_reasons: [] }] },
+        ],
+        error: null,
       });
+      const repo = new SupabaseJobRepository(client);
+
+      const result = await repo.findForDashboard("role-selection-1", {}, 50, 1);
+
+      expect(result.jobs.map((j) => j.id)).toEqual(["newer", "older"]);
     });
 
     it("returns a job with null score fields when it has no job_scores row", async () => {
