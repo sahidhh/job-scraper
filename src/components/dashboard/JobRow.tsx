@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { TableCell, TableRow } from "@/components/ui/table";
 import type { JobStatus, JobWithScore } from "@/features/jobs/domain/types";
+import { INELIGIBLE_REASON_LABELS } from "@/features/scoring/domain/classifyEligibility";
 import { ApplicationDraftDialog } from "./ApplicationDraftDialog";
 import { JobStatusSelect } from "./JobStatusSelect";
 
@@ -98,6 +99,13 @@ export function JobRow({
               {tag}
             </Badge>
           ))}
+          {/* Only reachable with "Hide jobs I can't apply to" unticked, so the
+              badge explains why the row is normally absent (AD-50). */}
+          {job.ineligibleReason && (
+            <Badge variant="warning" title="You can't apply to this one -- shown because the eligibility filter is off">
+              {INELIGIBLE_REASON_LABELS[job.ineligibleReason]}
+            </Badge>
+          )}
         </TableCell>
         <TableCell className="hidden md:table-cell">
           <Badge variant="secondary">{job.source}</Badge>

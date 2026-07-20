@@ -4,16 +4,18 @@ import { FilterBar } from "@/components/dashboard/FilterBar";
 import { JobsTable } from "@/components/dashboard/JobsTable";
 import { Button } from "@/components/ui/button";
 import { SupabaseCompanyRepository } from "@/features/companies/infrastructure/SupabaseCompanyRepository";
-import type { JobFilters, JobStats } from "@/features/jobs/domain/types";
+import type { JobFilters } from "@/features/jobs/domain/types";
 import { SupabaseJobRepository } from "@/features/jobs/infrastructure/SupabaseJobRepository";
 import { SupabaseNotificationPreferencesRepository } from "@/features/notifications/infrastructure/SupabaseNotificationPreferencesRepository";
 import { SupabaseResumeRepository } from "@/features/resume/infrastructure/SupabaseResumeRepository";
 import { SupabaseRoleRepository } from "@/features/roles/infrastructure/SupabaseRoleRepository";
 import { SupabaseSettingsRepository } from "@/features/settings/infrastructure/SupabaseSettingsRepository";
+import { SCORING_QUEUE_CONFIG } from "@/features/scoring/domain/scoringQueueConfig";
 import type { ScrapeRun } from "@/features/sources/domain/types";
 import { SupabaseScrapeRunRepository } from "@/features/sources/infrastructure/SupabaseScrapeRunRepository";
 import type { JobSource, LocationTag } from "@/shared/domain/enums";
 import { JOB_SOURCES, LOCATION_TAGS } from "@/shared/domain/enums";
+import { optionalEnv } from "@/shared/infrastructure/env";
 import { createSupabaseServerClient } from "@/shared/infrastructure/supabase/server";
 
 const DEFAULT_JOBS_LIMIT = 50;
@@ -28,7 +30,8 @@ type DashboardSearchParams = {
   maxYears?: string;
   q?: string;
   remote?: string;
-  sponsoring?: string;
+  ineligible?: string;
+  lowmatch?: string;
   limit?: string;
 };
 
@@ -69,8 +72,12 @@ function parseFilters(params: DashboardSearchParams): JobFilters {
   if (params.remote === "1") {
     filters.remoteOnly = true;
   }
-  if (params.sponsoring === "1") {
-    filters.sponsoringOnly = true;
+  // Inverted vs the other flags: these are hidden unless asked for.
+  if (params.ineligible === "1") {
+    filters.includeIneligible = true;
+  }
+  if (params.lowmatch === "1") {
+    filters.includeLowMatch = true;
   }
 
   return filters;
@@ -92,7 +99,8 @@ function loadMoreHref(params: DashboardSearchParams, currentLimit: number): stri
   if (params.maxYears) next.set("maxYears", params.maxYears);
   if (params.q) next.set("q", params.q);
   if (params.remote) next.set("remote", params.remote);
-  if (params.sponsoring) next.set("sponsoring", params.sponsoring);
+  if (params.ineligible) next.set("ineligible", params.ineligible);
+  if (params.lowmatch) next.set("lowmatch", params.lowmatch);
   next.set("limit", String(currentLimit + DEFAULT_JOBS_LIMIT));
   return `/dashboard?${next.toString()}`;
 }
@@ -115,12 +123,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       </div>
 
       {activeSelection ? (
-        <DashboardContent
-          roleSelectionId={activeSelection.id}
-          expandedRoles={activeSelection.expandedRoles}
-          filters={parseFilters(params)}
-          params={params}
-        />
+        <DashboardContent roleSelectionId={activeSelection.id} filters={parseFilters(params)} params={params} />
       ) : (
         <Button asChild>
           <Link href="/roles">Choose a role</Link>
@@ -135,12 +138,10 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 // when only the filter-dependent JobsSection re-renders (P1 #2).
 async function DashboardContent({
   roleSelectionId,
-  expandedRoles,
   filters,
   params,
 }: {
   roleSelectionId: string;
-  expandedRoles: string[];
   filters: JobFilters;
   params: DashboardSearchParams;
 }) {
@@ -163,13 +164,7 @@ async function DashboardContent({
         </div>
       )}
       <Suspense fallback={<JobsSectionFallback />}>
-        <JobsSection
-          roleSelectionId={roleSelectionId}
-          expandedRoles={expandedRoles}
-          filters={filters}
-          params={params}
-          scrapeRuns={scrapeRuns}
-        />
+        <JobsSection roleSelectionId={roleSelectionId} filters={filters} params={params} scrapeRuns={scrapeRuns} />
       </Suspense>
     </div>
   );
@@ -186,13 +181,11 @@ function JobsSectionFallback() {
 
 async function JobsSection({
   roleSelectionId,
-  expandedRoles,
   filters,
   params,
   scrapeRuns,
 }: {
   roleSelectionId: string;
-  expandedRoles: string[];
   filters: JobFilters;
   params: DashboardSearchParams;
   scrapeRuns: ScrapeRun[];
@@ -222,21 +215,21 @@ async function JobsSection({
   const activeResume = await resumeRepository.getActive();
   const resumeVersion = activeResume?.version ?? 0;
 
-  const [{ jobs, hasMore }, matchingRoleCount, statuses] = await Promise.all([
-    jobRepository.findForDashboard(roleSelectionId, effectiveFilters, limit, resumeVersion),
-    jobRepository.countMatchingExpandedRoles(expandedRoles).catch(() => null),
+  // Same default as score.ts -- it decides which unscored jobs are genuinely
+  // queued for AI vs deliberately skipped below the gate.
+  const keywordThreshold = Number(optionalEnv("KEYWORD_THRESHOLD", "0.25"));
+
+  const [{ jobs, hasMore, total, stats }, statuses] = await Promise.all([
+    jobRepository.findForDashboard(
+      roleSelectionId,
+      effectiveFilters,
+      limit,
+      resumeVersion,
+      keywordThreshold,
+      SCORING_QUEUE_CONFIG.maxAiRetries,
+    ),
     jobRepository.listStatuses(),
   ]);
-
-  const jobStats = await jobRepository
-    .countJobStats(roleSelectionId, effectiveFilters, resumeVersion)
-    .catch((): JobStats => ({
-      scoredCount: jobs.filter((j) => j.aiScore !== null).length,
-      awaitingReviewCount: jobs.filter((j) => j.aiScore === null && j.keywordScore !== null).length,
-      notEligibleCount: jobs.filter((j) => j.aiScore === null && j.keywordScore === null).length,
-      pendingCount: jobs.filter((j) => j.aiScore === null).length,
-      total: matchingRoleCount ?? jobs.length,
-    }));
 
   const lastRun = scrapeRuns[0];
   const isHighMatchFilter = params.minScore !== undefined && Number(params.minScore) >= 0.75;
@@ -251,20 +244,37 @@ async function JobsSection({
 
   return (
     <div className="space-y-4">
-      {/* Compact stats row */}
+      {/* Compact stats row -- every number describes the filtered set below,
+          so "showing X of Y" and the breakdown always reconcile. */}
       <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
         <span className="text-sm">
-          <span className="font-semibold tabular-nums">{jobs.length}</span>
+          <span className="font-semibold tabular-nums">
+            {jobs.length < total ? `${jobs.length} of ${total}` : total}
+          </span>
           <span className="ml-1 text-muted-foreground">jobs</span>
         </span>
         <span className="text-sm">
-          <span className="font-semibold tabular-nums">{jobStats.scoredCount}</span>
-          <span className="ml-1 text-muted-foreground">scored</span>
+          <span className="font-semibold tabular-nums">{stats.scoredCount}</span>
+          <span className="ml-1 text-muted-foreground">AI-scored</span>
         </span>
-        {jobStats.pendingCount > 0 && (
+        {stats.lowMatchCount > 0 && (
           <span className="text-sm">
-            <span className="font-semibold tabular-nums">{jobStats.pendingCount}</span>
-            <span className="ml-1 text-muted-foreground">unscored</span>
+            <span className="font-semibold tabular-nums">{stats.lowMatchCount}</span>
+            <span className="ml-1 text-muted-foreground">
+              low match{effectiveFilters.includeLowMatch ? "" : " (hidden)"}
+            </span>
+          </span>
+        )}
+        {stats.awaitingAiCount > 0 && (
+          <span className="text-sm">
+            <span className="font-semibold tabular-nums">{stats.awaitingAiCount}</span>
+            <span className="ml-1 text-muted-foreground">queued</span>
+          </span>
+        )}
+        {stats.abandonedCount > 0 && (
+          <span className="text-sm" title={`AI scoring failed ${SCORING_QUEUE_CONFIG.maxAiRetries}x — no longer retried`}>
+            <span className="font-semibold tabular-nums">{stats.abandonedCount}</span>
+            <span className="ml-1 text-muted-foreground">gave up</span>
           </span>
         )}
         {lastRun && (
@@ -290,22 +300,18 @@ async function JobsSection({
             ? "No jobs scraped yet. The scrape pipeline runs via GitHub Actions — see Settings for details."
             : "No matching jobs yet for this role selection. Jobs are added by the next scheduled scrape run."}
         </div>
-      ) : jobStats.pendingCount > 0 ? (
-        <div className="space-y-1.5">
-          {jobStats.awaitingReviewCount > 0 && (
-            <div className="rounded-xl border border-border bg-muted/50 px-4 py-2.5 text-sm text-muted-foreground">
-              {jobStats.awaitingReviewCount} job{jobStats.awaitingReviewCount === 1 ? "" : "s"} awaiting AI review — keyword score shown for now.
-            </div>
-          )}
-          {jobStats.notEligibleCount > 0 && (
-            <div className="rounded-xl border border-border bg-muted/50 px-4 py-2.5 text-sm text-muted-foreground">
-              {jobStats.notEligibleCount} job{jobStats.notEligibleCount === 1 ? "" : "s"} outside the current role selection — not scored.
-            </div>
-          )}
-        </div>
-      ) : null}
+      ) : (
+        // Only the genuine AI-retry queue is called "awaiting" -- low-match
+        // jobs were skipped at the keyword gate on purpose and will never be
+        // AI-scored for this role/resume, so promising a review would be a lie.
+        stats.awaitingAiCount > 0 && (
+          <div className="rounded-xl border border-border bg-muted/50 px-4 py-2.5 text-sm text-muted-foreground">
+            {stats.awaitingAiCount} job{stats.awaitingAiCount === 1 ? "" : "s"} awaiting AI review — keyword score shown for now.
+          </div>
+        )
+      )}
 
-      <FilterBar hasAiScores={jobStats.scoredCount > 0} statuses={statuses} effectiveMaxYears={effectiveFilters.maxYears ?? null} />
+      <FilterBar hasAiScores={stats.scoredCount > 0} statuses={statuses} effectiveMaxYears={effectiveFilters.maxYears ?? null} />
       <JobsTable jobs={jobs} statuses={statuses} />
 
       {hasMore && (

@@ -55,13 +55,30 @@ export function FilterBar({
     router.push(`/dashboard?${params.toString()}`);
   }
 
-  // Generic "1"/absent boolean toggle (remote, sponsoring).
+  // Generic "1"/absent boolean toggle (remote).
   function toggleFlag(key: string, checked: boolean) {
     const params = new URLSearchParams(searchParams.toString());
     if (checked) {
       params.set(key, "1");
     } else {
       params.delete(key);
+    }
+    router.push(`/dashboard?${params.toString()}`);
+  }
+
+  // Inverted toggle: the checkbox is on by default, and ticking it *off* is
+  // what adds ?ineligible=1. Ineligible = jobs the candidate could never
+  // actually apply to (region-locked remote, onsite refusing sponsorship).
+  const hidingIneligible = searchParams.get("ineligible") !== "1";
+  const hidingLowMatch = searchParams.get("lowmatch") !== "1";
+
+  // Shared by both default-on filters: ticked = param absent.
+  function toggleHiddenByDefault(key: string, checked: boolean) {
+    const params = new URLSearchParams(searchParams.toString());
+    if (checked) {
+      params.delete(key);
+    } else {
+      params.set(key, "1");
     }
     router.push(`/dashboard?${params.toString()}`);
   }
@@ -94,7 +111,10 @@ export function FilterBar({
     searchParams.get("q"),
     searchParams.get("archived") === "1" ? "1" : null,
     searchParams.get("remote") === "1" ? "1" : null,
-    searchParams.get("sponsoring") === "1" ? "1" : null,
+    // Counted only when the user has *unticked* the default -- the chip means
+    // "you changed something from the default view".
+    searchParams.get("ineligible") === "1" ? "1" : null,
+    searchParams.get("lowmatch") === "1" ? "1" : null,
   ].filter(Boolean).length;
 
   function clearAll() {
@@ -212,11 +232,21 @@ export function FilterBar({
       <label className="flex cursor-pointer items-center gap-2 text-sm">
         <input
           type="checkbox"
-          checked={searchParams.get("sponsoring") === "1"}
-          onChange={(e) => toggleFlag("sponsoring", e.target.checked)}
+          checked={hidingIneligible}
+          onChange={(e) => toggleHiddenByDefault("ineligible", e.target.checked)}
           className="size-4 accent-primary"
         />
-        <span>Offers visa sponsorship</span>
+        <span>Hide jobs I can&rsquo;t apply to</span>
+      </label>
+
+      <label className="flex cursor-pointer items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          checked={hidingLowMatch}
+          onChange={(e) => toggleHiddenByDefault("lowmatch", e.target.checked)}
+          className="size-4 accent-primary"
+        />
+        <span>Hide low keyword matches</span>
       </label>
 
       <label className="flex cursor-pointer items-center gap-2 text-sm">
@@ -389,15 +419,28 @@ export function FilterBar({
 
         <label
           className="flex cursor-pointer items-center gap-1.5 text-sm text-muted-foreground"
-          title="Only jobs that explicitly offer visa sponsorship"
+          title="Hide region-locked remote jobs and onsite jobs that refuse visa sponsorship"
         >
           <input
             type="checkbox"
-            checked={searchParams.get("sponsoring") === "1"}
-            onChange={(e) => toggleFlag("sponsoring", e.target.checked)}
+            checked={hidingIneligible}
+            onChange={(e) => toggleHiddenByDefault("ineligible", e.target.checked)}
             className="size-4 accent-primary"
           />
-          Sponsoring
+          Can apply
+        </label>
+
+        <label
+          className="flex cursor-pointer items-center gap-1.5 text-sm text-muted-foreground"
+          title="Hide jobs below the keyword gate -- they are never sent for AI scoring"
+        >
+          <input
+            type="checkbox"
+            checked={hidingLowMatch}
+            onChange={(e) => toggleHiddenByDefault("lowmatch", e.target.checked)}
+            className="size-4 accent-primary"
+          />
+          Good match
         </label>
 
         <label className="flex cursor-pointer items-center gap-1.5 text-sm text-muted-foreground">

@@ -6,4 +6,11 @@ export interface SettingsRepository {
   /** Desired max years of experience for the dashboard filter, or null if unset. */
   getDesiredExperienceYears(): Promise<number | null>;
   setDesiredExperienceYears(years: number | null): Promise<void>;
+  /**
+   * When true, the scrape pipeline discards foreign onsite/hybrid postings
+   * that explicitly refuse visa sponsorship instead of storing them
+   * (AD-50, isUnsponsoredForeignOnsite). Defaults to false when unset.
+   */
+  getSkipUnsponsoredForeignJobs(): Promise<boolean>;
+  setSkipUnsponsoredForeignJobs(enabled: boolean): Promise<void>;
 }

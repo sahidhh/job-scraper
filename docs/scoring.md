@@ -35,8 +35,11 @@ This is pure set arithmetic over two string arrays — no external calls, runs f
 
 ## 2a. Eligibility Pre-Filter (`features/scoring/domain/classifyEligibility.ts`, scoring-accuracy session)
 
-Runs between the keyword gate and stage 2, on every job whose `keyword_score >= KEYWORD_THRESHOLD`.
-Deterministic, no AI call, no new columns -- operates only on `locationRaw`/`locationTags`/`description`.
+Evaluated **at ingest** and persisted as `jobs.ineligible_reason` (`geo_locked` | `no_sponsorship` |
+null = can apply, `docs/decisions.md` AD-50). Deterministic, no AI call -- operates only on
+`locationRaw`/`locationTags`/`description`. `scoreJob` reads the stored verdict between the keyword
+gate and stage 2, recomputing `classifyEligibility()` only for rows ingested before the column
+existed and not yet put through `npm run backfill:eligibility`.
 
 The candidate is India-based and needs visa sponsorship for any onsite role. A job is **hard-excluded**
 (skips stage 2 entirely, `ai_score` stays null, no tokens spent) when:
@@ -55,9 +58,23 @@ A remote-open job (no geo-lock phrase) and an onsite job that is merely *silent*
 pass this filter -- silence is unconfirmed eligibility, not disqualification; that distinction is
 instead handled by the stage-2 prompt (§3) capping such jobs below a "strong" score.
 
-`scripts/score.ts` logs a distinct `hard-excluded` line per job (recomputing the same pure
-`classifyEligibility()` call purely for logging, not persisted) and a per-run count, separate from
-"below keyword gate" and "AI call failed".
+`scripts/score.ts` logs a distinct `hard-excluded` line per job and a per-run count, separate from
+"below keyword gate" and "AI call failed". Post-AD-50 that count should be **0** on a backfilled
+database: `findUnscored` filters candidates on `ineligible_reason IS NULL`, so hard-excluded jobs
+never enter the queue. A non-zero count means un-backfilled rows are still in circulation.
+
+The dashboard reports the four "no AI score" populations separately rather than lumping them into
+one "awaiting review" number (`computeJobStats`): **low match** (below the keyword gate -- skipped on
+purpose, never retried), **queued** (cleared the gate, AI call not yet successful -- retried every
+run), **gave up** (retried `MAX_AI_RETRIES` times, default 3 -- see below), and **ineligible**
+(hard-excluded, or no score row at all).
+
+**Only "queued" costs tokens.** Low-match and hard-excluded jobs are rejected by `scoreJob`'s gate
+*before* the provider call, so re-processing them is free. A queued job, by contrast, is a real paid
+API call on every cron run -- which is why `findUnscored` also excludes rows whose `retry_count` has
+reached `MAX_AI_RETRIES` (AD-51). Before that cap, `retry_count` was incremented and reported but
+never enforced, so a deterministically-failing job was paid for indefinitely. Raise `MAX_AI_RETRIES`
+and re-run scoring to give up-and-abandoned jobs another attempt.
 
 ## 3. AI Scoring Flow (`features/scoring`, stage 2 — gated)
 

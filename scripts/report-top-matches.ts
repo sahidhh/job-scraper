@@ -1,6 +1,8 @@
 import { SupabaseJobRepository } from "@/features/jobs/infrastructure/SupabaseJobRepository";
 import { SupabaseResumeRepository } from "@/features/resume/infrastructure/SupabaseResumeRepository";
 import { SupabaseRoleRepository } from "@/features/roles/infrastructure/SupabaseRoleRepository";
+import { SCORING_QUEUE_CONFIG } from "@/features/scoring/domain/scoringQueueConfig";
+import { optionalEnv } from "@/shared/infrastructure/env";
 import { createSupabaseServiceClient } from "@/shared/infrastructure/supabaseClient";
 
 // Read-only report: the top-N scored jobs for the active role selection +
@@ -50,6 +52,10 @@ async function main(): Promise<void> {
     { minAiScore: 0 },
     FETCH_CAP,
     resumeVersion,
+    // Only feeds the JobStats breakdown, which this report ignores -- but keep
+    // it consistent with score.ts so the value is never misleading if used.
+    Number(optionalEnv("KEYWORD_THRESHOLD", "0.25")),
+    SCORING_QUEUE_CONFIG.maxAiRetries,
   );
   const jobs = [...scored].sort((a, b) => (b.overallScore ?? 0) - (a.overallScore ?? 0)).slice(0, limit);
 

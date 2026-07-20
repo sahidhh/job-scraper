@@ -57,3 +57,35 @@ The regression was fixed by replacing the single two-query pattern with a three-
 4. **Query 3+** (chunked): fetch full job rows for eligible IDs in chunks of 100 — each URL is bounded to ≤ 3,700 chars.
 
 No schema changes were required. See `docs/reports/findUnscored-regression-fix.md` for the full investigation and implementation record.
+
+## Second Loop: Hard-Excluded Jobs (AD-50, 2026-07-20)
+
+The fix above closed the loop for jobs below the keyword gate, but left a second one open.
+
+`scoreJob` skips stage 2 for two independent reasons: `keyword_score < threshold` **or**
+`classifyEligibility()` says the job can never be applied to (geo-locked remote,
+sponsorship-refusing onsite). Only the first was represented in `findUnscored`'s done-set. A
+hard-excluded job with `keyword_score >= threshold` therefore satisfied neither exclusion clause:
+
+```sql
+ai_score IS NOT NULL          -- false: stage 2 never ran
+OR keyword_score < $threshold -- false: it cleared the gate
+```
+
+so it was re-fetched, re-gated, re-written with the same null, and had `retry_count` incremented on
+**every** cron run, indefinitely. No AI tokens were spent (the eligibility check precedes the API
+call), which is why it never appeared as cost — it surfaced instead as a dashboard that reported
+258 jobs permanently "awaiting AI review".
+
+**Fix:** the eligibility verdict is now computed once at ingest and persisted as
+`jobs.ineligible_reason`, and `findUnscored`'s candidate query adds `ineligible_reason IS NULL`.
+Hard-excluded jobs never enter the queue at all, rather than being filtered out after the fact.
+
+Note the deliberate asymmetry with the first fix: below-gate jobs are excluded via the
+`job_scores` done-set (the gate depends on the resume, so a new resume version re-queues them),
+whereas ineligibility is a property of the posting itself and is excluded at the `jobs` level (a
+new resume changes nothing about whether you can get a visa).
+
+**Operational:** requires `npm run backfill:eligibility` once — `ineligible_reason` is NULL on rows
+predating migration `20260720000001`, and NULL reads as "eligible". The `hard-excluded` counter in
+`score.ts`'s run summary should read 0 afterwards; a non-zero value means un-backfilled rows remain.

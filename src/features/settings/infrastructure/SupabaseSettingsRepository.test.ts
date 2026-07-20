@@ -49,4 +49,42 @@ describe("SupabaseSettingsRepository", () => {
       expect(builder.eq).toHaveBeenCalledWith("key", "desired_experience_years");
     });
   });
+
+  describe("getSkipUnsponsoredForeignJobs", () => {
+    it("returns true only when the stored value is exactly true", async () => {
+      const { client, builder } = mockSupabaseClient({ data: { value: true }, error: null });
+      const repo = new SupabaseSettingsRepository(client);
+
+      expect(await repo.getSkipUnsponsoredForeignJobs()).toBe(true);
+      expect(builder.eq).toHaveBeenCalledWith("key", "skip_unsponsored_foreign_jobs");
+    });
+
+    it("defaults to false when no row exists", async () => {
+      const { client } = mockSupabaseClient({ data: null, error: null });
+      const repo = new SupabaseSettingsRepository(client);
+
+      expect(await repo.getSkipUnsponsoredForeignJobs()).toBe(false);
+    });
+
+    it("returns false for a non-boolean stored value rather than coercing it", async () => {
+      const { client } = mockSupabaseClient({ data: { value: "yes" }, error: null });
+      const repo = new SupabaseSettingsRepository(client);
+
+      expect(await repo.getSkipUnsponsoredForeignJobs()).toBe(false);
+    });
+  });
+
+  describe("setSkipUnsponsoredForeignJobs", () => {
+    it("upserts on conflict of key, storing false rather than deleting the row", async () => {
+      const { client, builder } = mockSupabaseClient({ data: null, error: null });
+      const repo = new SupabaseSettingsRepository(client);
+
+      await repo.setSkipUnsponsoredForeignJobs(false);
+
+      const upsertCall = builder.upsert!.mock.calls[0] as unknown[];
+      expect(upsertCall[0]).toMatchObject({ key: "skip_unsponsored_foreign_jobs", value: false });
+      expect(upsertCall[1]).toEqual({ onConflict: "key" });
+      expect(builder.delete).not.toHaveBeenCalled();
+    });
+  });
 });

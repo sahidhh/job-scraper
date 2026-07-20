@@ -7,8 +7,27 @@ import {
 import type { LocationTag } from "@/shared/domain/enums";
 import { containsToken } from "@/shared/domain/skills";
 
+/**
+ * Stable machine code for why a job can never be applied to, persisted as
+ * `jobs.ineligible_reason` at ingest (AD-50). The human `reason` string
+ * quotes the matched phrase and is for logs/UI; this is what queries filter
+ * on, so the values must stay stable even if the phrase lists change.
+ */
+export type IneligibleReason =
+  /** Remote, but restricted to a region/country the candidate can't work from. */
+  | "geo_locked"
+  /** Onsite/hybrid, with an explicit "we don't sponsor" signal. */
+  | "no_sponsorship";
+
+export const INELIGIBLE_REASON_LABELS: Record<IneligibleReason, string> = {
+  geo_locked: "Region-locked",
+  no_sponsorship: "No visa sponsorship",
+};
+
 export interface EligibilityResult {
   eligible: boolean;
+  /** Stable code for persistence/filtering, null when eligible. */
+  code: IneligibleReason | null;
   /** Human-readable exclusion reason (matched phrase), null when eligible. */
   reason: string | null;
 }
@@ -81,7 +100,7 @@ export function classifyEligibility(job: EligibilityJob): EligibilityResult {
   if (isRemote) {
     const matched = findPhrase(haystack, GEO_LOCK_EXCLUSION_PHRASES);
     if (matched) {
-      return { eligible: false, reason: `remote but geo-locked ("${matched}")` };
+      return { eligible: false, code: "geo_locked", reason: `remote but geo-locked ("${matched}")` };
     }
 
     const qualifier = extractRemoteLocationQualifier(job.locationRaw);
@@ -89,16 +108,17 @@ export function classifyEligibility(job: EligibilityJob): EligibilityResult {
     if (lockedCountry) {
       return {
         eligible: false,
+        code: "geo_locked",
         reason: `remote but restricted to a single country ("${job.locationRaw}", matched "${lockedCountry}")`,
       };
     }
 
-    return { eligible: true, reason: null };
+    return { eligible: true, code: null, reason: null };
   }
 
   const matched = findPhrase(haystack, NO_SPONSORSHIP_EXCLUSION_PHRASES);
   if (matched) {
-    return { eligible: false, reason: `onsite with no-sponsorship signal ("${matched}")` };
+    return { eligible: false, code: "no_sponsorship", reason: `onsite with no-sponsorship signal ("${matched}")` };
   }
-  return { eligible: true, reason: null };
+  return { eligible: true, code: null, reason: null };
 }

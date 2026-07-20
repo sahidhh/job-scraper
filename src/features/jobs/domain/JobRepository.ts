@@ -1,4 +1,4 @@
-import type { CreateStatusInput, Job, JobFilters, JobStats, JobsPage, JobStatus, NormalizedJob, UpdateStatusInput, UpsertResult } from "./types";
+import type { CreateStatusInput, Job, JobFilters, JobsPage, JobStatus, NormalizedJob, UpdateStatusInput, UpsertResult } from "./types";
 
 export interface JobRepository {
   /**
@@ -58,11 +58,21 @@ export interface JobRepository {
    * with keyword_score >= keywordThreshold and ai_score IS NULL (stage 2
    * failed -- retried on the next run). Jobs that were intentionally skipped
    * at the keyword gate (keyword_score < keywordThreshold, ai_score IS NULL)
-   * are excluded so they are not re-queued forever. Jobs scored against a
-   * prior resume version are included so they are re-scored against the
-   * current version. Feeds scripts/score.ts.
+   * are excluded so they are not re-queued forever, as are jobs with a
+   * non-null ineligible_reason (hard-excluded at ingest -- AD-50; they too
+   * were previously re-queued on every run) and jobs whose retry_count has
+   * reached maxAiRetries (AD-51 -- the only one of the three whose retries
+   * cost real tokens). Jobs scored against a prior resume version are
+   * included so they are re-scored against the current version. Feeds
+   * scripts/score.ts.
    */
-  findUnscored(roleSelectionId: string, expandedRoles: string[], resumeVersion: number, keywordThreshold: number): Promise<Job[]>;
+  findUnscored(
+    roleSelectionId: string,
+    expandedRoles: string[],
+    resumeVersion: number,
+    keywordThreshold: number,
+    maxAiRetries: number,
+  ): Promise<Job[]>;
 
   /**
    * Jobs joined with job_scores for (roleSelectionId, resumeVersion),
@@ -70,24 +80,20 @@ export interface JobRepository {
    * Scores from prior resume versions are excluded; those jobs appear as
    * unscored (pending re-score). `hasMore` indicates whether additional
    * rows exist beyond `limit`.
+   *
+   * Also returns `total` and `stats` for the whole filtered set (not the page
+   * slice). `keywordThreshold` splits "awaiting AI" from "deliberately skipped
+   * below the gate", and `maxAiRetries` splits it again from "gave up after
+   * repeated failures" (computeJobStats).
    */
-  findForDashboard(roleSelectionId: string, filters: JobFilters, limit: number, resumeVersion: number): Promise<JobsPage>;
-
-  /**
-   * Count of jobs whose title or description matches at least one of
-   * expandedRoles (same predicate as findUnscored), regardless of scoring
-   * status. Lets the dashboard show how many of the jobs it lists are
-   * actually eligible for scoring under the active role selection
-   * (reports/dashboard-scoring-discrepancy.md).
-   */
-  countMatchingExpandedRoles(expandedRoles: string[]): Promise<number>;
-
-  /**
-   * Dataset-level scoring stats for (roleSelectionId, resumeVersion).
-   * Counts are derived from job_scores across the full dataset — not from
-   * a single page — so they are stable regardless of the display limit.
-   */
-  countJobStats(roleSelectionId: string, filters: JobFilters, resumeVersion: number): Promise<JobStats>;
+  findForDashboard(
+    roleSelectionId: string,
+    filters: JobFilters,
+    limit: number,
+    resumeVersion: number,
+    keywordThreshold: number,
+    maxAiRetries: number,
+  ): Promise<JobsPage>;
 
   /**
    * Marks active jobs that haven't been seen for `thresholdDays` as inactive

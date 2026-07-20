@@ -1,0 +1,57 @@
+name: Maintenance script
+
+# Manual runner for the one-off/idempotent maintenance scripts (backfills,
+# sweeps, reports). These read config from process.env directly (AD-04) and
+# the repo has no dotenv, so GitHub Actions -- where the secrets already
+# live -- is the only place they can run without putting the service-role
+# key on a developer's machine.
+#
+# Always dispatched by hand, never scheduled: every script here is either a
+# one-off migration follow-up or an operator-triggered refresh.
+on:
+  workflow_dispatch:
+    inputs:
+      script:
+        description: Which maintenance script to run
+        required: true
+        type: choice
+        options:
+          # Recomputes jobs.ineligible_reason for every active job (AD-50).
+          # Required once after migration 20260720000001; idempotent, so it
+          # is also the refresh path after editing candidate-constraints.ts.
+          - backfill:eligibility
+          # Pre-existing one-offs, wired here so they stop being unrunnable.
+          - backfill:min-years
+          - backfill:fingerprints
+          - sweep:stranded-resumes
+          - report:matches
+
+# Backfills issue row-by-row UPDATEs; two concurrent runs of the same script
+# would race on the same rows. Queue rather than overlap. Mirrors the
+# scrape pipeline's concurrency guard.
+concurrency:
+  group: maintenance-script
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    environment: Production
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - run: npm ci
+
+      - run: npm run ${{ inputs.script }}
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          # report:matches ranks by overall_score and needs the same gate
+          # value score.ts uses so its stats line isn't misleading; the
+          # backfills ignore it. Harmless to pass to all of them.
+          KEYWORD_THRESHOLD: ${{ vars.KEYWORD_THRESHOLD || '0.25' }}
+          MAX_AI_RETRIES: ${{ vars.MAX_AI_RETRIES || '3' }}

@@ -328,6 +328,7 @@ export type Database = {
           first_seen_at: string
           id: string
           inactive_reason: string | null
+          ineligible_reason: string | null
           is_active: boolean
           last_seen_at: string
           location_raw: string
@@ -364,6 +365,7 @@ export type Database = {
           first_seen_at?: string
           id?: string
           inactive_reason?: string | null
+          ineligible_reason?: string | null
           is_active?: boolean
           last_seen_at?: string
           location_raw?: string
@@ -400,6 +402,7 @@ export type Database = {
           first_seen_at?: string
           id?: string
           inactive_reason?: string | null
+          ineligible_reason?: string | null
           is_active?: boolean
           last_seen_at?: string
           location_raw?: string
