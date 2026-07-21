@@ -41,10 +41,14 @@
 2. Jobs displayed in table sorted by overall_score descending (ai_score + configurable ranking
    bonuses, see UC-06b), then posted_at descending as tiebreaker
 3. User can filter by location, source, status, min/max score, max experience, a free-text
-   search over title/company, a "remote only" toggle (jobs tagged `remote`), and a "sponsoring"
-   toggle (only jobs whose `visa_sponsorship` is an explicit yes); muted companies, employment
-   types, and keywords (UC-13) are always excluded
-4. Pagination loads next page on demand
+   search over title/company, a "remote only" toggle (jobs tagged `remote`), and two toggles that
+   are **on by default**: "can apply" (hides a non-null `ineligible_reason`, AD-50) and "good match"
+   (hides jobs below `KEYWORD_THRESHOLD`, AD-51); muted companies, employment types, and keywords
+   (UC-13) are always excluded
+4. A stats row reports the filtered set's breakdown (AI-scored / low match / queued for AI / gave up
+   after repeated AI failures), computed from the same rows the table renders so the numbers always
+   reconcile. Only "queued" costs tokens on subsequent runs
+5. Pagination loads next page on demand
 
 **Postcondition:** User sees paginated, filtered job list with scores, ranking-bonus reasons, and statuses
 
@@ -221,15 +225,21 @@
 2. Query: jobs matching expanded_roles without a score for active role_selection
 3. For each job:
    a. `computeKeywordScore(resume.skills, job description + title)`
-   b. If score ≥ KEYWORD_THRESHOLD: `classifyEligibility(job)` -- hard-excludes a remote job
-      geo-locked to a region the candidate fails, or an onsite job with an explicit
-      no-sponsorship/authorization signal (candidate needs sponsorship for any onsite role);
-      an eligible job then gets the OpenRouter AI score call (15s timeout, 1 retry), whose system
-      prompt carries the candidate's constraints (location/sponsorship, experience, primary/secondary
-      stack) so seniority/stack mismatches and sponsorship-silent onsite postings score below "strong"
+   b. If score ≥ KEYWORD_THRESHOLD: check eligibility -- the verdict stored at ingest
+      (`jobs.ineligible_reason`, AD-50), falling back to `classifyEligibility(job)` for rows
+      predating that column. Hard-excludes a remote job geo-locked to a region the candidate
+      fails, or an onsite job with an explicit no-sponsorship/authorization signal (candidate
+      needs sponsorship for any onsite role); an eligible job then gets the OpenRouter AI score
+      call (15s timeout, 1 retry), whose system prompt carries the candidate's constraints
+      (location/sponsorship, experience, primary/secondary stack) so seniority/stack mismatches
+      and sponsorship-silent onsite postings score below "strong"
    c. Upsert `job_scores` row
 4. AI failures and hard-excluded jobs both leave `ai_score = null`; AI failures are retried on the
-   next cron run, hard-excluded jobs are not (they will fail eligibility again)
+   next cron run, hard-excluded jobs are not -- step 2's query filters on `ineligible_reason IS NULL`,
+   so they never re-enter the queue at all (before AD-50 they were re-fetched and re-written forever)
+5. An AI failure is retried at most `MAX_AI_RETRIES` times (default 3, AD-51): each retry is a real
+   paid API call -- the only skip reason that is -- so `retry_count >= MAX_AI_RETRIES` joins the
+   done-set and the job is reported as "gave up" rather than retried indefinitely
 
 ---
 

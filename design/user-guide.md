@@ -109,9 +109,12 @@ your AI relevance score plus any ranking bonuses you've configured (see "Ranking
 - **Score range:** Set a min AI score
 - **Max experience:** Hide jobs requiring more years than this (unknown requirement always shown)
 - **Remote:** Show only jobs tagged `remote`
-- **Sponsoring:** Show only jobs that *explicitly* offer visa sponsorship (jobs where sponsorship is unknown/unstated are hidden while this is on — most postings don't say either way, so expect a short list)
+- **Can apply** (labelled "Hide jobs I can't apply to" on mobile): **on by default.** Hides postings you could never actually take — remote roles locked to a region you can't work from, and onsite roles that explicitly refuse visa sponsorship. India and remote-open jobs are never hidden by this: neither needs a visa. Untick it to see the excluded jobs, each badged with the reason.
+- **Good match** ("Hide low keyword matches" on mobile): **on by default.** Hides jobs whose keyword overlap fell below `KEYWORD_THRESHOLD`. These were never sent to the AI and never will be, so they're noise in a list you scan for matches. The stats row still counts them as "N low match (hidden)" so you always know how many are behind the filter.
 - **Show archived jobs:** Off by default
 - Companies you've muted (Notification preferences, §9) never appear here either
+
+> Replaced the old **Sponsoring** filter, which required a posting to literally say "visa sponsorship". Almost none do, so it matched a handful of jobs while also hiding every India job — which needs no sponsorship at all.
 
 Applying a filter re-runs the query on the server. While it's in flight the job
 list dims and an "Updating…" indicator appears next to the filters, so a filter
@@ -119,6 +122,18 @@ change reads as "loading" rather than a frozen page. On desktop the job table is
 sized to fit the window — long titles, company names, and sources are truncated
 with an ellipsis (hover to see the full value) instead of forcing a horizontal
 scrollbar.
+
+### The stats row
+Above the filters: `X of Y jobs · N AI-scored · N low match · N queued`. Every number describes the
+currently filtered set, so they always reconcile with the list below.
+
+- **AI-scored** — the AI has rated this job against your resume.
+- **low match** — keyword overlap fell below `KEYWORD_THRESHOLD`, so the AI stage was skipped to save budget. These will **not** be scored later; the keyword score is all you get unless you upload a new resume. Hidden by default (above).
+- **queued** — cleared the keyword gate but the AI call hasn't succeeded yet. The next `npm run score` run retries these. **This is the only bucket that costs money** — every retry is a paid API call. Only these are described as "awaiting AI review".
+- **gave up** — the AI call failed `MAX_AI_RETRIES` times (default 3), so scoring stopped paying for it. Still visible, still keyword-scored; it just won't be retried. Bump `MAX_AI_RETRIES` and re-run scoring if you think the failures were transient.
+
+Only "queued" ever grows your bill. "low match", "gave up" and ineligible jobs are all terminal —
+they sit in the database costing nothing.
 
 ### Sorting
 Sorted by overall score descending, then posted date descending as a tiebreaker. There's no
@@ -206,6 +221,19 @@ Click "Remove" on any company row. The company is soft-deleted (set inactive) an
 ### Notes
 - Wellfound, RemoteOK, and MyCareersFuture require no company configuration — they are always scraped (Wellfound requires `WELLFOUND_FEED_URL` environment variable)
 - Only `active = true` companies are scraped on each cron run
+
+### Visa Sponsorship
+**Location:** `/settings` → Visa sponsorship
+
+One checkbox: **"Skip UAE/Singapore onsite jobs that say they won't sponsor a visa."** Off by default.
+When on, those postings are discarded during the scrape and never saved at all.
+
+- Only postings that *explicitly* rule sponsorship out are dropped. The vast majority never mention
+  sponsorship either way, and those are kept — UAE employers in particular sponsor by default and
+  rarely say so, so a stricter rule would wipe out your UAE pipeline.
+- India and remote jobs are never affected. Neither needs a visa.
+- Applies to future scrape runs only. Jobs already saved stay put — the dashboard's "Can apply"
+  filter is what hides them there.
 
 ---
 

@@ -1,3 +1,4 @@
+import type { IneligibleReason } from "@/features/scoring/domain/classifyEligibility";
 import type { JobSource, LocationTag } from "@/shared/domain/enums";
 import type { EmailCategory, EmailConfidence } from "./extractContactEmail";
 import type { EmploymentType, SeniorityLevel, WorkArrangement } from "./extractJobAttributes";
@@ -53,6 +54,11 @@ export interface Job {
   relocationAssistance: boolean | null;
   securityClearance: boolean;
   urgentHiring: boolean;
+  // Why this posting can never be applied to, computed once at ingest by
+  // classifyEligibility (AD-50). Null = eligible. Read by findUnscored (to
+  // keep hard-excluded jobs out of the scoring queue permanently) and by the
+  // dashboard's default-on "hide jobs I can't apply to" filter.
+  ineligibleReason: IneligibleReason | null;
 }
 
 // Input to JobRepository.upsertMany() -- a TaggedRawJob ready to persist.
@@ -94,6 +100,9 @@ export interface NormalizedJob {
   relocationAssistance?: boolean | null;
   securityClearance?: boolean;
   urgentHiring?: boolean;
+  // Eligibility verdict (AD-50). Optional on input; derived by ingestJobs
+  // from classifyEligibility, not by the scraper.
+  ineligibleReason?: IneligibleReason | null;
 }
 
 export interface UpsertResult {
@@ -103,6 +112,15 @@ export interface UpsertResult {
   // from a different source -- recorded in job_duplicates instead of
   // inserted as a new row (Phase 1 Task 1).
   duplicates: number;
+}
+
+// ingestJobs' own result: an UpsertResult plus the jobs it dropped before
+// persisting anything, so a scrape run can report them (AD-50).
+export interface IngestResult extends UpsertResult {
+  // Foreign onsite/hybrid jobs discarded because the posting explicitly
+  // refuses visa sponsorship and the `skip_unsponsored_foreign_jobs`
+  // setting is on. Always 0 when the setting is off.
+  skippedUnsponsored: number;
 }
 
 // A source rediscovery of an already-ingested logical job (job_duplicates
@@ -142,11 +160,16 @@ export interface JobFilters {
   sources?: JobSource[];
   // Keep only jobs tagged "remote" (hard narrowing; ANDs with locationTags).
   remoteOnly?: boolean;
-  // Keep only jobs that explicitly offer visa sponsorship
-  // (visa_sponsorship === true). Unlike the soft employment-type/maxYears
-  // filters, "unknown" (null) and false are excluded -- the user is asking to
-  // see sponsors only.
-  sponsoringOnly?: boolean;
+  // Show jobs the candidate can never actually apply to (non-null
+  // ineligible_reason: region-locked remote, or onsite refusing sponsorship).
+  // Defaults to false -- unlike every other filter here, the *absence* of
+  // this flag narrows the result set (AD-50).
+  includeIneligible?: boolean;
+  // Show jobs whose keyword score fell below KEYWORD_THRESHOLD. They were
+  // skipped at the gate and will never receive an AI score for this
+  // (role, resume), so they're hidden by default as noise. Same inverted
+  // sense as includeIneligible (AD-51).
+  includeLowMatch?: boolean;
   minAiScore?: number;
   // Restrict to jobs whose current status is one of these ids.
   statusIds?: string[];
@@ -209,6 +232,9 @@ export interface JobWithScore extends Omit<Job, JobWithScoreOmittedKeys> {
   // Bonuses applied to reach overallScore (e.g. "preferred company"), for
   // display next to the score. Null/empty when none applied.
   overallScoreReasons: string[] | null;
+  // Failed AI-scoring attempts for this (role, resume). Null when there's no
+  // score row yet. Drives the retry cap's "gave up" bucket (AD-51).
+  retryCount: number | null;
   minYears: number | null;
   // Current status (job_state join, P0). Null => unset, rendered as the
   // first seeded status (New) by the UI.
@@ -222,15 +248,39 @@ export interface JobWithScore extends Omit<Job, JobWithScoreOmittedKeys> {
 export interface JobsPage {
   jobs: JobWithScore[];
   hasMore: boolean;
+  // Visible rows before the page slice -- what "showing 50 of N" means.
+  // Bounded by DASHBOARD_FETCH_CAP.
+  total: number;
+  // Scoring breakdown of the filtered set. NOTE: computed *before* the
+  // low-match visibility cut, so `stats.total` can exceed `total` above --
+  // deliberately, since `stats.lowMatchCount` is what explains the gap
+  // ("N low match hidden"). Every other filter is already applied.
+  stats: JobStats;
 }
 
-// Dataset-level scoring stats for the active (role, resumeVersion) pair.
-// Derived from job_scores counts across the full dataset, not from a page
-// slice — prevents stats from changing as the user pages through results.
+// Scoring breakdown of a filtered job set. Computed from the rows the
+// dashboard actually matched (computeJobStats), so the numbers always
+// describe the list on screen -- the previous implementation counted every
+// job_scores row in the database and ignored the filters entirely, which is
+// how "50 jobs" ended up sitting next to "466 scored".
+//
+// The five buckets partition `total` exactly: every job is in exactly one.
 export interface JobStats {
+  // AI-scored: ai_score is set.
   scoredCount: number;
-  awaitingReviewCount: number;
-  notEligibleCount: number;
-  pendingCount: number; // awaitingReviewCount + notEligibleCount
+  // Genuinely queued for AI: cleared the keyword gate but the AI call hasn't
+  // succeeded yet (failed/pending). score.ts retries these -- each retry is a
+  // real, paid API call, which is why they're capped (see abandonedCount).
+  awaitingAiCount: number;
+  // Cleared the gate but the AI call failed MAX_AI_RETRIES times, so scoring
+  // gave up to stop burning tokens (AD-51). Terminal, like lowMatchCount --
+  // reported separately so a capped job is visible, not silently dropped.
+  abandonedCount: number;
+  // Keyword score below KEYWORD_THRESHOLD -- stage 2 was skipped on purpose
+  // and will never run for this (role, resume). NOT "awaiting" anything.
+  lowMatchCount: number;
+  // Hard-excluded by eligibility, or never scored at all (outside the role
+  // selection). Nothing is pending for these either.
+  ineligibleCount: number;
   total: number;
 }

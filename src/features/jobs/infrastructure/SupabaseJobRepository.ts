@@ -3,7 +3,6 @@ import type {
   CreateStatusInput,
   Job,
   JobFilters,
-  JobStats,
   JobsPage,
   JobStatus,
   JobWithScore,
@@ -12,6 +11,7 @@ import type {
   UpsertResult,
 } from "@/features/jobs/domain/types";
 import { computeFingerprint } from "@/features/jobs/application/computeFingerprint";
+import { computeJobStats } from "@/features/jobs/domain/computeJobStats";
 import { normalizeCompanyName } from "@/features/companies/domain/normalizeCompanyName";
 import type { JobSource } from "@/shared/domain/enums";
 import { buildRoleFilter, sanitizeRoleForFilter } from "@/shared/infrastructure/roleFilter";
@@ -35,6 +35,7 @@ interface DashboardJobRow extends Omit<JobRow, "description"> {
     ai_reasoning: string | null;
     overall_score: number | null;
     overall_score_reasons: string[] | null;
+    retry_count: number | null;
   }[];
   // job_state.job_id is a PK referencing jobs, so PostgREST returns at most
   // one embedded row; treated as an array for parity with job_scores.
@@ -44,7 +45,7 @@ interface DashboardJobRow extends Omit<JobRow, "description"> {
 // Columns selected in findForDashboard; mirrors DashboardJobRow but without
 // the embedded foreign-table columns (those are added by PostgREST).
 const DASHBOARD_SELECT =
-  "id, source, source_job_id, company_id, company_name, title, location_raw, location_tags, url, min_years, posted_at, first_seen_at, last_seen_at, updated_at, is_active, inactive_reason, job_scores!left(keyword_score, ai_score, ai_reasoning, overall_score, overall_score_reasons, role_selection_id), job_state!left(status_id, job_statuses(id, label, color))";
+  "id, source, source_job_id, company_id, company_name, title, location_raw, location_tags, url, min_years, posted_at, first_seen_at, last_seen_at, updated_at, is_active, inactive_reason, ineligible_reason, job_scores!left(keyword_score, ai_score, ai_reasoning, overall_score, overall_score_reasons, retry_count, role_selection_id), job_state!left(status_id, job_statuses(id, label, color))";
 
 const UPSERT_BATCH_SIZE = 500;
 
@@ -84,6 +85,7 @@ function toJob(row: JobRow): Job {
     relocationAssistance: row.relocation_assistance,
     securityClearance: row.security_clearance,
     urgentHiring: row.urgent_hiring,
+    ineligibleReason: row.ineligible_reason as Job["ineligibleReason"],
   };
 }
 
@@ -127,11 +129,13 @@ function toDashboardJob(row: DashboardJobRow): JobWithScore {
     updatedAt: row.updated_at,
     isActive: row.is_active,
     inactiveReason: row.inactive_reason,
+    ineligibleReason: row.ineligible_reason as JobWithScore["ineligibleReason"],
     keywordScore: score?.keyword_score ?? null,
     aiScore: score?.ai_score ?? null,
     aiReasoning: score?.ai_reasoning ?? null,
     overallScore: score?.overall_score ?? null,
     overallScoreReasons: score?.overall_score_reasons ?? null,
+    retryCount: score?.retry_count ?? null,
     minYears: row.min_years ?? null,
     statusId: status?.id ?? null,
     statusLabel: status?.label ?? null,
@@ -181,6 +185,7 @@ function toUpsertRow(job: NormalizedJob, fingerprint: string): JobInsertRow {
     relocation_assistance: job.relocationAssistance ?? null,
     security_clearance: job.securityClearance ?? false,
     urgent_hiring: job.urgentHiring ?? false,
+    ineligible_reason: job.ineligibleReason ?? null,
   };
 }
 
@@ -348,7 +353,13 @@ export class SupabaseJobRepository implements JobRepository {
     return keys;
   }
 
-  async findUnscored(roleSelectionId: string, expandedRoles: string[], resumeVersion: number, keywordThreshold: number): Promise<Job[]> {
+  async findUnscored(
+    roleSelectionId: string,
+    expandedRoles: string[],
+    resumeVersion: number,
+    keywordThreshold: number,
+    maxAiRetries: number,
+  ): Promise<Job[]> {
     const roleFilter = buildRoleFilter(expandedRoles);
     if (!roleFilter) return [];
 
@@ -357,26 +368,43 @@ export class SupabaseJobRepository implements JobRepository {
     // excluded from the scoring queue if either:
     //   (a) ai_score IS NOT NULL — fully scored, or
     //   (b) keyword_score < keywordThreshold — intentionally skipped at the
-    //       keyword gate (ai_score is null by design, not by failure).
-    // Rows with keyword_score >= keywordThreshold AND ai_score IS NULL are NOT
-    // excluded — they represent genuine AI call failures that should be retried.
+    //       keyword gate (ai_score is null by design, not by failure), or
+    //   (c) retry_count >= maxAiRetries — the AI call has failed this many
+    //       times, so we stop paying for it (AD-51). Unlike (a) and (b) this
+    //       one costs real tokens on every attempt, which is the whole reason
+    //       for the cap: retry_count was previously incremented and reported
+    //       but never actually enforced anywhere.
+    // Rows with keyword_score >= keywordThreshold, ai_score IS NULL and
+    // retry_count < maxAiRetries are NOT excluded — they represent recoverable
+    // AI call failures that should still be retried.
     const { data: doneRows, error: doneError } = await this.client
       .from("job_scores")
       .select("job_id")
       .eq("role_selection_id", roleSelectionId)
       .eq("resume_version", resumeVersion)
-      .or(`ai_score.not.is.null,keyword_score.lt.${keywordThreshold}`);
+      .or(
+        `ai_score.not.is.null,keyword_score.lt.${keywordThreshold},retry_count.gte.${maxAiRetries}`,
+      );
     if (doneError) throw toAppError(doneError);
     const doneIdSet = new Set((doneRows ?? []).map((row) => row.job_id));
 
-    // Query 2: fetch IDs of all active candidate jobs matching the role filter.
-    // Selecting only `id` keeps this query URL small regardless of how large
-    // the done set grows (fixes the 414 URI Too Long regression introduced when
-    // the scoring-loop fix expanded doneIds from ~50 to ~400+ entries).
+    // Query 2: fetch IDs of all active, eligible candidate jobs matching the
+    // role filter. Selecting only `id` keeps this query URL small regardless of
+    // how large the done set grows (fixes the 414 URI Too Long regression
+    // introduced when the scoring-loop fix expanded doneIds from ~50 to ~400+
+    // entries).
+    //
+    // `ineligible_reason is null` closes the second scoring loop (AD-50): a
+    // hard-excluded job (geo-locked remote / onsite refusing sponsorship) keeps
+    // ai_score null by design, but with keyword_score >= threshold it never
+    // entered the done-set above, so every run re-fetched it, re-ran the gate,
+    // re-wrote the same null, and bumped retry_count -- forever. Now that the
+    // verdict is persisted at ingest, those jobs never enter the queue at all.
     const { data: candidateRows, error: candidateError } = await this.client
       .from("jobs")
       .select("id")
       .eq("is_active", true)
+      .is("ineligible_reason", null)
       .or(roleFilter);
     if (candidateError) throw toAppError(candidateError);
 
@@ -399,69 +427,21 @@ export class SupabaseJobRepository implements JobRepository {
     return jobs;
   }
 
-  async countMatchingExpandedRoles(expandedRoles: string[]): Promise<number> {
-    const roleFilter = buildRoleFilter(expandedRoles);
-    if (!roleFilter) return 0;
-
-    const { count, error } = await this.client
-      .from("jobs")
-      .select("id", { count: "exact", head: true })
-      .eq("is_active", true)
-      .or(roleFilter);
-    if (error) throw toAppError(error);
-    return count ?? 0;
-  }
-
-  async countJobStats(roleSelectionId: string, _filters: JobFilters, resumeVersion: number): Promise<JobStats> {
-    // Q1: scored — ai_score IS NOT NULL for this (role, version)
-    const { count: scoredCount, error: scoredError } = await this.client
-      .from("job_scores")
-      .select("job_id", { count: "exact", head: true })
-      .eq("role_selection_id", roleSelectionId)
-      .eq("resume_version", resumeVersion)
-      .not("ai_score", "is", null);
-    if (scoredError) throw toAppError(scoredError);
-
-    // Q2: awaiting review — keyword_score IS NOT NULL, ai_score IS NULL
-    const { count: awaitingCount, error: awaitingError } = await this.client
-      .from("job_scores")
-      .select("job_id", { count: "exact", head: true })
-      .eq("role_selection_id", roleSelectionId)
-      .eq("resume_version", resumeVersion)
-      .not("keyword_score", "is", null)
-      .is("ai_score", null);
-    if (awaitingError) throw toAppError(awaitingError);
-
-    // Q3: total active jobs (full dataset, not page-scoped)
-    const { count: total, error: totalError } = await this.client
-      .from("jobs")
-      .select("id", { count: "exact", head: true })
-      .eq("is_active", true);
-    if (totalError) throw toAppError(totalError);
-
-    const scored = scoredCount ?? 0;
-    const awaitingReview = awaitingCount ?? 0;
-    const totalJobs = total ?? 0;
-    // notEligible = active jobs with no score row for this role+version
-    const notEligible = Math.max(0, totalJobs - scored - awaitingReview);
-
-    return {
-      scoredCount: scored,
-      awaitingReviewCount: awaitingReview,
-      notEligibleCount: notEligible,
-      pendingCount: awaitingReview + notEligible,
-      total: totalJobs,
-    };
-  }
-
-  async findForDashboard(roleSelectionId: string, filters: JobFilters, limit: number, resumeVersion: number): Promise<JobsPage> {
+  async findForDashboard(
+    roleSelectionId: string,
+    filters: JobFilters,
+    limit: number,
+    resumeVersion: number,
+    keywordThreshold: number,
+    maxAiRetries: number,
+  ): Promise<JobsPage> {
     // Status filtering is resolved to a set of job ids first (mirrors the
     // aiScored-exclusion pattern in findUnscored): PostgREST filters on an
     // embedded resource only null out the embedding, they don't drop the
     // parent row, so status restrict/exclude must constrain `jobs.id`.
     const statusScope = await this.resolveStatusScope(filters);
     if (statusScope.restrictToIds && statusScope.restrictToIds.length === 0) {
-      return { jobs: [], hasMore: false };
+      return { jobs: [], hasMore: false, total: 0, stats: computeJobStats([], keywordThreshold, maxAiRetries) };
     }
 
     // When minAiScore is set, use !inner so jobs without a qualifying score are
@@ -488,11 +468,14 @@ export class SupabaseJobRepository implements JobRepository {
       // (two overlaps) -- intentional: "remote only" is a hard narrowing.
       query = query.overlaps("location_tags", ["remote"]);
     }
-    if (filters.sponsoringOnly) {
-      // Only jobs with an explicit "yes" sponsorship signal (extracted at
-      // ingest). Deliberately excludes null ("unknown") and false, unlike the
-      // soft employment-type filter -- the user asked to *see only* sponsors.
-      query = query.eq("visa_sponsorship", true);
+    if (!filters.includeIneligible) {
+      // Default ON (AD-50): hide postings the candidate could never actually
+      // apply to -- region-locked remote roles, and onsite roles that
+      // explicitly refuse visa sponsorship. Replaces the old `sponsoringOnly`
+      // filter, which required an explicit "we sponsor" phrase and therefore
+      // matched almost nothing while also wrongly excluding India jobs, which
+      // need no sponsorship at all.
+      query = query.is("ineligible_reason", null);
     }
     if (filters.minAiScore !== undefined) {
       query = query.gte("job_scores.ai_score", filters.minAiScore);
@@ -557,10 +540,28 @@ export class SupabaseJobRepository implements JobRepository {
     if (error) throw toAppError(error);
 
     const ranked = (data ?? []).map(toDashboardJob).sort(byOverallScoreDescThenPostedAt);
-    const hasMore = ranked.length > limit;
-    const jobs = ranked.slice(0, limit);
 
-    return { jobs, hasMore };
+    // Stats are computed over the whole filtered set (`ranked`), not the page
+    // slice, and cost nothing extra -- the rows are already in memory. This
+    // replaces countJobStats, which ran three DB-wide COUNT queries that
+    // ignored `filters` entirely and so never agreed with the visible list.
+    // Computed BEFORE the low-match cut below so `lowMatchCount` can explain
+    // how many rows that cut is hiding.
+    const stats = computeJobStats(ranked, keywordThreshold, maxAiRetries);
+
+    // Low-match jobs are filtered in memory, not in SQL: keyword_score lives
+    // on the embedded job_scores resource, and a PostgREST filter there only
+    // nulls the embedding rather than dropping the parent row (the same
+    // constraint that forces the in-memory ranking above). Jobs with no score
+    // row at all are never cut here -- they're unscored, not low-match.
+    const visible = filters.includeLowMatch
+      ? ranked
+      : ranked.filter((job) => job.keywordScore === null || job.keywordScore >= keywordThreshold);
+
+    const hasMore = visible.length > limit;
+    const jobs = visible.slice(0, limit);
+
+    return { jobs, hasMore, total: visible.length, stats };
   }
 
   // Translates the status filter into job-id constraints:

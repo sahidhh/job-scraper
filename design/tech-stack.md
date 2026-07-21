@@ -83,6 +83,7 @@ These are explicitly banned by the project rules (CLAUDE.md):
 | `SOURCE_DISABLE_THRESHOLD` | `7` | Number of consecutive probe failures before a source is auto-disabled |
 | `MIN_HEALTHY_SOURCE_COUNT` | `3` | Minimum number of healthy sources; validation exits 1 if count drops below this |
 | `SCORING_STUCK_THRESHOLD_HOURS` | `48` | Hours an AI-retry job can wait before `score.ts` logs it as "stuck" (Phase 1 Task 6, `getScoringQueueReport`) |
+| `MAX_AI_RETRIES` | `3` | Failed AI-scoring attempts before a job is dropped from the retry queue (AD-51). A failed AI call is the only skip reason that spends tokens on every attempt, so this is the spend bound; raise it if your failures are mostly transient rate limits |
 | `SOURCE_STALE_HOURS` | `6` | Hours since a source's last scrape_runs row (of any status) before it's flagged `isStale` on `/analytics` -- distinct from an actively-failing source |
 | `JOB_EXPIRATION_DAYS` | `14` | Days since `last_seen_at` before `scrape.ts` soft-deactivates a job (`is_active = false`, `inactive_reason = 'expired'`) |
 | `REMOTEOK_DISABLED` | _(unset)_ | Set `true` or `1` to explicitly disable RemoteOK ingestion (set in `scrape.yml` — RemoteOK's near-zero yield made it not worth probing on every run, see `docs/remoteok-evaluation.md`) |
@@ -174,6 +175,7 @@ These are explicitly banned by the project rules (CLAUDE.md):
 | `validate-sources` | `tsx scripts/validate-sources.ts` | Probe all configured ATS boards; exit 1 only on new failures or healthy count below minimum |
 | `backfill:fingerprints` | `tsx scripts/backfill-fingerprints.ts` | One-off backfill of `jobs.fingerprint` for rows inserted before cross-source dedup (Phase 1 Task 1) |
 | `backfill:min-years` | `tsx scripts/backfill-min-years.ts` | (v1.2) Explicit name for the one-off `min_years` backfill (previously unwired) |
+| `backfill:eligibility` | `tsx scripts/backfill-eligibility.ts` | (AD-50) Recomputes `jobs.ineligible_reason` for every active job. Required once after migration `20260720000001`; idempotent, so it doubles as the refresh path after editing `candidate-constraints.ts` |
 | `sweep:stranded-resumes` | `tsx scripts/sweep-stranded-resumes.ts` | (bugfix session, decisions.md AD-40) Read-only report of Storage objects orphaned by the pre-fix upload ordering and any resume row with suspiciously short `parsed_text`; pass `--delete-orphaned-storage` to remove confirmed-orphaned Storage objects (rows are never auto-deleted) |
 | `discover:career-pages` | `tsx scripts/discover-career-pages.ts` | Manual run of ATS career-page discovery (Phase 2 Task 8) |
 | `setup:webhook` | `tsx scripts/setup-webhook.ts` | One-off Telegram webhook registration |
@@ -189,5 +191,17 @@ These are explicitly banned by the project rules (CLAUDE.md):
 | `rescore.yml` | `workflow_dispatch` only | `rescore.ts` (clears active scores) → `score.ts` (rebuilds). Shares the `scrape-pipeline` concurrency group so it never overlaps a scheduled scrape. Use after a scoring prompt/constraint change to re-rank the existing corpus (decisions.md AD-50) |
 | `validate-sources.yml` | `workflow_dispatch` only | `validate-sources.ts` — probe ATS boards, exit 1 only on new failures or sub-minimum healthy count |
 | `verify-production.yml` | `workflow_dispatch` only (v1.4, no schedule) | `verify-production.ts` — 24-check operational health report, uploads `verification-reports/` as a build artifact, exit 1 only on a critical-severity failure |
+| `maintenance.yml` | `workflow_dispatch` only (AD-50) | Runs one maintenance script chosen from a dropdown (`backfill:eligibility`, `backfill:min-years`, `backfill:fingerprints`, `sweep:stranded-resumes`, `report:matches`) |
+
+**Running maintenance scripts:** use `maintenance.yml`, not your laptop. Every script reads
+`process.env` directly (AD-04) and the repo intentionally has **no `dotenv`**, so a local
+`npm run backfill:*` fails with `Missing required environment variable: SUPABASE_URL` unless you
+export the secrets into your shell by hand. Dispatching the workflow runs them where
+`SUPABASE_SERVICE_ROLE_KEY` already lives, keeping the service-role key off developer machines
+(`design/security.md`'s service-role boundary).
+
+**Applying migrations:** likewise never run `supabase db push` locally (it needs `supabase link`,
+a project ref, and an access token). `migrate.yml` pushes migrations automatically on every push to
+`main`.
 
 The cron `schedule:` entry in `scrape.yml` is **active** (`0 */6 * * *`, every 6 hours), not commented out — whether this 6h cadence was a deliberate, approved choice is an open question tracked in `TECHNICAL_DEBT.md` #1, not a doc-accuracy issue.

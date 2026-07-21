@@ -7,6 +7,7 @@ import { classifyScrapeFailure } from "@/features/sources/domain/classifyScrapeF
 import { LlmCareersPageExtractor } from "@/features/sources/infrastructure/careersUrl/LlmCareersPageExtractor";
 import { fetchCareersUrlJobs } from "@/features/sources/infrastructure/careersUrl/CareersUrlScraper";
 import { SupabaseScrapeRunRepository } from "@/features/sources/infrastructure/SupabaseScrapeRunRepository";
+import { SupabaseSettingsRepository } from "@/features/settings/infrastructure/SupabaseSettingsRepository";
 import { createSupabaseServiceClient } from "@/shared/infrastructure/supabaseClient";
 
 // Manual-trigger entry point for the static careers-URL fetcher
@@ -30,6 +31,7 @@ async function main(): Promise<void> {
   const jobRepository = new SupabaseJobRepository(client);
   const roleRepository = new SupabaseRoleRepository(client);
   const scrapeRunRepository = new SupabaseScrapeRunRepository(client);
+  const settingsRepository = new SupabaseSettingsRepository(client);
 
   const roleSelection = await roleRepository.getActiveSelection();
   if (!roleSelection) {
@@ -45,7 +47,8 @@ async function main(): Promise<void> {
     const rawJobs = await fetchCareersUrlJobs(url, roles, { extractor });
 
     const filtered = tagLocations(rawJobs).filter((job) => hasAllowedLocation(job.locationTags));
-    const result = await ingestJobs(filtered, { jobRepository });
+    const skipUnsponsoredForeignJobs = await settingsRepository.getSkipUnsponsoredForeignJobs();
+    const result = await ingestJobs(filtered, { jobRepository, skipUnsponsoredForeignJobs });
 
     const completedAt = new Date();
     const durationMs = completedAt.getTime() - startedAt.getTime();
@@ -67,9 +70,11 @@ async function main(): Promise<void> {
       metadata: { url },
     });
 
+    const skippedNote =
+      result.skippedUnsponsored > 0 ? `, skipped ${result.skippedUnsponsored} unsponsored foreign` : "";
     console.log(
       `[scrape-careers-url] ${url}: found ${rawJobs.length}, kept ${filtered.length}, ` +
-        `inserted ${result.inserted}, updated ${result.updated}, duplicates ${result.duplicates} (${durationMs}ms)`,
+        `inserted ${result.inserted}, updated ${result.updated}, duplicates ${result.duplicates}${skippedNote} (${durationMs}ms)`,
     );
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

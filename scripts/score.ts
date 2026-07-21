@@ -3,7 +3,8 @@ import { SupabaseResumeRepository } from "@/features/resume/infrastructure/Supab
 import { SupabaseRoleRepository } from "@/features/roles/infrastructure/SupabaseRoleRepository";
 import { getScoringQueueReport } from "@/features/scoring/application/getScoringQueueReport";
 import { scoreJob } from "@/features/scoring/application/scoreJob";
-import { classifyEligibility } from "@/features/scoring/domain/classifyEligibility";
+import { INELIGIBLE_REASON_LABELS, classifyEligibility } from "@/features/scoring/domain/classifyEligibility";
+import { SCORING_QUEUE_CONFIG } from "@/features/scoring/domain/scoringQueueConfig";
 import { OpenRouterAiScoreProvider } from "@/features/scoring/infrastructure/OpenRouterAiScoreProvider";
 import { SupabaseRankingPreferencesRepository } from "@/features/scoring/infrastructure/SupabaseRankingPreferencesRepository";
 import { SupabaseScoreRepository } from "@/features/scoring/infrastructure/SupabaseScoreRepository";
@@ -59,8 +60,17 @@ async function main(): Promise<void> {
     );
   }
 
-  const jobs = await jobRepository.findUnscored(roleSelection.id, roleSelection.expandedRoles, resume.version, keywordThreshold);
-  console.log(`[score] scoring ${jobs.length} unscored/retry job(s) for role selection ${roleSelection.id}`);
+  const { maxAiRetries } = SCORING_QUEUE_CONFIG;
+  const jobs = await jobRepository.findUnscored(
+    roleSelection.id,
+    roleSelection.expandedRoles,
+    resume.version,
+    keywordThreshold,
+    maxAiRetries,
+  );
+  console.log(
+    `[score] scoring ${jobs.length} unscored/retry job(s) for role selection ${roleSelection.id} (AI retry cap ${maxAiRetries})`,
+  );
 
   // Composite ranking score bonuses (Theme 1); absent settings row means
   // aiScore-only ranking (computeOverallScore.ts defaults to zero bonuses).
@@ -81,10 +91,14 @@ async function main(): Promise<void> {
         rankingPreferences,
       });
 
-      // classifyEligibility is pure/cheap -- recomputed here (not persisted,
-      // no new column) purely to distinguish "hard-excluded" from "AI call
-      // failed" in the log, since both leave ai_score null on the row.
-      const eligibility = classifyEligibility(job);
+      // Distinguishes "hard-excluded" from "AI call failed" in the log, since
+      // both leave ai_score null on the row. findUnscored now filters out jobs
+      // with a stored ineligible_reason (AD-50), so this branch should only
+      // ever fire for rows ingested before that column existed and not yet
+      // put through `npm run backfill:eligibility`.
+      const eligibility = job.ineligibleReason
+        ? { eligible: false, reason: INELIGIBLE_REASON_LABELS[job.ineligibleReason] }
+        : classifyEligibility(job);
 
       if (result.keywordScore < keywordThreshold) {
         skippedBelowGate += 1;

@@ -48,6 +48,7 @@ const job: Job = {
   relocationAssistance: null,
   securityClearance: false,
   urgentHiring: false,
+  ineligibleReason: null,
 };
 
 const resume: Resume = {

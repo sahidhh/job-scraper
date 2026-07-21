@@ -58,6 +58,7 @@ const jobRow: JobRow = {
   relocation_assistance: null,
   security_clearance: false,
   urgent_hiring: false,
+  ineligible_reason: null,
 };
 
 describe("SupabaseJobRepository", () => {
@@ -204,7 +205,7 @@ describe("SupabaseJobRepository", () => {
       ]);
       const repo = new SupabaseJobRepository(client);
 
-      const result = await repo.findUnscored("role-selection-1", ["React Developer", "Frontend Engineer"], 1, 0.25);
+      const result = await repo.findUnscored("role-selection-1", ["React Developer", "Frontend Engineer"], 1, 0.25, 3);
 
       expect(result).toEqual([
         {
@@ -224,6 +225,7 @@ describe("SupabaseJobRepository", () => {
           updatedAt: "2025-12-01T00:00:00Z",
           isActive: true,
           inactiveReason: null,
+          ineligibleReason: null,
           minYears: null,
           canonicalCompanyName: "Acme",
           fingerprint: "test-fingerprint",
@@ -255,7 +257,7 @@ describe("SupabaseJobRepository", () => {
       // Query 1: done IDs query uses the scoring-loop-fix OR filter.
       expect(doneBuilder.eq).toHaveBeenCalledWith("role_selection_id", "role-selection-1");
       expect(doneBuilder.eq).toHaveBeenCalledWith("resume_version", 1);
-      expect(doneBuilder.or).toHaveBeenCalledWith("ai_score.not.is.null,keyword_score.lt.0.25");
+      expect(doneBuilder.or).toHaveBeenCalledWith("ai_score.not.is.null,keyword_score.lt.0.25,retry_count.gte.3");
 
       // Query 2: candidates query selects only id (no large NOT IN in URL).
       expect(candidatesBuilder.select).toHaveBeenCalledWith("id");
@@ -280,7 +282,7 @@ describe("SupabaseJobRepository", () => {
       ]);
       const repo = new SupabaseJobRepository(client);
 
-      const result = await repo.findUnscored("role-selection-1", ["React Developer"], 1, 0.25);
+      const result = await repo.findUnscored("role-selection-1", ["React Developer"], 1, 0.25, 3);
 
       expect(result).toEqual([expect.objectContaining({ id: "job-1" })]);
       expect(builders).toHaveLength(3);
@@ -291,11 +293,48 @@ describe("SupabaseJobRepository", () => {
       expect(chunkBuilder.not).not.toHaveBeenCalled();
     });
 
+    it("excludes rows at the AI retry cap so a deterministically-failing job stops costing tokens", async () => {
+      // AD-51: a failed AI call is the only skip reason that spends real
+      // tokens on every attempt. retry_count was tracked and reported long
+      // before anything enforced it.
+      const { client, builders } = queuedSupabaseClient([
+        { data: [], error: null },
+        { data: [{ id: "job-1" }], error: null },
+        { data: [jobRow], error: null },
+      ]);
+      const repo = new SupabaseJobRepository(client);
+
+      await repo.findUnscored("role-selection-1", ["React Developer"], 1, 0.25, 3);
+
+      const doneBuilder = builders[0] as Record<string, ReturnType<typeof vi.fn>>;
+      expect(doneBuilder.or).toHaveBeenCalledWith(
+        "ai_score.not.is.null,keyword_score.lt.0.25,retry_count.gte.3",
+      );
+    });
+
+    it("constrains candidates to eligible jobs so hard-excluded ones can never be re-queued", async () => {
+      // The second scoring loop (AD-50): a hard-excluded job keeps ai_score
+      // null by design, but with keyword_score >= threshold it never lands in
+      // the done-set either, so before this filter every run re-fetched it,
+      // re-wrote the same null and bumped retry_count -- forever.
+      const { client, builders } = queuedSupabaseClient([
+        { data: [], error: null },
+        { data: [{ id: "job-1" }], error: null },
+        { data: [jobRow], error: null },
+      ]);
+      const repo = new SupabaseJobRepository(client);
+
+      await repo.findUnscored("role-selection-1", ["React Developer"], 1, 0.25, 3);
+
+      const candidatesBuilder = builders[1] as Record<string, ReturnType<typeof vi.fn>>;
+      expect(candidatesBuilder.is).toHaveBeenCalledWith("ineligible_reason", null);
+    });
+
     it("returns an empty array without querying when there are no expanded roles", async () => {
       const { client, builders } = queuedSupabaseClient([]);
       const repo = new SupabaseJobRepository(client);
 
-      expect(await repo.findUnscored("role-selection-1", [], 1, 0.25)).toEqual([]);
+      expect(await repo.findUnscored("role-selection-1", [], 1, 0.25, 3)).toEqual([]);
       expect(builders).toHaveLength(0);
     });
 
@@ -307,7 +346,7 @@ describe("SupabaseJobRepository", () => {
       ]);
       const repo = new SupabaseJobRepository(client);
 
-      await repo.findUnscored("role-selection-1", ["Engineer, Backend (Remote)"], 1, 0.25);
+      await repo.findUnscored("role-selection-1", ["Engineer, Backend (Remote)"], 1, 0.25, 3);
 
       expect(builders).toHaveLength(2);
       const candidatesBuilder = builders[1] as Record<string, ReturnType<typeof vi.fn>>;
@@ -320,7 +359,7 @@ describe("SupabaseJobRepository", () => {
       const { client, builders } = queuedSupabaseClient([]);
       const repo = new SupabaseJobRepository(client);
 
-      expect(await repo.findUnscored("role-selection-1", ["(),.%*"], 1, 0.25)).toEqual([]);
+      expect(await repo.findUnscored("role-selection-1", ["(),.%*"], 1, 0.25, 3)).toEqual([]);
       expect(builders).toHaveLength(0);
     });
 
@@ -342,7 +381,7 @@ describe("SupabaseJobRepository", () => {
       ]);
       const repo = new SupabaseJobRepository(client);
 
-      const result = await repo.findUnscored("role-selection-1", ["React Developer"], 1, 0.25);
+      const result = await repo.findUnscored("role-selection-1", ["React Developer"], 1, 0.25, 3);
 
       expect(result.map((j) => j.id)).toEqual(["eligible-1", "eligible-2"]);
       expect(builders).toHaveLength(3);
@@ -369,7 +408,7 @@ describe("SupabaseJobRepository", () => {
       ]);
       const repo = new SupabaseJobRepository(client);
 
-      const result = await repo.findUnscored("role-selection-1", ["React Developer"], 1, 0.25);
+      const result = await repo.findUnscored("role-selection-1", ["React Developer"], 1, 0.25, 3);
 
       expect(result).toHaveLength(150);
       // 4 builders: done, candidates, chunk-1, chunk-2.
@@ -390,40 +429,10 @@ describe("SupabaseJobRepository", () => {
       ]);
       const repo = new SupabaseJobRepository(client);
 
-      const result = await repo.findUnscored("role-selection-1", ["React Developer"], 1, 0.25);
+      const result = await repo.findUnscored("role-selection-1", ["React Developer"], 1, 0.25, 3);
 
       expect(result).toEqual([]);
       expect(builders).toHaveLength(2);
-    });
-  });
-
-  describe("countMatchingExpandedRoles", () => {
-    it("returns the exact count from a head-only query filtered by expanded roles", async () => {
-      const { client, builder } = mockSupabaseClient({ data: null, error: null, count: 24 });
-      const repo = new SupabaseJobRepository(client);
-
-      const result = await repo.countMatchingExpandedRoles(["React Developer", "Frontend Engineer"]);
-
-      expect(result).toBe(24);
-      expect(builder.select).toHaveBeenCalledWith("id", { count: "exact", head: true });
-      expect(builder.or).toHaveBeenCalledWith(
-        "title.ilike.%React Developer%,description.ilike.%React Developer%,title.ilike.%Frontend Engineer%,description.ilike.%Frontend Engineer%",
-      );
-    });
-
-    it("returns 0 without querying when there are no expanded roles", async () => {
-      const { client, builders } = queuedSupabaseClient([]);
-      const repo = new SupabaseJobRepository(client);
-
-      expect(await repo.countMatchingExpandedRoles([])).toBe(0);
-      expect(builders).toHaveLength(0);
-    });
-
-    it("returns 0 when count is null", async () => {
-      const { client } = mockSupabaseClient({ data: null, error: null, count: null });
-      const repo = new SupabaseJobRepository(client);
-
-      expect(await repo.countMatchingExpandedRoles(["React Developer"])).toBe(0);
     });
   });
 
@@ -440,6 +449,8 @@ describe("SupabaseJobRepository", () => {
         { locationTags: ["remote"], sources: ["greenhouse"] },
         50,
         1,
+        0.25,
+        3,
       );
 
       expect(result).toEqual({
@@ -452,8 +463,12 @@ describe("SupabaseJobRepository", () => {
           }),
         ],
         hasMore: false,
+        total: 1,
+        stats: { scoredCount: 1, awaitingAiCount: 0, abandonedCount: 0, lowMatchCount: 0, ineligibleCount: 0, total: 1 },
       });
       expect(builder.eq).toHaveBeenCalledWith("job_scores.role_selection_id", "role-selection-1");
+      // Default-on eligibility filter (AD-50): includeIneligible was not set.
+      expect(builder.is).toHaveBeenCalledWith("ineligible_reason", null);
       expect(builder.eq).toHaveBeenCalledWith("job_scores.resume_version", 1);
       expect(builder.overlaps).toHaveBeenCalledWith("location_tags", ["remote"]);
       expect(builder.in).toHaveBeenCalledWith("source", ["greenhouse"]);
@@ -474,7 +489,7 @@ describe("SupabaseJobRepository", () => {
       });
       const repo = new SupabaseJobRepository(client);
 
-      const result = await repo.findForDashboard("role-selection-1", {}, 50, 1);
+      const result = await repo.findForDashboard("role-selection-1", {}, 50, 1, 0.25, 3);
 
       // overall_score desc, unscored (null) last.
       expect(result.jobs.map((j) => j.id)).toEqual(["top", "high", "mid", "unscored"]);
@@ -500,7 +515,7 @@ describe("SupabaseJobRepository", () => {
       });
       const repo = new SupabaseJobRepository(client);
 
-      const result = await repo.findForDashboard("role-selection-1", {}, 50, 1);
+      const result = await repo.findForDashboard("role-selection-1", {}, 50, 1, 0.25, 3);
 
       expect(result.jobs.map((j) => j.id)).toEqual(["newer", "older"]);
     });
@@ -512,7 +527,7 @@ describe("SupabaseJobRepository", () => {
       });
       const repo = new SupabaseJobRepository(client);
 
-      const result = await repo.findForDashboard("role-selection-1", {}, 50, 1);
+      const result = await repo.findForDashboard("role-selection-1", {}, 50, 1, 0.25, 3);
 
       expect(result.jobs).toEqual([
         expect.objectContaining({ keywordScore: null, aiScore: null, aiReasoning: null }),
@@ -526,7 +541,7 @@ describe("SupabaseJobRepository", () => {
       });
       const repo = new SupabaseJobRepository(client);
 
-      const result = await repo.findForDashboard("role-selection-1", { minAiScore: 0.8 }, 50, 1);
+      const result = await repo.findForDashboard("role-selection-1", { minAiScore: 0.8 }, 50, 1, 0.25, 3);
 
       expect(result.jobs).toEqual([expect.objectContaining({ id: "job-high" })]);
       expect(builder.gte).toHaveBeenCalledWith("job_scores.ai_score", 0.8);
@@ -542,7 +557,7 @@ describe("SupabaseJobRepository", () => {
       });
       const repo = new SupabaseJobRepository(client);
 
-      const result = await repo.findForDashboard("role-selection-1", {}, 1, 1);
+      const result = await repo.findForDashboard("role-selection-1", {}, 1, 1, 0.25, 3);
 
       expect(result.hasMore).toBe(true);
       expect(result.jobs).toHaveLength(1);
@@ -555,7 +570,7 @@ describe("SupabaseJobRepository", () => {
       });
       const repo = new SupabaseJobRepository(client);
 
-      await repo.findForDashboard("role-selection-1", { search: "react, dev" }, 50, 1);
+      await repo.findForDashboard("role-selection-1", { search: "react, dev" }, 50, 1, 0.25, 3);
 
       expect(builder.or).toHaveBeenCalledWith("title.ilike.%react dev%,company_name.ilike.%react dev%");
     });
@@ -567,7 +582,7 @@ describe("SupabaseJobRepository", () => {
       });
       const repo = new SupabaseJobRepository(client);
 
-      await repo.findForDashboard("role-selection-1", { excludeCompanies: ["Acme", "Globex"] }, 50, 1);
+      await repo.findForDashboard("role-selection-1", { excludeCompanies: ["Acme", "Globex"] }, 50, 1, 0.25, 3);
 
       expect(builder.not).toHaveBeenCalledWith("company_name", "ilike", "%Acme%");
       expect(builder.not).toHaveBeenCalledWith("company_name", "ilike", "%Globex%");
@@ -584,7 +599,7 @@ describe("SupabaseJobRepository", () => {
       });
       const repo = new SupabaseJobRepository(client);
 
-      await repo.findForDashboard("role-selection-1", { excludeKeywords: ["intern", "staffing"] }, 50, 1);
+      await repo.findForDashboard("role-selection-1", { excludeKeywords: ["intern", "staffing"] }, 50, 1, 0.25, 3);
 
       expect(builder.not).toHaveBeenCalledWith("title", "ilike", "%intern%");
       expect(builder.not).toHaveBeenCalledWith("title", "ilike", "%staffing%");
@@ -602,7 +617,7 @@ describe("SupabaseJobRepository", () => {
       });
       const repo = new SupabaseJobRepository(client);
 
-      await repo.findForDashboard("role-selection-1", { excludeEmploymentTypes: ["internship", "contract"] }, 50, 1);
+      await repo.findForDashboard("role-selection-1", { excludeEmploymentTypes: ["internship", "contract"] }, 50, 1, 0.25, 3);
 
       expect(builder.or).toHaveBeenCalledWith("employment_type.is.null,employment_type.not.in.(internship,contract)");
     });
@@ -624,7 +639,7 @@ describe("SupabaseJobRepository", () => {
       ]);
       const repo = new SupabaseJobRepository(client);
 
-      const result = await repo.findForDashboard("role-selection-1", {}, 50, 1);
+      const result = await repo.findForDashboard("role-selection-1", {}, 50, 1, 0.25, 3);
 
       expect(result.jobs).toEqual([
         expect.objectContaining({ id: "job-1", statusId: "s1", statusLabel: "Applied", statusColor: "#DCFCE7" }),
@@ -641,7 +656,7 @@ describe("SupabaseJobRepository", () => {
       ]);
       const repo = new SupabaseJobRepository(client);
 
-      await repo.findForDashboard("role-selection-1", { statusIds: ["s1"] }, 50, 1);
+      await repo.findForDashboard("role-selection-1", { statusIds: ["s1"] }, 50, 1, 0.25, 3);
 
       const [stateBuilder, mainBuilder] = builders as [
         Record<string, ReturnType<typeof vi.fn>>,
@@ -657,9 +672,14 @@ describe("SupabaseJobRepository", () => {
       ]);
       const repo = new SupabaseJobRepository(client);
 
-      const result = await repo.findForDashboard("role-selection-1", { statusIds: ["s1"] }, 50, 1);
+      const result = await repo.findForDashboard("role-selection-1", { statusIds: ["s1"] }, 50, 1, 0.25, 3);
 
-      expect(result).toEqual({ jobs: [], hasMore: false });
+      expect(result).toEqual({
+        jobs: [],
+        hasMore: false,
+        total: 0,
+        stats: { scoredCount: 0, awaitingAiCount: 0, abandonedCount: 0, lowMatchCount: 0, ineligibleCount: 0, total: 0 },
+      });
       expect(builders).toHaveLength(1);
     });
 
@@ -670,9 +690,93 @@ describe("SupabaseJobRepository", () => {
       });
       const repo = new SupabaseJobRepository(client);
 
-      await repo.findForDashboard("role-selection-1", { includeArchived: true }, 50, 1);
+      await repo.findForDashboard("role-selection-1", { includeArchived: true }, 50, 1, 0.25, 3);
 
       expect(builder.eq).not.toHaveBeenCalledWith("label", "Archived");
+    });
+
+    // AD-50: this is the only filter whose *absence* narrows the result set.
+    it("stops filtering on ineligible_reason when includeIneligible is set", async () => {
+      const { client, builder } = mockSupabaseClient({
+        data: [{ ...jobRow, job_scores: [], job_state: [] }],
+        error: null,
+      });
+      const repo = new SupabaseJobRepository(client);
+
+      await repo.findForDashboard("role-selection-1", { includeIneligible: true }, 50, 1, 0.25, 3);
+
+      expect(builder.is).not.toHaveBeenCalledWith("ineligible_reason", null);
+    });
+
+    it("reports stats over the whole filtered set, not just the returned page", async () => {
+      const { client } = mockSupabaseClient({
+        data: [
+          { ...jobRow, id: "scored", job_scores: [{ keyword_score: 0.9, ai_score: 0.8, overall_score: 0.8 }] },
+          { ...jobRow, id: "queued", job_scores: [{ keyword_score: 0.9, ai_score: null }] },
+          { ...jobRow, id: "low", job_scores: [{ keyword_score: 0.1, ai_score: null }] },
+        ],
+        error: null,
+      });
+      const repo = new SupabaseJobRepository(client);
+
+      const result = await repo.findForDashboard("role-selection-1", { includeLowMatch: true }, 1, 1, 0.25, 3);
+
+      expect(result.jobs).toHaveLength(1);
+      expect(result.total).toBe(3);
+      expect(result.stats).toEqual({
+        scoredCount: 1,
+        awaitingAiCount: 1,
+        abandonedCount: 0,
+        lowMatchCount: 1,
+        ineligibleCount: 0,
+        total: 3,
+      });
+    });
+
+    // AD-51: filtered in memory, since a PostgREST filter on the embedded
+    // job_scores.keyword_score would only null the embedding.
+    it("hides jobs below the keyword gate by default, but still counts them in stats", async () => {
+      const { client } = mockSupabaseClient({
+        data: [
+          { ...jobRow, id: "good", job_scores: [{ keyword_score: 0.9, ai_score: 0.8, overall_score: 0.8 }] },
+          { ...jobRow, id: "low", job_scores: [{ keyword_score: 0.1, ai_score: null }] },
+        ],
+        error: null,
+      });
+      const repo = new SupabaseJobRepository(client);
+
+      const result = await repo.findForDashboard("role-selection-1", {}, 50, 1, 0.25, 3);
+
+      expect(result.jobs.map((j) => j.id)).toEqual(["good"]);
+      expect(result.total).toBe(1);
+      // stats still describe the pre-cut set -- lowMatchCount is what explains
+      // the gap between stats.total and total.
+      expect(result.stats.lowMatchCount).toBe(1);
+      expect(result.stats.total).toBe(2);
+    });
+
+    it("keeps a job with no score row at all when hiding low matches -- unscored is not low-match", async () => {
+      const { client } = mockSupabaseClient({
+        data: [{ ...jobRow, id: "unscored", job_scores: [] }],
+        error: null,
+      });
+      const repo = new SupabaseJobRepository(client);
+
+      const result = await repo.findForDashboard("role-selection-1", {}, 50, 1, 0.25, 3);
+
+      expect(result.jobs.map((j) => j.id)).toEqual(["unscored"]);
+    });
+
+    it("shows low-match jobs when includeLowMatch is set", async () => {
+      const { client } = mockSupabaseClient({
+        data: [{ ...jobRow, id: "low", job_scores: [{ keyword_score: 0.1, ai_score: null }] }],
+        error: null,
+      });
+      const repo = new SupabaseJobRepository(client);
+
+      const result = await repo.findForDashboard("role-selection-1", { includeLowMatch: true }, 50, 1, 0.25, 3);
+
+      expect(result.jobs.map((j) => j.id)).toEqual(["low"]);
     });
   });
 

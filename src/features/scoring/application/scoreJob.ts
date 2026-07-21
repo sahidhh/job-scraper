@@ -3,7 +3,8 @@ import type { Resume } from "@/features/resume/domain/types";
 import type { AiScoreProvider } from "@/features/scoring/domain/AiScoreProvider";
 import type { EmbeddingScoreProvider } from "@/features/scoring/domain/EmbeddingScoreProvider";
 import type { ScoreRepository } from "@/features/scoring/domain/ScoreRepository";
-import { classifyEligibility } from "@/features/scoring/domain/classifyEligibility";
+import type { EligibilityResult } from "@/features/scoring/domain/classifyEligibility";
+import { INELIGIBLE_REASON_LABELS, classifyEligibility } from "@/features/scoring/domain/classifyEligibility";
 import type { NewJobScore, RankingPreferences } from "@/features/scoring/domain/types";
 import { validateNewJobScore } from "@/features/scoring/domain/validation";
 import { extractSkills, type SkillDictionaryEntry } from "@/shared/domain/skills";
@@ -20,6 +21,24 @@ export interface ScoreJobDeps {
   costPer1kTokens?: number | null;
   /** Composite-ranking-score bonuses (Theme 1); absent/empty = aiScore-only ranking. */
   rankingPreferences?: RankingPreferences;
+}
+
+/**
+ * The stored ingest-time verdict (jobs.ineligible_reason, AD-50) is
+ * authoritative when present; classifyEligibility is only recomputed for jobs
+ * that predate the column and haven't been through
+ * `npm run backfill:eligibility` yet. Keeping the fallback also lets scoreJob
+ * stay unit-testable from a plain Job fixture with no DB round trip.
+ */
+function resolveEligibility(job: Job): EligibilityResult {
+  if (job.ineligibleReason !== null) {
+    return {
+      eligible: false,
+      code: job.ineligibleReason,
+      reason: INELIGIBLE_REASON_LABELS[job.ineligibleReason],
+    };
+  }
+  return classifyEligibility(job);
 }
 
 /**
@@ -41,7 +60,7 @@ export async function scoreJob(
 ): Promise<NewJobScore> {
   const jobSkills = extractSkills(`${job.title}\n${job.description}`, deps.skillsDictionary);
   const keywordScore = computeKeywordScore(resume.skills, jobSkills);
-  const eligibility = classifyEligibility(job);
+  const eligibility = resolveEligibility(job);
 
   let aiScore: number | null = null;
   let aiReasoning: string | null = null;

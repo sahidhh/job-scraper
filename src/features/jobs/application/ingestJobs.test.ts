@@ -26,8 +26,6 @@ function makeRepository(): JobRepository {
     upsertMany: vi.fn().mockResolvedValue({ inserted: 0, updated: 0, duplicates: 0 }),
     findUnscored: vi.fn(),
     findForDashboard: vi.fn(),
-    countMatchingExpandedRoles: vi.fn(),
-    countJobStats: vi.fn(),
     markExpiredJobs: vi.fn(),
     listStatuses: vi.fn(),
     setJobStatus: vi.fn(),
@@ -60,7 +58,7 @@ describe("ingestJobs", () => {
 
     const result = await ingestJobs([makeJob()], { jobRepository });
 
-    expect(result).toEqual({ inserted: 2, updated: 0, duplicates: 1 });
+    expect(result).toEqual({ inserted: 2, updated: 0, duplicates: 1, skippedUnsponsored: 0 });
   });
 
   it("short-circuits without calling the repository when there are no jobs", async () => {
@@ -68,7 +66,7 @@ describe("ingestJobs", () => {
 
     const result = await ingestJobs([], { jobRepository });
 
-    expect(result).toEqual({ inserted: 0, updated: 0, duplicates: 0 });
+    expect(result).toEqual({ inserted: 0, updated: 0, duplicates: 0, skippedUnsponsored: 0 });
     expect(jobRepository.upsertMany).not.toHaveBeenCalled();
   });
 
@@ -142,6 +140,97 @@ describe("ingestJobs", () => {
       salaryMax: null,
       salaryPeriod: null,
       salaryConfidence: null,
+    });
+  });
+
+  // AD-50: the eligibility verdict is computed once here rather than
+  // recomputed on every scoring run.
+  describe("eligibility verdict", () => {
+    it("stores null for a job that can actually be applied to", async () => {
+      const jobRepository = makeRepository();
+
+      await ingestJobs([makeJob()], { jobRepository });
+
+      expect(vi.mocked(jobRepository.upsertMany).mock.calls[0]?.[0]?.[0]).toMatchObject({
+        ineligibleReason: null,
+      });
+    });
+
+    it("stores geo_locked for a region-restricted remote job", async () => {
+      const jobRepository = makeRepository();
+      const job = makeJob({ locationRaw: "Remote - Poland", locationTags: ["remote"] });
+
+      await ingestJobs([job], { jobRepository });
+
+      expect(vi.mocked(jobRepository.upsertMany).mock.calls[0]?.[0]?.[0]).toMatchObject({
+        ineligibleReason: "geo_locked",
+      });
+    });
+
+    it("stores no_sponsorship for an onsite job that refuses to sponsor", async () => {
+      const jobRepository = makeRepository();
+      const job = makeJob({
+        locationRaw: "Dubai",
+        locationTags: ["uae"],
+        description: "We do not sponsor visas for this role.",
+      });
+
+      await ingestJobs([job], { jobRepository });
+
+      expect(vi.mocked(jobRepository.upsertMany).mock.calls[0]?.[0]?.[0]).toMatchObject({
+        ineligibleReason: "no_sponsorship",
+      });
+    });
+  });
+
+  describe("skipUnsponsoredForeignJobs", () => {
+    // Explicit refusal, so extractJobAttributes sets visaSponsorship=false.
+    const refusing = makeJob({
+      sourceJobId: "refusing",
+      locationRaw: "Dubai",
+      locationTags: ["uae"],
+      description: "Visa sponsorship is not available.",
+    });
+
+    it("drops a foreign onsite job that refuses sponsorship and reports the count", async () => {
+      const jobRepository = makeRepository();
+
+      const result = await ingestJobs([refusing, makeJob({ sourceJobId: "ok" })], {
+        jobRepository,
+        skipUnsponsoredForeignJobs: true,
+      });
+
+      const passed = vi.mocked(jobRepository.upsertMany).mock.calls[0]?.[0];
+      expect(passed?.map((j) => j.sourceJobId)).toEqual(["ok"]);
+      expect(result.skippedUnsponsored).toBe(1);
+    });
+
+    it("stores the same job when the setting is off", async () => {
+      const jobRepository = makeRepository();
+
+      const result = await ingestJobs([refusing], { jobRepository });
+
+      expect(vi.mocked(jobRepository.upsertMany).mock.calls[0]?.[0]).toHaveLength(1);
+      expect(result.skippedUnsponsored).toBe(0);
+    });
+
+    it("keeps a foreign job that simply never mentions sponsorship", async () => {
+      const jobRepository = makeRepository();
+      const silent = makeJob({ locationRaw: "Dubai", locationTags: ["uae"] });
+
+      const result = await ingestJobs([silent], { jobRepository, skipUnsponsoredForeignJobs: true });
+
+      expect(vi.mocked(jobRepository.upsertMany).mock.calls[0]?.[0]).toHaveLength(1);
+      expect(result.skippedUnsponsored).toBe(0);
+    });
+
+    it("skips the repository entirely when every job was dropped", async () => {
+      const jobRepository = makeRepository();
+
+      const result = await ingestJobs([refusing], { jobRepository, skipUnsponsoredForeignJobs: true });
+
+      expect(jobRepository.upsertMany).not.toHaveBeenCalled();
+      expect(result).toEqual({ inserted: 0, updated: 0, duplicates: 0, skippedUnsponsored: 1 });
     });
   });
 });

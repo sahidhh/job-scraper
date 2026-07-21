@@ -4,6 +4,7 @@ import { CompaniesTable } from "@/components/settings/CompaniesTable";
 import { CompanyFormDialog } from "@/components/settings/CompanyFormDialog";
 import { ExperienceCard } from "@/components/settings/ExperienceCard";
 import { RankingPreferencesCard } from "@/components/settings/RankingPreferencesCard";
+import { SponsorshipCard } from "@/components/settings/SponsorshipCard";
 import { ThresholdsCard } from "@/components/settings/ThresholdsCard";
 import { SupabaseCompanyRepository } from "@/features/companies/infrastructure/SupabaseCompanyRepository";
 import { SupabaseRankingPreferencesRepository } from "@/features/scoring/infrastructure/SupabaseRankingPreferencesRepository";
@@ -17,10 +18,11 @@ export default async function SettingsSourcesPage() {
   const rankingPreferencesRepository = new SupabaseRankingPreferencesRepository(client);
   const settingsRepository = new SupabaseSettingsRepository(client);
 
-  const [companies, desiredExperience, rankingPreferences] = await Promise.all([
+  const [companies, desiredExperience, rankingPreferences, skipUnsponsoredForeignJobs] = await Promise.all([
     companyRepository.list(),
     settingsRepository.getDesiredExperienceYears(),
     rankingPreferencesRepository.getPreferences(),
+    settingsRepository.getSkipUnsponsoredForeignJobs(),
   ]);
 
   const keywordThreshold = optionalEnv("KEYWORD_THRESHOLD", "0.25");
@@ -38,6 +40,7 @@ export default async function SettingsSourcesPage() {
         </CardContent>
       </Card>
       <ExperienceCard current={desiredExperience} />
+      <SponsorshipCard current={skipUnsponsoredForeignJobs} />
       <ThresholdsCard keywordThreshold={keywordThreshold} notifyThreshold={notifyThreshold} />
       <RankingPreferencesCard current={rankingPreferences} />
     </section>

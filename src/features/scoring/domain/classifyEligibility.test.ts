@@ -20,7 +20,7 @@ describe("classifyEligibility", () => {
       }),
     );
 
-    expect(result).toEqual({ eligible: true, reason: null });
+    expect(result).toEqual({ eligible: true, code: null, reason: null });
   });
 
   // Eligibility table row 2: remote but geo-locked to a failing region -> EXCLUDE
@@ -47,7 +47,7 @@ describe("classifyEligibility", () => {
       }),
     );
 
-    expect(result).toEqual({ eligible: true, reason: null });
+    expect(result).toEqual({ eligible: true, code: null, reason: null });
   });
 
   // Eligibility table row 4: onsite + explicit no-sponsorship signal -> EXCLUDE
@@ -76,7 +76,7 @@ describe("classifyEligibility", () => {
       }),
     );
 
-    expect(result).toEqual({ eligible: true, reason: null });
+    expect(result).toEqual({ eligible: true, code: null, reason: null });
   });
 
   it("does not exclude a job mentioning India in a 'must reside in' style phrase", () => {
@@ -88,7 +88,7 @@ describe("classifyEligibility", () => {
       }),
     );
 
-    expect(result).toEqual({ eligible: true, reason: null });
+    expect(result).toEqual({ eligible: true, code: null, reason: null });
   });
 
   it("excludes an onsite job requiring citizens-only authorization", () => {
@@ -144,7 +144,7 @@ describe("classifyEligibility", () => {
       }),
     );
 
-    expect(result).toEqual({ eligible: true, reason: null });
+    expect(result).toEqual({ eligible: true, code: null, reason: null });
   });
 
   it("does not exclude 'Remote (Worldwide)' or other generic-open qualifiers", () => {
@@ -156,7 +156,7 @@ describe("classifyEligibility", () => {
       }),
     );
 
-    expect(result).toEqual({ eligible: true, reason: null });
+    expect(result).toEqual({ eligible: true, code: null, reason: null });
   });
 
   it("does not exclude a bare 'Remote' locationRaw with no qualifier", () => {
@@ -168,7 +168,7 @@ describe("classifyEligibility", () => {
       }),
     );
 
-    expect(result).toEqual({ eligible: true, reason: null });
+    expect(result).toEqual({ eligible: true, code: null, reason: null });
   });
 
   it("does not exclude a region name outside the curated country list (e.g. EMEA)", () => {
@@ -180,7 +180,7 @@ describe("classifyEligibility", () => {
       }),
     );
 
-    expect(result).toEqual({ eligible: true, reason: null });
+    expect(result).toEqual({ eligible: true, code: null, reason: null });
   });
 
   it("does not match a country name buried inside a longer free-form locationRaw that doesn't start with 'Remote'", () => {
@@ -192,7 +192,7 @@ describe("classifyEligibility", () => {
       }),
     );
 
-    expect(result).toEqual({ eligible: true, reason: null });
+    expect(result).toEqual({ eligible: true, code: null, reason: null });
   });
 
   it("does not false-match 'us'/'uk' short codes inside unrelated country names (Russia, Ukraine)", () => {
@@ -202,7 +202,7 @@ describe("classifyEligibility", () => {
     // Russia itself isn't in the curated list, so this stays eligible --
     // the point of this test is that it must NOT be excluded via a stray
     // "us" substring match inside "Russia".
-    expect(russia).toEqual({ eligible: true, reason: null });
+    expect(russia).toEqual({ eligible: true, code: null, reason: null });
   });
 
   it("treats hybrid postings as onsite for the sponsorship check", () => {

@@ -49,6 +49,7 @@ function makeJob(overrides: Partial<Job> = {}): Job {
     relocationAssistance: null,
     securityClearance: false,
     urgentHiring: false,
+    ineligibleReason: null,
     ...overrides,
   };
 }
@@ -266,6 +267,30 @@ describe("scoreJob", () => {
     });
 
     expect(result.keywordScore).toBe(1);
+    expect(result.aiScore).toBeNull();
+    expect(aiScoreProvider.score).not.toHaveBeenCalled();
+  });
+
+  it("honours a stored ineligible_reason without re-deriving it from the posting text", async () => {
+    // AD-50: the ingest-time verdict is authoritative. This job's own text
+    // reads as perfectly eligible, so if the stored value were ignored the
+    // AI call would fire.
+    const job = makeJob({
+      locationRaw: "Remote",
+      locationTags: ["remote"],
+      description: "Build UI with React and Node.js.",
+      ineligibleReason: "geo_locked",
+    });
+    const resume = makeResume({ skills: ["React", "Node.js"] });
+    const aiScoreProvider = makeAiProvider({ score: 0.9, reasoning: "should not be called", model: "x", tokensInput: null, tokensOutput: null });
+
+    const result = await scoreJob(job, resume, "role-selection-1", {
+      scoreRepository: makeScoreRepository(),
+      aiScoreProvider,
+      skillsDictionary: dictionary,
+      keywordThreshold: 0.5,
+    });
+
     expect(result.aiScore).toBeNull();
     expect(aiScoreProvider.score).not.toHaveBeenCalled();
   });

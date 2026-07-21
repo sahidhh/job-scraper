@@ -7,6 +7,8 @@ function makeRepository(): SettingsRepository {
   return {
     getDesiredExperienceYears: vi.fn(),
     setDesiredExperienceYears: vi.fn().mockResolvedValue(undefined),
+    getSkipUnsponsoredForeignJobs: vi.fn(),
+    setSkipUnsponsoredForeignJobs: vi.fn().mockResolvedValue(undefined),
   };
 }
 

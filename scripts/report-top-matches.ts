@@ -2,7 +2,9 @@ import type { JobFilters } from "@/features/jobs/domain/types";
 import { SupabaseJobRepository } from "@/features/jobs/infrastructure/SupabaseJobRepository";
 import { SupabaseResumeRepository } from "@/features/resume/infrastructure/SupabaseResumeRepository";
 import { SupabaseRoleRepository } from "@/features/roles/infrastructure/SupabaseRoleRepository";
+import { SCORING_QUEUE_CONFIG } from "@/features/scoring/domain/scoringQueueConfig";
 import { LOCATION_TAGS, type LocationTag } from "@/shared/domain/enums";
+import { optionalEnv } from "@/shared/infrastructure/env";
 import { createSupabaseServiceClient } from "@/shared/infrastructure/supabaseClient";
 
 // Read-only report: the top-N scored jobs for the active role selection +
@@ -10,10 +12,10 @@ import { createSupabaseServiceClient } from "@/shared/infrastructure/supabaseCli
 // /dashboard shows (SupabaseJobRepository.findForDashboard orders correctly as
 // of AD-49). Optional filters mirror the dashboard's. Never writes.
 //
-// Usage: tsx scripts/report-top-matches.ts [N] [--location <india|singapore|uae|remote>] [--remote] [--sponsoring]
+// Usage: tsx scripts/report-top-matches.ts [N] [--location <india|singapore|uae|remote>] [--remote]
 //   e.g. npm run report:matches -- 15 --location uae
 //        npm run report:matches -- --remote
-//        npm run report:matches -- --sponsoring
+// (--sponsoring was removed with the filter it wrapped -- AD-50.)
 const DEFAULT_LIMIT = 10;
 
 function pad(value: string, width: number): string {
@@ -51,8 +53,18 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
       filters.remoteOnly = true;
       labels.push("remote");
     } else if (token === "--sponsoring") {
-      filters.sponsoringOnly = true;
-      labels.push("sponsoring");
+      // AD-50 removed the filter this flag was built on: it required an
+      // explicit "visa sponsorship" phrase in the posting (null for nearly
+      // every job) and excluded India roles, which need no sponsorship. The
+      // report is already restricted to AI-scored jobs, and jobs the
+      // candidate can't apply to never get an AI score, so this list is
+      // eligibility-filtered by construction -- there is nothing left for
+      // the flag to narrow.
+      console.error(
+        "--sponsoring was removed (docs/decisions.md AD-50). Scored jobs are already eligibility-filtered;\n" +
+          "for a confirmed-sponsorship signal, see the sponsorship ranking bonus in Settings → Ranking.",
+      );
+      process.exit(1);
     } else if (/^\d+$/.test(token)) {
       limit = Number(token);
     } else {
@@ -81,7 +93,16 @@ async function main(): Promise<void> {
   const activeResume = await resumeRepository.getActive();
   const resumeVersion = activeResume?.version ?? 0;
 
-  const { jobs } = await jobRepository.findForDashboard(roleSelection.id, filters, limit, resumeVersion);
+  const { jobs } = await jobRepository.findForDashboard(
+    roleSelection.id,
+    filters,
+    limit,
+    resumeVersion,
+    // Both only feed the JobStats breakdown, which this report ignores -- but
+    // keep them consistent with score.ts so the values are never misleading.
+    Number(optionalEnv("KEYWORD_THRESHOLD", "0.25")),
+    SCORING_QUEUE_CONFIG.maxAiRetries,
+  );
 
   console.log(`\nTop ${limit} matches${label} — role "${roleSelection.primaryRole}", resume v${resumeVersion}`);
   console.log(`Generated: ${new Date().toISOString()}`);
