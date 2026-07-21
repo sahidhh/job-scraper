@@ -45,8 +45,8 @@ function ScoreBadge({
       <span className="text-xs text-muted-foreground">AI score</span>
       {overallScoreReasons && overallScoreReasons.length > 0 && (
         <span
-          className="text-xs text-muted-foreground"
-          title="Ranking bonuses applied on top of the AI score -- see Settings → Ranking"
+          className="block max-w-full truncate text-xs text-muted-foreground"
+          title={`Ranking bonuses applied on top of the AI score: ${overallScoreReasons.join(", ")} -- see Settings → Ranking`}
         >
           + {overallScoreReasons.join(", ")}
         </span>
@@ -80,35 +80,44 @@ export function JobRow({
             className="size-4 accent-primary"
           />
         </TableCell>
-        <TableCell className="max-w-xs">
+        <TableCell>
           <button
             type="button"
             onClick={() => setOpen((value) => !value)}
-            className="flex items-center gap-1 text-left font-medium hover:underline"
+            title={job.title}
+            className="flex w-full min-w-0 items-center gap-1 text-left font-medium hover:underline"
           >
             {open ? <ChevronDown className="h-4 w-4 shrink-0" /> : <ChevronRight className="h-4 w-4 shrink-0" />}
-            <span className="truncate">{job.title}</span>
+            <span className="min-w-0 flex-1 truncate">{job.title}</span>
           </button>
         </TableCell>
-        <TableCell className="max-w-[10rem]">
-          <span className="block truncate">{job.companyName}</span>
+        <TableCell>
+          <span className="block truncate" title={job.companyName}>
+            {job.companyName}
+          </span>
         </TableCell>
-        <TableCell className="hidden space-x-1 md:table-cell">
-          {job.locationTags.map((tag) => (
-            <Badge key={tag} variant="outline">
-              {tag}
-            </Badge>
-          ))}
-          {/* Only reachable with "Hide jobs I can't apply to" unticked, so the
-              badge explains why the row is normally absent (AD-50). */}
-          {job.ineligibleReason && (
-            <Badge variant="warning" title="You can't apply to this one -- shown because the eligibility filter is off">
-              {INELIGIBLE_REASON_LABELS[job.ineligibleReason]}
-            </Badge>
-          )}
+        <TableCell className="hidden overflow-hidden md:table-cell">
+          <div className="flex flex-wrap gap-1">
+            {job.locationTags.map((tag) => (
+              <Badge key={tag} variant="outline">
+                {tag}
+              </Badge>
+            ))}
+            {/* Only reachable with "Hide jobs I can't apply to" unticked, so the
+                badge explains why the row is normally absent (AD-50). Sits
+                inside the same flex-wrap as the location tags so it wraps with
+                them rather than overflowing the cell (#82). */}
+            {job.ineligibleReason && (
+              <Badge variant="warning" title="You can't apply to this one -- shown because the eligibility filter is off">
+                {INELIGIBLE_REASON_LABELS[job.ineligibleReason]}
+              </Badge>
+            )}
+          </div>
         </TableCell>
-        <TableCell className="hidden md:table-cell">
-          <Badge variant="secondary">{job.source}</Badge>
+        <TableCell className="hidden overflow-hidden md:table-cell">
+          <Badge variant="secondary" className="max-w-full truncate" title={job.source}>
+            {job.source}
+          </Badge>
         </TableCell>
         <TableCell>
           <JobStatusSelect jobId={job.id} statusId={job.statusId} statuses={statuses} />

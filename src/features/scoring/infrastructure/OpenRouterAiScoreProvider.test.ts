@@ -362,6 +362,21 @@ describe("OpenRouterAiScoreProvider", () => {
     expect(systemPrompt).toContain("silent on sponsorship");
   });
 
+  it("makes the preferred-geography signal subordinate to the sponsorship cap (a target location does not waive sponsorship)", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(chatResponse({ score: 0.8, reasoning: "ok" }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const provider = new OpenRouterAiScoreProvider();
+    await provider.score({ job, resume });
+
+    const body = JSON.parse((fetchMock.mock.calls[0]![1] as RequestInit).body as string);
+    const systemPrompt = body.messages[0].content as string;
+    // Preferred geographies (Singapore/UAE) must not let a sponsorship-silent
+    // onsite role score "strong" -- the whole point of this tightening.
+    expect(systemPrompt).toContain("does NOT waive the sponsorship requirement");
+    expect(systemPrompt).toContain("does not confirm sponsorship");
+  });
+
   it("does not truncate text within the default caps", async () => {
     const fetchMock = vi.fn().mockResolvedValue(chatResponse({ score: 0.8, reasoning: "ok" }));
     vi.stubGlobal("fetch", fetchMock);

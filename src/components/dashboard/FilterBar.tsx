@@ -1,7 +1,7 @@
 "use client";
 
-import { SlidersHorizontal, X } from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { Loader2, SlidersHorizontal, X } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import type { JobStatus } from "@/features/jobs/domain/types";
 import { JOB_SOURCES, LOCATION_TAGS } from "@/shared/domain/enums";
+import { useDashboardNavigation } from "./DashboardNavigationProvider";
 
 export function FilterBar({
   hasAiScores,
@@ -20,7 +21,7 @@ export function FilterBar({
   statuses: JobStatus[];
   effectiveMaxYears: number | null;
 }) {
-  const router = useRouter();
+  const { isPending, navigate } = useDashboardNavigation();
   const searchParams = useSearchParams();
   const [sheetOpen, setSheetOpen] = useState(false);
 
@@ -31,7 +32,7 @@ export function FilterBar({
     } else {
       params.set(key, value);
     }
-    router.push(`/dashboard?${params.toString()}`);
+    navigate(`/dashboard?${params.toString()}`);
   }
 
   function updateSearch(value: string) {
@@ -42,7 +43,7 @@ export function FilterBar({
     } else {
       params.set("q", trimmed);
     }
-    router.push(`/dashboard?${params.toString()}`);
+    navigate(`/dashboard?${params.toString()}`);
   }
 
   function toggleArchived(checked: boolean) {
@@ -52,7 +53,7 @@ export function FilterBar({
     } else {
       params.delete("archived");
     }
-    router.push(`/dashboard?${params.toString()}`);
+    navigate(`/dashboard?${params.toString()}`);
   }
 
   // Generic "1"/absent boolean toggle (remote).
@@ -63,7 +64,7 @@ export function FilterBar({
     } else {
       params.delete(key);
     }
-    router.push(`/dashboard?${params.toString()}`);
+    navigate(`/dashboard?${params.toString()}`);
   }
 
   // Inverted toggle: the checkbox is on by default, and ticking it *off* is
@@ -80,7 +81,7 @@ export function FilterBar({
     } else {
       params.set(key, "1");
     }
-    router.push(`/dashboard?${params.toString()}`);
+    navigate(`/dashboard?${params.toString()}`);
   }
 
   // Score stored as 0–1 decimal in URL, shown as 0–100 integer in the input
@@ -95,7 +96,7 @@ export function FilterBar({
         params.set("minScore", String(n / 100));
       }
     }
-    router.push(`/dashboard?${params.toString()}`);
+    navigate(`/dashboard?${params.toString()}`);
   }
 
   const minScoreDisplay = searchParams.get("minScore")
@@ -118,7 +119,7 @@ export function FilterBar({
   ].filter(Boolean).length;
 
   function clearAll() {
-    router.push("/dashboard");
+    navigate("/dashboard");
   }
 
   const controls = (
@@ -317,6 +318,12 @@ export function FilterBar({
             Clear
           </button>
         )}
+        {isPending && (
+          <span className="flex items-center gap-1 text-xs text-muted-foreground" aria-live="polite">
+            <Loader2 className="size-3.5 animate-spin" />
+            Updating…
+          </span>
+        )}
       </div>
 
       {/* Desktop: horizontal row */}
@@ -458,6 +465,12 @@ export function FilterBar({
             <X className="size-3.5" />
             Clear
           </Button>
+        )}
+        {isPending && (
+          <span className="flex items-center gap-1.5 text-sm text-muted-foreground" aria-live="polite">
+            <Loader2 className="size-4 animate-spin" />
+            Updating…
+          </span>
         )}
       </div>
     </>

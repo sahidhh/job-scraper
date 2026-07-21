@@ -116,6 +116,13 @@ your AI relevance score plus any ranking bonuses you've configured (see "Ranking
 
 > Replaced the old **Sponsoring** filter, which required a posting to literally say "visa sponsorship". Almost none do, so it matched a handful of jobs while also hiding every India job — which needs no sponsorship at all.
 
+Applying a filter re-runs the query on the server. While it's in flight the job
+list dims and an "Updating…" indicator appears next to the filters, so a filter
+change reads as "loading" rather than a frozen page. On desktop the job table is
+sized to fit the window — long titles, company names, and sources are truncated
+with an ellipsis (hover to see the full value) instead of forcing a horizontal
+scrollbar.
+
 ### The stats row
 Above the filters: `X of Y jobs · N AI-scored · N low match · N queued`. Every number describes the
 currently filtered set, so they always reconcile with the list below.

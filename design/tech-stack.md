@@ -162,6 +162,7 @@ These are explicitly banned by the project rules (CLAUDE.md):
 | `check:service-role-boundary` | `tsx scripts/checkServiceRoleBoundary.ts` | CI safety gate — ensures service role key not used in app/ |
 | `scrape` | `tsx scripts/scrape.ts` | Manual scrape run |
 | `score` | `tsx scripts/score.ts` | Manual scoring run |
+| `rescore` | `tsx scripts/rescore.ts` | Clears every `job_scores` row for the active role selection + resume version so the next `score` run rebuilds them under the current prompt/constraints (decisions.md AD-50). Delete-only; run `score` after, or use the `rescore.yml` workflow which chains both |
 | `notify` | `tsx scripts/notify.ts` | Manual notification run |
 | `doctor` | `tsx scripts/doctor.ts` | (v1.2) Checks required/optional env vars are set and does a live Supabase + Telegram connectivity check; exit 1 if anything required is missing or unreachable |
 | `verify:production` | `tsx scripts/verify-production.ts --format=all` | (v1.4) Runs the 24-check production verification framework; writes `verification-reports/latest.{md,json}` + console; exit 1 only on a critical-severity ("not ready") failure |
@@ -170,7 +171,7 @@ These are explicitly banned by the project rules (CLAUDE.md):
 | `diagnose` | `tsx scripts/report-sources.ts && tsx scripts/filter-analysis.ts` | (v1.2) Combined pipeline diagnostic: recent-run/failure report + fetch→location-filter→ingest funnel |
 | `analytics` | `tsx scripts/source-analytics.ts` | (v1.2) 30-day per-source quality report (keep rate, low performers) |
 | `report:sources` | `tsx scripts/report-sources.ts` | (v1.2) Explicit name for the last-run/recent-failures report (previously unwired) |
-| `report:matches` | `tsx scripts/report-top-matches.ts [N]` | Read-only terminal report of the top N (default 10) scored jobs for the active role selection + resume version, ordered by overall score — the same ranking `/dashboard` shows |
+| `report:matches` | `tsx scripts/report-top-matches.ts [N] [--location <india\|singapore\|uae\|remote>] [--remote] [--sponsoring]` | Read-only terminal report of the top N (default 10) scored jobs for the active role selection + resume version, ordered by overall score — the same ranking `/dashboard` shows. Optional filters (pass after `--`, e.g. `npm run report:matches -- 15 --location uae`) mirror the dashboard's location/remote/sponsoring filters |
 | `validate-sources` | `tsx scripts/validate-sources.ts` | Probe all configured ATS boards; exit 1 only on new failures or healthy count below minimum |
 | `backfill:fingerprints` | `tsx scripts/backfill-fingerprints.ts` | One-off backfill of `jobs.fingerprint` for rows inserted before cross-source dedup (Phase 1 Task 1) |
 | `backfill:min-years` | `tsx scripts/backfill-min-years.ts` | (v1.2) Explicit name for the one-off `min_years` backfill (previously unwired) |
@@ -187,6 +188,7 @@ These are explicitly banned by the project rules (CLAUDE.md):
 |---|---|---|
 | `ci.yml` | Push / PR to main | `typecheck` → `lint` → `test` → `build`; separate `check:service-role-boundary` job |
 | `scrape.yml` | Cron (every 6h) or `workflow_dispatch` | `scrape.ts` → `score.ts` → `notify.ts` |
+| `rescore.yml` | `workflow_dispatch` only | `rescore.ts` (clears active scores) → `score.ts` (rebuilds). Shares the `scrape-pipeline` concurrency group so it never overlaps a scheduled scrape. Use after a scoring prompt/constraint change to re-rank the existing corpus (decisions.md AD-50) |
 | `validate-sources.yml` | `workflow_dispatch` only | `validate-sources.ts` — probe ATS boards, exit 1 only on new failures or sub-minimum healthy count |
 | `verify-production.yml` | `workflow_dispatch` only (v1.4, no schedule) | `verify-production.ts` — 24-check operational health report, uploads `verification-reports/` as a build artifact, exit 1 only on a critical-severity failure |
 | `maintenance.yml` | `workflow_dispatch` only (AD-50) | Runs one maintenance script chosen from a dropdown (`backfill:eligibility`, `backfill:min-years`, `backfill:fingerprints`, `sweep:stranded-resumes`, `report:matches`) |

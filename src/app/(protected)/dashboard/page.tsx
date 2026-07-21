@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Suspense } from "react";
+import { DashboardNavigationProvider } from "@/components/dashboard/DashboardNavigationProvider";
 import { FilterBar } from "@/components/dashboard/FilterBar";
 import { JobsTable } from "@/components/dashboard/JobsTable";
 import { Button } from "@/components/ui/button";
@@ -311,8 +312,10 @@ async function JobsSection({
         )
       )}
 
-      <FilterBar hasAiScores={stats.scoredCount > 0} statuses={statuses} effectiveMaxYears={effectiveFilters.maxYears ?? null} />
-      <JobsTable jobs={jobs} statuses={statuses} />
+      <DashboardNavigationProvider>
+        <FilterBar hasAiScores={stats.scoredCount > 0} statuses={statuses} effectiveMaxYears={effectiveFilters.maxYears ?? null} />
+        <JobsTable jobs={jobs} statuses={statuses} />
+      </DashboardNavigationProvider>
 
       {hasMore && (
         <Button asChild variant="outline" size="sm">

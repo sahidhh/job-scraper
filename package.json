@@ -14,6 +14,7 @@
     "verify": "npm run typecheck && npm run lint && npm run test && npm run build",
     "scrape": "tsx scripts/scrape.ts",
     "score": "tsx scripts/score.ts",
+    "rescore": "tsx scripts/rescore.ts",
     "notify": "tsx scripts/notify.ts",
     "doctor": "tsx scripts/doctor.ts",
     "verify:production": "tsx scripts/verify-production.ts --format=all",

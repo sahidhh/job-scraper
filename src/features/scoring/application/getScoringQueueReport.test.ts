@@ -7,6 +7,7 @@ describe("getScoringQueueReport", () => {
     const scoreRepository: ScoreRepository = {
       insertScore: vi.fn(),
       hasScore: vi.fn(),
+      deleteScores: vi.fn(),
       findAwaitingAi: vi.fn().mockResolvedValue([{ jobId: "job-1", scoredAt: "2026-01-01T00:00:00Z", retryCount: 2 }]),
     };
 
@@ -26,6 +27,7 @@ describe("getScoringQueueReport", () => {
     const scoreRepository: ScoreRepository = {
       insertScore: vi.fn(),
       hasScore: vi.fn(),
+      deleteScores: vi.fn(),
       findAwaitingAi: vi.fn().mockResolvedValue([
         { jobId: "job-1", scoredAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(), retryCount: 1 },
       ]),
