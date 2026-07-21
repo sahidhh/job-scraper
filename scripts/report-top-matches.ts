@@ -15,7 +15,7 @@ import { createSupabaseServiceClient } from "@/shared/infrastructure/supabaseCli
 // Usage: tsx scripts/report-top-matches.ts [N] [--location <india|singapore|uae|remote>] [--remote]
 //   e.g. npm run report:matches -- 15 --location uae
 //        npm run report:matches -- --remote
-// (--sponsoring was removed with the filter it wrapped -- AD-50.)
+// (--sponsoring was removed with the filter it wrapped -- AD-51.)
 const DEFAULT_LIMIT = 10;
 
 function pad(value: string, width: number): string {
@@ -53,7 +53,7 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
       filters.remoteOnly = true;
       labels.push("remote");
     } else if (token === "--sponsoring") {
-      // AD-50 removed the filter this flag was built on: it required an
+      // AD-51 removed the filter this flag was built on: it required an
       // explicit "visa sponsorship" phrase in the posting (null for nearly
       // every job) and excluded India roles, which need no sponsorship. The
       // report is already restricted to AI-scored jobs, and jobs the
@@ -61,7 +61,7 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
       // eligibility-filtered by construction -- there is nothing left for
       // the flag to narrow.
       console.error(
-        "--sponsoring was removed (docs/decisions.md AD-50). Scored jobs are already eligibility-filtered;\n" +
+        "--sponsoring was removed (docs/decisions.md AD-51). Scored jobs are already eligibility-filtered;\n" +
           "for a confirmed-sponsorship signal, see the sponsorship ranking bonus in Settings → Ranking.",
       );
       process.exit(1);

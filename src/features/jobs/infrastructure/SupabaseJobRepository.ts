@@ -370,7 +370,7 @@ export class SupabaseJobRepository implements JobRepository {
     //   (b) keyword_score < keywordThreshold — intentionally skipped at the
     //       keyword gate (ai_score is null by design, not by failure), or
     //   (c) retry_count >= maxAiRetries — the AI call has failed this many
-    //       times, so we stop paying for it (AD-51). Unlike (a) and (b) this
+    //       times, so we stop paying for it (AD-52). Unlike (a) and (b) this
     //       one costs real tokens on every attempt, which is the whole reason
     //       for the cap: retry_count was previously incremented and reported
     //       but never actually enforced anywhere.
@@ -394,7 +394,7 @@ export class SupabaseJobRepository implements JobRepository {
     // introduced when the scoring-loop fix expanded doneIds from ~50 to ~400+
     // entries).
     //
-    // `ineligible_reason is null` closes the second scoring loop (AD-50): a
+    // `ineligible_reason is null` closes the second scoring loop (AD-51): a
     // hard-excluded job (geo-locked remote / onsite refusing sponsorship) keeps
     // ai_score null by design, but with keyword_score >= threshold it never
     // entered the done-set above, so every run re-fetched it, re-ran the gate,
@@ -469,7 +469,7 @@ export class SupabaseJobRepository implements JobRepository {
       query = query.overlaps("location_tags", ["remote"]);
     }
     if (!filters.includeIneligible) {
-      // Default ON (AD-50): hide postings the candidate could never actually
+      // Default ON (AD-51): hide postings the candidate could never actually
       // apply to -- region-locked remote roles, and onsite roles that
       // explicitly refuse visa sponsorship. Replaces the old `sponsoringOnly`
       // filter, which required an explicit "we sponsor" phrase and therefore

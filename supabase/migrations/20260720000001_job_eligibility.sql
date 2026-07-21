@@ -1,4 +1,4 @@
--- Persisted eligibility verdict (docs/decisions.md AD-50). Until now
+-- Persisted eligibility verdict (docs/decisions.md AD-51). Until now
 -- classifyEligibility.ts was recomputed in memory at scoring time and thrown
 -- away, which meant (a) the dashboard could not filter on it, and (b)
 -- findUnscored had no way to exclude hard-excluded jobs, so every score run

@@ -59,9 +59,9 @@ export interface JobRepository {
    * failed -- retried on the next run). Jobs that were intentionally skipped
    * at the keyword gate (keyword_score < keywordThreshold, ai_score IS NULL)
    * are excluded so they are not re-queued forever, as are jobs with a
-   * non-null ineligible_reason (hard-excluded at ingest -- AD-50; they too
+   * non-null ineligible_reason (hard-excluded at ingest -- AD-51; they too
    * were previously re-queued on every run) and jobs whose retry_count has
-   * reached maxAiRetries (AD-51 -- the only one of the three whose retries
+   * reached maxAiRetries (AD-52 -- the only one of the three whose retries
    * cost real tokens). Jobs scored against a prior resume version are
    * included so they are re-scored against the current version. Feeds
    * scripts/score.ts.

@@ -9,7 +9,7 @@ export interface SettingsRepository {
   /**
    * When true, the scrape pipeline discards foreign onsite/hybrid postings
    * that explicitly refuse visa sponsorship instead of storing them
-   * (AD-50, isUnsponsoredForeignOnsite). Defaults to false when unset.
+   * (AD-51, isUnsponsoredForeignOnsite). Defaults to false when unset.
    */
   getSkipUnsponsoredForeignJobs(): Promise<boolean>;
   setSkipUnsponsoredForeignJobs(enabled: boolean): Promise<void>;

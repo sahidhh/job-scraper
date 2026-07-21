@@ -24,7 +24,7 @@ export interface ScoreJobDeps {
 }
 
 /**
- * The stored ingest-time verdict (jobs.ineligible_reason, AD-50) is
+ * The stored ingest-time verdict (jobs.ineligible_reason, AD-51) is
  * authoritative when present; classifyEligibility is only recomputed for jobs
  * that predate the column and haven't been through
  * `npm run backfill:eligibility` yet. Keeping the fallback also lets scoreJob

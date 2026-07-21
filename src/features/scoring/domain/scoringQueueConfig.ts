@@ -3,7 +3,7 @@
 // Default of 48h assumes the 2-hourly scrape/score cron (~24 missed
 // attempts) -- override via SCORING_STUCK_THRESHOLD_HOURS.
 //
-// maxAiRetries is the hard stop that "stuck" visibility never was (AD-51):
+// maxAiRetries is the hard stop that "stuck" visibility never was (AD-52):
 // a failed AI call is the ONLY skip reason that costs real tokens on every
 // attempt, and before this cap `retry_count` was incremented and reported
 // but never enforced, so a deterministically-failing job was paid for on

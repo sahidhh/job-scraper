@@ -36,7 +36,7 @@ This is pure set arithmetic over two string arrays — no external calls, runs f
 ## 2a. Eligibility Pre-Filter (`features/scoring/domain/classifyEligibility.ts`, scoring-accuracy session)
 
 Evaluated **at ingest** and persisted as `jobs.ineligible_reason` (`geo_locked` | `no_sponsorship` |
-null = can apply, `docs/decisions.md` AD-50). Deterministic, no AI call -- operates only on
+null = can apply, `docs/decisions.md` AD-51). Deterministic, no AI call -- operates only on
 `locationRaw`/`locationTags`/`description`. `scoreJob` reads the stored verdict between the keyword
 gate and stage 2, recomputing `classifyEligibility()` only for rows ingested before the column
 existed and not yet put through `npm run backfill:eligibility`.
@@ -59,7 +59,7 @@ pass this filter -- silence is unconfirmed eligibility, not disqualification; th
 instead handled by the stage-2 prompt (§3) capping such jobs below a "strong" score.
 
 `scripts/score.ts` logs a distinct `hard-excluded` line per job and a per-run count, separate from
-"below keyword gate" and "AI call failed". Post-AD-50 that count should be **0** on a backfilled
+"below keyword gate" and "AI call failed". Post-AD-51 that count should be **0** on a backfilled
 database: `findUnscored` filters candidates on `ineligible_reason IS NULL`, so hard-excluded jobs
 never enter the queue. A non-zero count means un-backfilled rows are still in circulation.
 
@@ -72,7 +72,7 @@ run), **gave up** (retried `MAX_AI_RETRIES` times, default 3 -- see below), and 
 **Only "queued" costs tokens.** Low-match and hard-excluded jobs are rejected by `scoreJob`'s gate
 *before* the provider call, so re-processing them is free. A queued job, by contrast, is a real paid
 API call on every cron run -- which is why `findUnscored` also excludes rows whose `retry_count` has
-reached `MAX_AI_RETRIES` (AD-51). Before that cap, `retry_count` was incremented and reported but
+reached `MAX_AI_RETRIES` (AD-52). Before that cap, `retry_count` was incremented and reported but
 never enforced, so a deterministically-failing job was paid for indefinitely. Raise `MAX_AI_RETRIES`
 and re-run scoring to give up-and-abandoned jobs another attempt.
 

@@ -58,7 +58,7 @@ The regression was fixed by replacing the single two-query pattern with a three-
 
 No schema changes were required. See `docs/reports/findUnscored-regression-fix.md` for the full investigation and implementation record.
 
-## Second Loop: Hard-Excluded Jobs (AD-50, 2026-07-20)
+## Second Loop: Hard-Excluded Jobs (AD-51, 2026-07-20)
 
 The fix above closed the loop for jobs below the keyword gate, but left a second one open.
 

@@ -55,7 +55,7 @@ export interface Job {
   securityClearance: boolean;
   urgentHiring: boolean;
   // Why this posting can never be applied to, computed once at ingest by
-  // classifyEligibility (AD-50). Null = eligible. Read by findUnscored (to
+  // classifyEligibility (AD-51). Null = eligible. Read by findUnscored (to
   // keep hard-excluded jobs out of the scoring queue permanently) and by the
   // dashboard's default-on "hide jobs I can't apply to" filter.
   ineligibleReason: IneligibleReason | null;
@@ -100,7 +100,7 @@ export interface NormalizedJob {
   relocationAssistance?: boolean | null;
   securityClearance?: boolean;
   urgentHiring?: boolean;
-  // Eligibility verdict (AD-50). Optional on input; derived by ingestJobs
+  // Eligibility verdict (AD-51). Optional on input; derived by ingestJobs
   // from classifyEligibility, not by the scraper.
   ineligibleReason?: IneligibleReason | null;
 }
@@ -115,7 +115,7 @@ export interface UpsertResult {
 }
 
 // ingestJobs' own result: an UpsertResult plus the jobs it dropped before
-// persisting anything, so a scrape run can report them (AD-50).
+// persisting anything, so a scrape run can report them (AD-51).
 export interface IngestResult extends UpsertResult {
   // Foreign onsite/hybrid jobs discarded because the posting explicitly
   // refuses visa sponsorship and the `skip_unsponsored_foreign_jobs`
@@ -163,12 +163,12 @@ export interface JobFilters {
   // Show jobs the candidate can never actually apply to (non-null
   // ineligible_reason: region-locked remote, or onsite refusing sponsorship).
   // Defaults to false -- unlike every other filter here, the *absence* of
-  // this flag narrows the result set (AD-50).
+  // this flag narrows the result set (AD-51).
   includeIneligible?: boolean;
   // Show jobs whose keyword score fell below KEYWORD_THRESHOLD. They were
   // skipped at the gate and will never receive an AI score for this
   // (role, resume), so they're hidden by default as noise. Same inverted
-  // sense as includeIneligible (AD-51).
+  // sense as includeIneligible (AD-52).
   includeLowMatch?: boolean;
   minAiScore?: number;
   // Restrict to jobs whose current status is one of these ids.
@@ -233,7 +233,7 @@ export interface JobWithScore extends Omit<Job, JobWithScoreOmittedKeys> {
   // display next to the score. Null/empty when none applied.
   overallScoreReasons: string[] | null;
   // Failed AI-scoring attempts for this (role, resume). Null when there's no
-  // score row yet. Drives the retry cap's "gave up" bucket (AD-51).
+  // score row yet. Drives the retry cap's "gave up" bucket (AD-52).
   retryCount: number | null;
   minYears: number | null;
   // Current status (job_state join, P0). Null => unset, rendered as the
@@ -273,7 +273,7 @@ export interface JobStats {
   // real, paid API call, which is why they're capped (see abandonedCount).
   awaitingAiCount: number;
   // Cleared the gate but the AI call failed MAX_AI_RETRIES times, so scoring
-  // gave up to stop burning tokens (AD-51). Terminal, like lowMatchCount --
+  // gave up to stop burning tokens (AD-52). Terminal, like lowMatchCount --
   // reported separately so a capped job is visible, not silently dropped.
   abandonedCount: number;
   // Keyword score below KEYWORD_THRESHOLD -- stage 2 was skipped on purpose

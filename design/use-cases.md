@@ -42,8 +42,8 @@
    bonuses, see UC-06b), then posted_at descending as tiebreaker
 3. User can filter by location, source, status, min/max score, max experience, a free-text
    search over title/company, a "remote only" toggle (jobs tagged `remote`), and two toggles that
-   are **on by default**: "can apply" (hides a non-null `ineligible_reason`, AD-50) and "good match"
-   (hides jobs below `KEYWORD_THRESHOLD`, AD-51); muted companies, employment types, and keywords
+   are **on by default**: "can apply" (hides a non-null `ineligible_reason`, AD-51) and "good match"
+   (hides jobs below `KEYWORD_THRESHOLD`, AD-52); muted companies, employment types, and keywords
    (UC-13) are always excluded
 4. A stats row reports the filtered set's breakdown (AI-scored / low match / queued for AI / gave up
    after repeated AI failures), computed from the same rows the table renders so the numbers always
@@ -226,7 +226,7 @@
 3. For each job:
    a. `computeKeywordScore(resume.skills, job description + title)`
    b. If score ≥ KEYWORD_THRESHOLD: check eligibility -- the verdict stored at ingest
-      (`jobs.ineligible_reason`, AD-50), falling back to `classifyEligibility(job)` for rows
+      (`jobs.ineligible_reason`, AD-51), falling back to `classifyEligibility(job)` for rows
       predating that column. Hard-excludes a remote job geo-locked to a region the candidate
       fails, or an onsite job with an explicit no-sponsorship/authorization signal (candidate
       needs sponsorship for any onsite role); an eligible job then gets the OpenRouter AI score
@@ -236,8 +236,8 @@
    c. Upsert `job_scores` row
 4. AI failures and hard-excluded jobs both leave `ai_score = null`; AI failures are retried on the
    next cron run, hard-excluded jobs are not -- step 2's query filters on `ineligible_reason IS NULL`,
-   so they never re-enter the queue at all (before AD-50 they were re-fetched and re-written forever)
-5. An AI failure is retried at most `MAX_AI_RETRIES` times (default 3, AD-51): each retry is a real
+   so they never re-enter the queue at all (before AD-51 they were re-fetched and re-written forever)
+5. An AI failure is retried at most `MAX_AI_RETRIES` times (default 3, AD-52): each retry is a real
    paid API call -- the only skip reason that is -- so `retry_count >= MAX_AI_RETRIES` joins the
    done-set and the job is reported as "gave up" rather than retried indefinitely
 

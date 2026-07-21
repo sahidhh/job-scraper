@@ -104,7 +104,7 @@ export function JobRow({
               </Badge>
             ))}
             {/* Only reachable with "Hide jobs I can't apply to" unticked, so the
-                badge explains why the row is normally absent (AD-50). Sits
+                badge explains why the row is normally absent (AD-51). Sits
                 inside the same flex-wrap as the location tags so it wraps with
                 them rather than overflowing the cell (#82). */}
             {job.ineligibleReason && (

@@ -9,7 +9,7 @@ import { containsToken } from "@/shared/domain/skills";
 
 /**
  * Stable machine code for why a job can never be applied to, persisted as
- * `jobs.ineligible_reason` at ingest (AD-50). The human `reason` string
+ * `jobs.ineligible_reason` at ingest (AD-51). The human `reason` string
  * quotes the matched phrase and is for logs/UI; this is what queries filter
  * on, so the values must stay stable even if the phrase lists change.
  */

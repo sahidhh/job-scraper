@@ -16,7 +16,7 @@ on:
         required: true
         type: choice
         options:
-          # Recomputes jobs.ineligible_reason for every active job (AD-50).
+          # Recomputes jobs.ineligible_reason for every active job (AD-51).
           # Required once after migration 20260720000001; idempotent, so it
           # is also the refresh path after editing candidate-constraints.ts.
           - backfill:eligibility

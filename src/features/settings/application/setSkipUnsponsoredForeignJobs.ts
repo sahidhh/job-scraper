@@ -6,7 +6,7 @@ export interface SetSkipUnsponsoredForeignJobsDeps {
 
 /**
  * Persist whether the scrape pipeline should discard foreign onsite/hybrid
- * postings that explicitly refuse visa sponsorship (AD-50). No validation
+ * postings that explicitly refuse visa sponsorship (AD-51). No validation
  * needed beyond the boolean the type system already enforces -- unlike
  * setDesiredExperience there is no range to check.
  */

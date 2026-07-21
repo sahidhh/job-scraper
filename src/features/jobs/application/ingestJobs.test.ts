@@ -143,7 +143,7 @@ describe("ingestJobs", () => {
     });
   });
 
-  // AD-50: the eligibility verdict is computed once here rather than
+  // AD-51: the eligibility verdict is computed once here rather than
   // recomputed on every scoring run.
   describe("eligibility verdict", () => {
     it("stores null for a job that can actually be applied to", async () => {
