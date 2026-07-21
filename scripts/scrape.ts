@@ -41,7 +41,7 @@ async function main(): Promise<void> {
 
   const roles = roleSelection.expandedRoles;
 
-  // Read once for the whole run (AD-50): when on, foreign onsite/hybrid
+  // Read once for the whole run (AD-51): when on, foreign onsite/hybrid
   // postings that explicitly refuse visa sponsorship are dropped before they
   // are ever persisted.
   const skipUnsponsoredForeignJobs = await settingsRepository.getSkipUnsponsoredForeignJobs();

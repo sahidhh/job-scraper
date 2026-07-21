@@ -12,7 +12,7 @@ type SponsorshipJob = {
 
 /**
  * True for a posting the candidate would need a work visa for, where the
- * posting explicitly says it will NOT sponsor one (AD-50). Gates the
+ * posting explicitly says it will NOT sponsor one (AD-51). Gates the
  * optional `skip_unsponsored_foreign_jobs` ingest filter.
  *
  * Deliberately keyed on `visaSponsorship === false` (an explicit refusal),

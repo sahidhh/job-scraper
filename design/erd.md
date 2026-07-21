@@ -62,7 +62,7 @@ erDiagram
         boolean relocation_assistance "nullable; same tri-state as visa_sponsorship"
         boolean security_clearance "NOT NULL default false"
         boolean urgent_hiring "NOT NULL default false"
-        text ineligible_reason "nullable; null=can apply | geo_locked | no_sponsorship; classifyEligibility.ts at ingest (AD-50)"
+        text ineligible_reason "nullable; null=can apply | geo_locked | no_sponsorship; classifyEligibility.ts at ingest (AD-51)"
     }
 
     JOB_DUPLICATES {
@@ -242,7 +242,7 @@ erDiagram
 | `job_scores` | `INDEX (overall_score DESC NULLS LAST)` | Dashboard default sort (Theme 1 composite ranking score); backfilled to `= ai_score` for pre-existing rows, migration `20260704000004_ranking_overall_score.sql` |
 | `job_scores` | `INDEX (role_selection_id, resume_version, scored_at) WHERE ai_score IS NULL` | `findAwaitingAi`'s unscored-queue shape |
 | `jobs` | `INDEX (is_active)` | Active-jobs filter shared by `findUnscored`/`findForDashboard`/`markExpiredJobs` (created in `20260618000001_expired_job_detection.sql`, not repeated by the 2026-07-04 hardening migration) |
-| `jobs` | `INDEX (ineligible_reason)` | `findUnscored`'s candidate query and `findForDashboard`'s default-on eligibility filter, both `IS NULL` (migration `20260720000001_job_eligibility.sql`, AD-50) |
+| `jobs` | `INDEX (ineligible_reason)` | `findUnscored`'s candidate query and `findForDashboard`'s default-on eligibility filter, both `IS NULL` (migration `20260720000001_job_eligibility.sql`, AD-51) |
 | `scrape_runs` | `INDEX (source, run_at DESC)` | `listRecentBySource` (per-source health report, called once per source per `/analytics` load) |
 | `jobs` | `INDEX (employment_type)` | Notification-preference `excludeEmploymentTypes` filter reads this at digest time |
 | `resumes` | `UNIQUE (is_active) WHERE is_active = true` | Enforce single active resume |

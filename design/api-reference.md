@@ -300,7 +300,7 @@ Actions **never throw** to the client. On success they call `revalidatePath()` t
 
 #### `setSkipUnsponsoredForeignJobsAction(enabled)`
 **File:** `src/features/settings/actions.ts`  
-**Description:** Stores the `skip_unsponsored_foreign_jobs` flag in `app_settings` (AD-50). When on, the next scrape run discards UAE/Singapore onsite/hybrid postings that *explicitly* refuse visa sponsorship instead of storing them. Ingest-time only — nothing already in the database changes.
+**Description:** Stores the `skip_unsponsored_foreign_jobs` flag in `app_settings` (AD-51). When on, the next scrape run discards UAE/Singapore onsite/hybrid postings that *explicitly* refuse visa sponsorship instead of storing them. Ingest-time only — nothing already in the database changes.
 
 | Param | Type | Description |
 |---|---|---|

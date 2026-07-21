@@ -272,7 +272,7 @@ describe("scoreJob", () => {
   });
 
   it("honours a stored ineligible_reason without re-deriving it from the posting text", async () => {
-    // AD-50: the ingest-time verdict is authoritative. This job's own text
+    // AD-51: the ingest-time verdict is authoritative. This job's own text
     // reads as perfectly eligible, so if the stored value were ignored the
     // AI call would fire.
     const job = makeJob({

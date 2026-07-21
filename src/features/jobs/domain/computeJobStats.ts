@@ -4,7 +4,7 @@ type StatsRow = Pick<JobWithScore, "keywordScore" | "aiScore" | "ineligibleReaso
 
 /**
  * Partitions a filtered dashboard result set into the five scoring buckets
- * the stats row reports (AD-50, AD-51). Pure and page-independent: callers
+ * the stats row reports (AD-51, AD-52). Pure and page-independent: callers
  * pass the whole matched set, not the visible slice, so the numbers don't
  * drift as the user pages.
  *

@@ -5,7 +5,7 @@ import { useState, useTransition } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { setSkipUnsponsoredForeignJobsAction } from "@/features/settings/actions";
 
-// Settings card for the ingest-time sponsorship filter (AD-50). Saves on
+// Settings card for the ingest-time sponsorship filter (AD-51). Saves on
 // toggle -- there's only one boolean, so an explicit Save button (as on
 // ExperienceCard, where a half-typed number needs one) would just be a
 // second click.

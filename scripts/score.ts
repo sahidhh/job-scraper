@@ -93,7 +93,7 @@ async function main(): Promise<void> {
 
       // Distinguishes "hard-excluded" from "AI call failed" in the log, since
       // both leave ai_score null on the row. findUnscored now filters out jobs
-      // with a stored ineligible_reason (AD-50), so this branch should only
+      // with a stored ineligible_reason (AD-51), so this branch should only
       // ever fire for rows ingested before that column existed and not yet
       // put through `npm run backfill:eligibility`.
       const eligibility = job.ineligibleReason

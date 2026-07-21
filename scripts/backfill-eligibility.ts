@@ -4,7 +4,7 @@ import { createSupabaseServiceClient } from "@/shared/infrastructure/supabaseCli
 const BATCH_SIZE = 500;
 
 // One-off (but idempotent) backfill for jobs.ineligible_reason, added by
-// migration 20260720000001 (AD-50). Rows ingested before that migration have
+// migration 20260720000001 (AD-51). Rows ingested before that migration have
 // the column NULL, which reads as "eligible" -- so every existing job must be
 // re-classified once or hard-excluded jobs stay in the scoring queue and
 // visible on the dashboard.

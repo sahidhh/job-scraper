@@ -7,7 +7,7 @@ import { isUnsponsoredForeignOnsite } from "@/features/jobs/domain/isUnsponsored
 import { validateNormalizedJob } from "@/features/jobs/domain/validation";
 // Cross-feature import: the eligibility rules live with scoring (their other
 // consumer, scoreJob.ts) but the verdict is now a job attribute computed
-// once here at ingest rather than recomputed per scoring run (AD-50).
+// once here at ingest rather than recomputed per scoring run (AD-51).
 import { classifyEligibility } from "@/features/scoring/domain/classifyEligibility";
 import { dedupeJobs } from "./dedupeJobs";
 import { parseMinYears } from "./parseMinYears";
@@ -48,7 +48,7 @@ export async function ingestJobs(
   // (Phase 2 Task 9), a best-effort salary (Phase 2 Task 10), deterministic
   // job attributes (employment type/seniority/work arrangement/visa/
   // relocation/clearance/urgency -- personal-intelligence polish), and the
-  // eligibility verdict (AD-50) at ingest, all parsed from title+description.
+  // eligibility verdict (AD-51) at ingest, all parsed from title+description.
   const enriched = deduped.map((job) => {
     const text = `${job.title}\n${job.description}`;
     const contact = extractContactEmail(text);

@@ -294,7 +294,7 @@ describe("SupabaseJobRepository", () => {
     });
 
     it("excludes rows at the AI retry cap so a deterministically-failing job stops costing tokens", async () => {
-      // AD-51: a failed AI call is the only skip reason that spends real
+      // AD-52: a failed AI call is the only skip reason that spends real
       // tokens on every attempt. retry_count was tracked and reported long
       // before anything enforced it.
       const { client, builders } = queuedSupabaseClient([
@@ -313,7 +313,7 @@ describe("SupabaseJobRepository", () => {
     });
 
     it("constrains candidates to eligible jobs so hard-excluded ones can never be re-queued", async () => {
-      // The second scoring loop (AD-50): a hard-excluded job keeps ai_score
+      // The second scoring loop (AD-51): a hard-excluded job keeps ai_score
       // null by design, but with keyword_score >= threshold it never lands in
       // the done-set either, so before this filter every run re-fetched it,
       // re-wrote the same null and bumped retry_count -- forever.
@@ -467,7 +467,7 @@ describe("SupabaseJobRepository", () => {
         stats: { scoredCount: 1, awaitingAiCount: 0, abandonedCount: 0, lowMatchCount: 0, ineligibleCount: 0, total: 1 },
       });
       expect(builder.eq).toHaveBeenCalledWith("job_scores.role_selection_id", "role-selection-1");
-      // Default-on eligibility filter (AD-50): includeIneligible was not set.
+      // Default-on eligibility filter (AD-51): includeIneligible was not set.
       expect(builder.is).toHaveBeenCalledWith("ineligible_reason", null);
       expect(builder.eq).toHaveBeenCalledWith("job_scores.resume_version", 1);
       expect(builder.overlaps).toHaveBeenCalledWith("location_tags", ["remote"]);
@@ -695,7 +695,7 @@ describe("SupabaseJobRepository", () => {
       expect(builder.eq).not.toHaveBeenCalledWith("label", "Archived");
     });
 
-    // AD-50: this is the only filter whose *absence* narrows the result set.
+    // AD-51: this is the only filter whose *absence* narrows the result set.
     it("stops filtering on ineligible_reason when includeIneligible is set", async () => {
       const { client, builder } = mockSupabaseClient({
         data: [{ ...jobRow, job_scores: [], job_state: [] }],
@@ -733,7 +733,7 @@ describe("SupabaseJobRepository", () => {
       });
     });
 
-    // AD-51: filtered in memory, since a PostgREST filter on the embedded
+    // AD-52: filtered in memory, since a PostgREST filter on the embedded
     // job_scores.keyword_score would only null the embedding.
     it("hides jobs below the keyword gate by default, but still counts them in stats", async () => {
       const { client } = mockSupabaseClient({

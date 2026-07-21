@@ -27,7 +27,7 @@ export async function setDesiredExperienceAction(years: number | null): Promise<
   }
 }
 
-// AD-50 -- when on, the next scrape run discards foreign onsite/hybrid
+// AD-51 -- when on, the next scrape run discards foreign onsite/hybrid
 // postings that explicitly refuse visa sponsorship instead of storing them.
 // Affects ingest only, so nothing already in the DB changes; /dashboard is
 // still revalidated so the settings round-trip feels immediate.

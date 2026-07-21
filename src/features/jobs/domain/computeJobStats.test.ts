@@ -44,7 +44,7 @@ describe("computeJobStats", () => {
 
   it("moves a job that hit the retry cap out of the queue and into 'gave up'", () => {
     // The only bucket that was costing money: at the cap, score.ts stops
-    // paying for further attempts (AD-51).
+    // paying for further attempts (AD-52).
     const stats = computeJobStats([row({ keywordScore: 0.9, retryCount: 3 })], 0.25, 3);
     expect(stats.abandonedCount).toBe(1);
     expect(stats.awaitingAiCount).toBe(0);
