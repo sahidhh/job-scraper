@@ -192,6 +192,7 @@ These are explicitly banned by the project rules (CLAUDE.md):
 | `validate-sources.yml` | `workflow_dispatch` only | `validate-sources.ts` — probe ATS boards, exit 1 only on new failures or sub-minimum healthy count |
 | `verify-production.yml` | `workflow_dispatch` only (v1.4, no schedule) | `verify-production.ts` — 24-check operational health report, uploads `verification-reports/` as a build artifact, exit 1 only on a critical-severity failure |
 | `maintenance.yml` | `workflow_dispatch` only (AD-51) | Runs one maintenance script chosen from a dropdown (`backfill:eligibility`, `backfill:min-years`, `backfill:fingerprints`, `sweep:stranded-resumes`, `report:matches`) |
+| `migrate.yml` | Push to `main` | `supabase link` → `supabase db push`. Sends a Telegram alert on failure — the triggering PR has already merged green, so nothing else surfaces that the schema is behind the code |
 
 **Running maintenance scripts:** use `maintenance.yml`, not your laptop. Every script reads
 `process.env` directly (AD-04) and the repo intentionally has **no `dotenv`**, so a local
@@ -203,5 +204,12 @@ export the secrets into your shell by hand. Dispatching the workflow runs them w
 **Applying migrations:** likewise never run `supabase db push` locally (it needs `supabase link`,
 a project ref, and an access token). `migrate.yml` pushes migrations automatically on every push to
 `main`.
+
+`SUPABASE_ACCESS_TOKEN` is a Supabase **personal access token, and those expire.** When it lapses,
+`migrate.yml` fails at the `link` step with `Unauthorized` and every subsequent migration silently
+stops applying while PRs keep merging green — the schema drifts behind the code until something
+reads a column its migration never created. This happened between 2026-07-19 and 2026-07-21 and is
+why the workflow now alerts on failure. If you see that alert, rotate the token at
+`supabase.com/dashboard/account/tokens`, update the repo secret, and re-run the workflow.
 
 The cron `schedule:` entry in `scrape.yml` is **active** (`0 */6 * * *`, every 6 hours), not commented out — whether this 6h cadence was a deliberate, approved choice is an open question tracked in `TECHNICAL_DEBT.md` #1, not a doc-accuracy issue.
