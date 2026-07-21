@@ -20,6 +20,7 @@ async function main(): Promise<void> {
   let offset = 0;
   let totalProcessed = 0;
   let totalChanged = 0;
+  let totalFailed = 0;
   const byReason = new Map<string, number>();
 
   console.log("[backfill-eligibility] starting reclassification of active jobs");
@@ -37,9 +38,13 @@ async function main(): Promise<void> {
       .order("id", { ascending: true })
       .range(offset, offset + BATCH_SIZE - 1);
 
+    // Throw rather than break: a fetch failure means the run accomplished
+    // nothing, and breaking here would fall through to the summary and exit 0
+    // -- indistinguishable from a clean no-op run. That is exactly how a
+    // missing ineligible_reason column (migration 20260720000001 unapplied)
+    // reported success while backfilling zero rows.
     if (error) {
-      console.error(`[backfill-eligibility] batch ${batchNumber}: fetch error — ${error.message}`);
-      break;
+      throw new Error(`batch ${batchNumber}: fetch error — ${error.message}`);
     }
 
     if (!jobs || jobs.length === 0) {
@@ -67,6 +72,10 @@ async function main(): Promise<void> {
         .eq("id", job.id);
 
       if (updateError) {
+        // Per-row failures stay non-fatal so one bad row can't strand the
+        // rest of the corpus, but they are counted and surfaced in the exit
+        // code -- a run that failed every write must not report success.
+        totalFailed += 1;
         console.error(
           `[backfill-eligibility] batch ${batchNumber}: failed to update job ${job.id} — ${updateError.message}`,
         );
@@ -95,8 +104,13 @@ async function main(): Promise<void> {
   console.log(
     `[backfill-eligibility] finished — processed: ${totalProcessed}` +
       ` | changed: ${totalChanged}` +
+      ` | failed: ${totalFailed}` +
       ` | ineligible breakdown: ${breakdown}`,
   );
+
+  if (totalFailed > 0) {
+    throw new Error(`${totalFailed} row update(s) failed — see the errors above`);
+  }
 }
 
 main().catch((err) => {

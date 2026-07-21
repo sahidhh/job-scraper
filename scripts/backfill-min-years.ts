@@ -9,6 +9,7 @@ async function main(): Promise<void> {
   let batchNumber = 0;
   let totalProcessed = 0;
   let totalUpdated = 0;
+  let totalFailed = 0;
   let offset = 0;
 
   console.log("[backfill-min-years] starting backfill of min_years for NULL rows");
@@ -24,9 +25,11 @@ async function main(): Promise<void> {
       .eq("is_active", true)
       .range(offset, offset + BATCH_SIZE - 1);
 
+    // Throw rather than break: breaking here falls through to the summary and
+    // exits 0, so a run that fetched nothing at all is indistinguishable from
+    // a run with nothing left to do.
     if (error) {
-      console.error(`[backfill-min-years] batch ${batchNumber}: fetch error — ${error.message}`);
-      break;
+      throw new Error(`batch ${batchNumber}: fetch error — ${error.message}`);
     }
 
     if (!jobs || jobs.length === 0) {
@@ -54,6 +57,9 @@ async function main(): Promise<void> {
           .eq("id", job.id);
 
         if (updateError) {
+          // Non-fatal per row (one bad row must not strand the corpus), but
+          // counted so the exit code can't report a wholly-failed run as success.
+          totalFailed += 1;
           console.error(
             `[backfill-min-years] batch ${batchNumber}: failed to update job ${job.id} — ${updateError.message}`,
           );
@@ -61,6 +67,7 @@ async function main(): Promise<void> {
           batchUpdated += 1;
         }
       } catch (err) {
+        totalFailed += 1;
         const message = err instanceof Error ? err.message : String(err);
         console.error(
           `[backfill-min-years] batch ${batchNumber}: unexpected error on job ${job.id} — ${message}`,
@@ -99,8 +106,13 @@ async function main(): Promise<void> {
   console.log(
     `[backfill-min-years] finished — total processed: ${totalProcessed}` +
       ` | total updated: ${totalUpdated}` +
+      ` | failed: ${totalFailed}` +
       ` | remaining NULL (active, has description): ${remainingNull ?? "unknown"}`,
   );
+
+  if (totalFailed > 0) {
+    throw new Error(`${totalFailed} row update(s) failed — see the errors above`);
+  }
 }
 
 main().catch((err) => {
