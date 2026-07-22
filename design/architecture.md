@@ -238,7 +238,8 @@ flowchart TD
     ELIG -- Yes --> SAVE_KW["Save keyword score only\n(ai_score = null, no AI call)"]
     ELIG -- No --> AI["OpenRouter AI call\n15s timeout, 1 retry"]
     AI --> AI_OK{Success?}
-    AI_OK -- Yes --> OVERALL["computeOverallScore()\nai_score + configurable bonuses"]
+    AI_OK -- Yes --> CAP["capAiScoreForEligibility()\nclamp onsite foreign +\nunconfirmed sponsorship → ≤ 0.40"]
+    CAP --> OVERALL["computeOverallScore()\nai_score + configurable bonuses"]
     OVERALL --> SAVE_AI["Save keyword + ai_score\n+ ai_reasoning + overall_score"]
     AI_OK -- No --> SAVE_KW2["Save keyword score only\n(retried next cron run)"]
     SAVE_KW --> NEXT
@@ -260,6 +261,13 @@ excluded here (unconfirmed, not disqualified) -- they still reach the AI call, w
 need, ~years of experience, primary/secondary stack) and instructs the model that a sponsorship-silent
 onsite posting, a seniority mismatch, or a primary-stack mismatch each caps the score below a "strong"
 match, regardless of skill-keyword overlap.
+
+**Code-enforced sponsorship cap** (`capAiScoreForEligibility.ts`, AD-53): the prompt cap above proved
+insufficient — the model recites the sponsorship constraint in its reasoning yet still emits a high
+number. So after a successful AI call, the score is clamped **deterministically in code** to ≤ 0.40 when
+the job is onsite (not `remote`-tagged) in a foreign sponsorship market (`singapore`/`uae`, no `india`
+fallback) and the model's returned `sponsorshipConfirmed` flag is false. The model classifies; the code
+does the arithmetic. Remote, India-onsite, and sponsorship-confirmed roles pass through untouched.
 
 Every save goes through the `upsert_job_score` RPC (erd.md), which atomically increments `retry_count`
 whenever the write leaves `ai_score` null. After each `score.ts` run, `getScoringQueueReport()` (Phase 1

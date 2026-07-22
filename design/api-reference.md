@@ -429,16 +429,17 @@ All routes except `/login` and `/auth/callback` are protected by `middleware.ts`
         "type": "object",
         "properties": {
           "score": { "type": "number" },
-          "reasoning": { "type": "string" }
+          "reasoning": { "type": "string" },
+          "sponsorshipConfirmed": { "type": "boolean" }
         },
-        "required": ["score", "reasoning"]
+        "required": ["score", "reasoning", "sponsorshipConfirmed"]
       }
     }
   }
 }
 ```
 
-**Response:** JSON `{ score: number [0-1], reasoning: string }`
+**Response:** JSON `{ score: number [0-1], reasoning: string, sponsorshipConfirmed: boolean }`. `sponsorshipConfirmed` (AD-53) is the model's classification of whether the posting *explicitly* offers visa sponsorship/relocation; `scoreJob` uses it to apply the deterministic eligibility cap (`capAiScoreForEligibility`, ceiling 0.40) for onsite foreign roles. Defaults to `false` when the model omits or mistypes it (the conservative direction).
 
 **Request (Role Expansion):**
 ```json
