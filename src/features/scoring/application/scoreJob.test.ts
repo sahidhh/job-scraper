@@ -78,10 +78,22 @@ function makeScoreRepository(): ScoreRepository {
 }
 
 function makeAiProvider(
-  result: { score: number; reasoning: string; model: string; tokensInput: number | null; tokensOutput: number | null } | null,
+  result:
+    | {
+        score: number;
+        reasoning: string;
+        model: string;
+        tokensInput: number | null;
+        tokensOutput: number | null;
+        sponsorshipConfirmed?: boolean;
+      }
+    | null,
 ): AiScoreProvider {
+  // Default sponsorshipConfirmed to false (unconfirmed) unless a test sets it,
+  // mirroring the provider's conservative default.
+  const resolved = result === null ? null : { sponsorshipConfirmed: false, ...result };
   return {
-    score: vi.fn().mockResolvedValue(result),
+    score: vi.fn().mockResolvedValue(resolved),
   };
 }
 
@@ -295,7 +307,7 @@ describe("scoreJob", () => {
     expect(aiScoreProvider.score).not.toHaveBeenCalled();
   });
 
-  it("does not exclude an onsite job that is merely silent on sponsorship", async () => {
+  it("does not exclude an onsite job that is merely silent on sponsorship (AI still runs), but caps its score (AD-53)", async () => {
     const job = makeJob({
       locationRaw: "Singapore",
       locationTags: ["singapore"],
@@ -303,7 +315,17 @@ describe("scoreJob", () => {
     });
     const resume = makeResume({ skills: ["React", "Node.js"] });
     const scoreRepository = makeScoreRepository();
-    const aiScoreProvider = makeAiProvider({ score: 0.6, reasoning: "worth a look", model: "x", tokensInput: null, tokensOutput: null });
+    // Model returns a strong 0.9 with sponsorship unconfirmed -- exactly the
+    // failure mode AD-53 addresses. It must not be hard-excluded (AI runs),
+    // but the stored score is deterministically capped to 0.4.
+    const aiScoreProvider = makeAiProvider({
+      score: 0.9,
+      reasoning: "Strong stack match",
+      model: "x",
+      tokensInput: null,
+      tokensOutput: null,
+      sponsorshipConfirmed: false,
+    });
 
     const result = await scoreJob(job, resume, "role-selection-1", {
       scoreRepository,
@@ -313,7 +335,58 @@ describe("scoreJob", () => {
     });
 
     expect(aiScoreProvider.score).toHaveBeenCalledWith({ job, resume });
-    expect(result.aiScore).toBe(0.6);
+    expect(result.aiScore).toBe(0.4);
+    expect(result.aiReasoning).toContain("Strong stack match");
+    expect(result.aiReasoning).toContain("Auto-capped");
+  });
+
+  it("does NOT cap an onsite Singapore role when the model confirms sponsorship (AD-53)", async () => {
+    const job = makeJob({
+      locationRaw: "Singapore",
+      locationTags: ["singapore"],
+      description: "Build UI with React and Node.js. Visa sponsorship provided.",
+    });
+    const resume = makeResume({ skills: ["React", "Node.js"] });
+    const aiScoreProvider = makeAiProvider({
+      score: 0.9,
+      reasoning: "Strong match, sponsors",
+      model: "x",
+      tokensInput: null,
+      tokensOutput: null,
+      sponsorshipConfirmed: true,
+    });
+
+    const result = await scoreJob(job, resume, "role-selection-1", {
+      scoreRepository: makeScoreRepository(),
+      aiScoreProvider,
+      skillsDictionary: dictionary,
+      keywordThreshold: 0.5,
+    });
+
+    expect(result.aiScore).toBe(0.9);
+    expect(result.aiReasoning).toBe("Strong match, sponsors");
+  });
+
+  it("does NOT cap a remote role even with unconfirmed sponsorship (AD-53)", async () => {
+    const job = makeJob(); // locationTags: ["remote"]
+    const resume = makeResume({ skills: ["React", "Node.js"] });
+    const aiScoreProvider = makeAiProvider({
+      score: 0.9,
+      reasoning: "Remote, strong match",
+      model: "x",
+      tokensInput: null,
+      tokensOutput: null,
+      sponsorshipConfirmed: false,
+    });
+
+    const result = await scoreJob(job, resume, "role-selection-1", {
+      scoreRepository: makeScoreRepository(),
+      aiScoreProvider,
+      skillsDictionary: dictionary,
+      keywordThreshold: 0.5,
+    });
+
+    expect(result.aiScore).toBe(0.9);
   });
 
   it("leaves embeddingScore null when no embedding provider is supplied", async () => {

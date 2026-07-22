@@ -121,6 +121,16 @@ constraints from `shared/config/candidate-constraints.ts` (location/sponsorship 
 experience, primary/secondary stack) so the model itself penalizes seniority and stack mismatches, and
 treats a sponsorship-silent onsite posting as at most "worth reviewing".
 
+The sponsorship cap is **also enforced in code, not left to the prompt alone** (AD-53). The model returns a
+`sponsorshipConfirmed` boolean alongside `score`; `capAiScoreForEligibility()`
+(`src/features/scoring/domain/capAiScore.ts`, pure) then clamps the AI score to
+`UNCONFIRMED_SPONSORSHIP_AI_CEILING = 0.4` for an onsite role in a foreign sponsorship market
+(`singapore`/`uae`, no `india` fallback tag) whose sponsorship is unconfirmed. This split — the model
+classifies, the code does the arithmetic — exists because the model reliably *identifies* unconfirmed
+sponsorship in its prose but will not reliably translate that into a low number (AD-53's smoking gun: a
+1.00-scored onsite Singapore role whose own reasoning named the disqualifiers). `scoreJob` applies the
+cap immediately after the AI call and appends the reason to `aiReasoning` so the number and prose agree.
+
 ### 6.3 Notification Pipeline
 
 ```mermaid

@@ -23,14 +23,18 @@ const SCHEMA = {
   properties: {
     score: { type: "number" },
     reasoning: { type: "string" },
+    // AD-53: the model classifies sponsorship (a read/extract task it's good
+    // at); scoreJob applies the numeric eligibility cap in code.
+    sponsorshipConfirmed: { type: "boolean" },
   },
-  required: ["score", "reasoning"],
+  required: ["score", "reasoning", "sponsorshipConfirmed"],
   additionalProperties: false,
 } as const;
 
 interface JobMatchResponse {
   score?: unknown;
   reasoning?: unknown;
+  sponsorshipConfirmed?: unknown;
 }
 
 export interface AiCallStats {
@@ -74,13 +78,14 @@ function buildSystemPrompt(resume: Resume): string {
     `- Targeting ${CANDIDATE_CONSTRAINTS.targetRoles.join(", ")} roles.`,
     `- Preferred geographies (soft signal only): ${CANDIDATE_CONSTRAINTS.targetLocations.join(", ")}; onsite India (Bangalore/Chennai) is an acceptable fallback. "Preferred" means only "do not dock a role merely for being abroad" -- it does NOT waive the sponsorship requirement above. An onsite role in a preferred location (e.g. Singapore or the UAE) that is silent on sponsorship is still unconfirmed eligibility and is capped exactly like any other onsite role. The sole no-sponsorship-needed case is a genuinely remote role open to India. Never raise a score on location alone.`,
     "",
-    "Scoring rules:",
-    "- A high score (\"strong match\") must mean the candidate could genuinely apply today: right seniority band, primary stack match, and (for onsite roles) confirmed sponsorship. Do not call it strong on skill-keyword overlap alone.",
-    "- Seniority mismatch (the posting wants meaningfully more experience than the candidate has) caps the score well below a strong match, regardless of skill overlap.",
-    "- Primary-stack mismatch (the posting's core/primary stack is not the candidate's) caps the score well below a strong match, regardless of skill overlap.",
-    "- An onsite posting that is silent on sponsorship is at best worth reviewing, never strong -- eligibility is unconfirmed. This holds even when the role is in a preferred/target location (e.g. Singapore, UAE): a desirable geography does not confirm sponsorship, so a strong resume-and-stack match to a sponsorship-silent onsite role is still capped at worth-reviewing, not strong.",
+    "Scoring rules -- these are NUMERIC ceilings, not adjectives. Emit the actual number: never describe a cap in the reasoning while returning a score above it.",
+    "- A high score (>= 0.70, \"strong match\") must mean the candidate could genuinely apply today: right seniority band, primary stack match, and (for onsite roles) confirmed sponsorship. Never award it on skill-keyword overlap alone.",
+    "- Seniority mismatch (the posting wants meaningfully more experience than the candidate has): the score MUST NOT exceed 0.50, regardless of skill overlap.",
+    "- Primary-stack mismatch (the posting's core/primary stack is not the candidate's): the score MUST NOT exceed 0.50, regardless of skill overlap.",
+    "- An onsite posting that is silent on sponsorship: the score MUST NOT exceed 0.40 -- eligibility is unconfirmed. This holds even when the role is in a preferred/target location (e.g. Singapore, UAE): a desirable geography does not confirm sponsorship, so a strong resume-and-stack match to a sponsorship-silent onsite role is still capped, never strong.",
     "- Do not invent or assume facts not present in the job posting or resume.",
-    "Respond with score (a number from 0 to 1) and reasoning (1-3 sentences) that names which of these rules, if any, drove the score.",
+    "Also return sponsorshipConfirmed: true ONLY if the posting explicitly states visa sponsorship or relocation is available/provided; false if it is silent, ambiguous, or refuses it. Do not infer it from the company, seniority, or location -- a Singapore/UAE address does not by itself confirm sponsorship.",
+    "Respond with score (a number from 0 to 1), sponsorshipConfirmed (boolean), and reasoning (1-3 sentences) that names which of these rules, if any, drove the score.",
   ].join("\n");
 }
 
@@ -156,6 +161,9 @@ export class OpenRouterAiScoreProvider implements AiScoreProvider {
       return {
         score: Math.min(1, Math.max(0, result.score)),
         reasoning: result.reasoning,
+        // Default to false (unconfirmed) when the model omits or mistypes it --
+        // the conservative direction, so a missing flag caps rather than frees.
+        sponsorshipConfirmed: result.sponsorshipConfirmed === true,
         model,
         tokensInput: usage.promptTokens,
         tokensOutput: usage.completionTokens,
