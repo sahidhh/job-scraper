@@ -153,3 +153,15 @@ export class SupabaseApplicationRepository implements ApplicationRepository {
     return toApplication(data);
   }
 }
+
+  async updateStatus(id: string, status: ApplicationStatus): Promise<Application> {
+    const { data, error } = await this.client
+      .from("applications")
+      .update({ status })
+      .eq("id", id)
+      .select("*")
+      .single();
+
+    if (error) throw toAppError(error);
+    return toApplication(data);
+  }
