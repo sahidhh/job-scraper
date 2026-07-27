@@ -1,4 +1,5 @@
 import type { ApplicationRepository } from "@/features/applications/domain/ApplicationRepository";
+import type { ApplicationStatus } from "../domain/types";
 import type { Application, ApplicationKind, NewApplicationDraft, PendingApplicationDraft } from "@/features/applications/domain/types";
 import type { TypedSupabaseClient } from "@/shared/infrastructure/supabaseClient";
 import { toAppError } from "@/shared/infrastructure/supabaseError";
@@ -152,8 +153,6 @@ export class SupabaseApplicationRepository implements ApplicationRepository {
     if (error) throw toAppError(error);
     return toApplication(data);
   }
-}
-
   async updateStatus(id: string, status: ApplicationStatus): Promise<Application> {
     const { data, error } = await this.client
       .from("applications")
@@ -165,3 +164,4 @@ export class SupabaseApplicationRepository implements ApplicationRepository {
     if (error) throw toAppError(error);
     return toApplication(data);
   }
+}

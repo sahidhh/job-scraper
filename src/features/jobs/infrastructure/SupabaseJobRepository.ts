@@ -86,6 +86,8 @@ function toJob(row: JobRow): Job {
     securityClearance: row.security_clearance,
     urgentHiring: row.urgent_hiring,
     ineligibleReason: row.ineligible_reason as Job["ineligibleReason"],
+    lastModifiedBy: row.last_modified_by as Job["lastModifiedBy"],
+    lastModifiedAt: row.last_modified_at,
   };
 }
 
@@ -137,6 +139,8 @@ function toDashboardJob(row: DashboardJobRow): JobWithScore {
     overallScoreReasons: score?.overall_score_reasons ?? null,
     retryCount: score?.retry_count ?? null,
     minYears: row.min_years ?? null,
+    lastModifiedBy: row.last_modified_by as JobWithScore["lastModifiedBy"],
+    lastModifiedAt: row.last_modified_at,
     statusId: status?.id ?? null,
     statusLabel: status?.label ?? null,
     statusColor: status?.color ?? null,

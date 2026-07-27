@@ -81,7 +81,7 @@ export function JobRow({
   useDashboardHotkeys(job.id, {
     onReject: () => rejectStatus && onAction(rejectStatus),
     onArchive: () => archiveStatus && onAction(archiveStatus),
-    onDraft: () => {}, // TODO
+    onDraft: () => setOpen(true),
   });
 
   const [open, setOpen] = useState(false);

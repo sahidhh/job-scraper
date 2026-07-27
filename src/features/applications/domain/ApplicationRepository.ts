@@ -1,3 +1,4 @@
+import type { ApplicationStatus } from "./types";
 import type { Application, ApplicationKind, NewApplicationDraft, PendingApplicationDraft } from "./types";
 
 export interface ApplicationRepository {

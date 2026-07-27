@@ -13,43 +13,41 @@ function chatResponse(
   );
 }
 
-const job: Job = {
-  id: "job-1",
-  source: "greenhouse",
-  sourceJobId: "123",
-  companyId: null,
-  companyName: "Acme",
-  title: "Senior React Developer",
-  locationRaw: "Remote",
-  locationTags: ["remote"],
-  description: "Build UI with React and Node.js",
-  url: "https://example.com/jobs/123",
-  postedAt: null,
-  firstSeenAt: "2026-01-01T00:00:00Z",
-  lastSeenAt: "2026-01-01T00:00:00Z",
-  updatedAt: "2026-01-01T00:00:00Z",
-  isActive: true,
-  inactiveReason: null,
-  minYears: null,
-  canonicalCompanyName: "Acme",
-  fingerprint: "test-fingerprint",
-  contactEmail: null,
-  contactEmailCategory: null,
-  contactEmailConfidence: null,
-  salaryCurrency: null,
-  salaryMin: null,
-  salaryMax: null,
-  salaryPeriod: null,
-  salaryConfidence: null,
-  employmentType: null,
-  seniority: null,
-  workArrangement: null,
-  visaSponsorship: null,
-  relocationAssistance: null,
-  securityClearance: false,
-  urgentHiring: false,
-  ineligibleReason: null,
-};
+const job: Job = { id: "job-1",
+source: "greenhouse",
+sourceJobId: "123",
+companyId: null,
+companyName: "Acme",
+title: "Senior React Developer",
+locationRaw: "Remote",
+locationTags: ["remote"],
+description: "Build UI with React and Node.js",
+url: "https://example.com/jobs/123",
+postedAt: null,
+firstSeenAt: "2026-01-01T00:00:00Z",
+lastSeenAt: "2026-01-01T00:00:00Z",
+updatedAt: "2026-01-01T00:00:00Z",
+isActive: true,
+inactiveReason: null,
+minYears: null,
+canonicalCompanyName: "Acme",
+fingerprint: "test-fingerprint",
+contactEmail: null,
+contactEmailCategory: null,
+contactEmailConfidence: null,
+salaryCurrency: null,
+salaryMin: null,
+salaryMax: null,
+salaryPeriod: null,
+salaryConfidence: null,
+employmentType: null,
+seniority: null,
+workArrangement: null,
+visaSponsorship: null,
+relocationAssistance: null,
+securityClearance: false,
+urgentHiring: false,
+ineligibleReason: null };
 
 const resume: Resume = {
   id: "resume-1",
@@ -268,7 +266,7 @@ describe("OpenRouterAiScoreProvider", () => {
     const fetchMock = vi.fn().mockResolvedValue(chatResponse({ score: 0.8, reasoning: "ok" }));
     vi.stubGlobal("fetch", fetchMock);
 
-    const jobWithTags: Job = { ...job, locationRaw: "Singapore (Hybrid)", locationTags: ["singapore"] };
+    const jobWithTags: Job = { ...job, locationRaw: "Singapore (Hybrid)", locationTags: ["singapore"], lastModifiedBy: null, lastModifiedAt: null };
     const provider = new OpenRouterAiScoreProvider();
     await provider.score({ job: jobWithTags, resume });
 
@@ -281,7 +279,7 @@ describe("OpenRouterAiScoreProvider", () => {
     const fetchMock = vi.fn().mockResolvedValue(chatResponse({ score: 0.8, reasoning: "ok" }));
     vi.stubGlobal("fetch", fetchMock);
 
-    const jobNoTags: Job = { ...job, locationRaw: "Unknown", locationTags: [] };
+    const jobNoTags: Job = { ...job, locationRaw: "Unknown", locationTags: [], lastModifiedBy: null, lastModifiedAt: null };
     const provider = new OpenRouterAiScoreProvider();
     await provider.score({ job: jobNoTags, resume });
 
@@ -294,7 +292,7 @@ describe("OpenRouterAiScoreProvider", () => {
     const fetchMock = vi.fn().mockResolvedValue(chatResponse({ score: 0.8, reasoning: "ok" }));
     vi.stubGlobal("fetch", fetchMock);
 
-    const seniorJob: Job = { ...job, minYears: 5 };
+    const seniorJob: Job = { ...job, minYears: 5, lastModifiedBy: null, lastModifiedAt: null };
     const provider = new OpenRouterAiScoreProvider();
     await provider.score({ job: seniorJob, resume });
 
@@ -345,7 +343,7 @@ describe("OpenRouterAiScoreProvider", () => {
     const fetchMock = vi.fn().mockResolvedValue(chatResponse({ score: 0.8, reasoning: "ok" }));
     vi.stubGlobal("fetch", fetchMock);
 
-    const longDescriptionJob: Job = { ...job, description: "b".repeat(100) };
+    const longDescriptionJob: Job = { ...job, description: "b".repeat(100), lastModifiedBy: null, lastModifiedAt: null };
     const provider = new OpenRouterAiScoreProvider();
     await provider.score({ job: longDescriptionJob, resume });
 

@@ -27,7 +27,7 @@ export function CompanyHistoryPanel({ companyName }: { companyName: string }) {
             {jobs.filter(j => j.companyName === companyName).map((job) => (
               <TableRow key={job.id}>
                 <TableCell className="text-sm">{job.title}</TableCell>
-                <TableCell className="text-sm text-muted-foreground">{new Date(job.postedAt).toLocaleDateString()}</TableCell>
+                <TableCell className="text-sm text-muted-foreground">{job.postedAt ? new Date(job.postedAt).toLocaleDateString() : "—"}</TableCell>
               </TableRow>
             ))}
           </TableBody>
