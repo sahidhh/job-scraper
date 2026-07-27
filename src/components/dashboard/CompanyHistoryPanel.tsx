@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { getCompanyHistoryAction } from "@/features/jobs/actions";
-import type { Job } from "@/features/jobs/domain/types";
+import type { JobWithScore } from "@/features/jobs/domain/types";
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import { Loader2 } from "lucide-react";
 
 export function CompanyHistoryPanel({ companyName }: { companyName: string }) {
-  const [jobs, setJobs] = useState<Job[] | null>(null);
+  const [jobs, setJobs] = useState<JobWithScore[] | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

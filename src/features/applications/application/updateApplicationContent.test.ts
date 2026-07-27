@@ -28,6 +28,7 @@ function makeRepository(existing: Application | null): ApplicationRepository {
     updateContent: vi.fn().mockResolvedValue({ ...existing, subject: "New subject", body: "New body" }),
     markSent: vi.fn(),
     markDismissed: vi.fn(),
+    updateStatus: vi.fn(),
   };
 }
 

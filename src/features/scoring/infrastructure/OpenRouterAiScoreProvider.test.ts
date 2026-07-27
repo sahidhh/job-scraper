@@ -266,7 +266,7 @@ describe("OpenRouterAiScoreProvider", () => {
     const fetchMock = vi.fn().mockResolvedValue(chatResponse({ score: 0.8, reasoning: "ok" }));
     vi.stubGlobal("fetch", fetchMock);
 
-    const jobWithTags: Job = { ...job, locationRaw: "Singapore (Hybrid)", locationTags: ["singapore"], lastModifiedBy: null, lastModifiedAt: null };
+    const jobWithTags: Job = { ...job, locationRaw: "Singapore (Hybrid)", locationTags: ["singapore"] };
     const provider = new OpenRouterAiScoreProvider();
     await provider.score({ job: jobWithTags, resume });
 
@@ -279,7 +279,7 @@ describe("OpenRouterAiScoreProvider", () => {
     const fetchMock = vi.fn().mockResolvedValue(chatResponse({ score: 0.8, reasoning: "ok" }));
     vi.stubGlobal("fetch", fetchMock);
 
-    const jobNoTags: Job = { ...job, locationRaw: "Unknown", locationTags: [], lastModifiedBy: null, lastModifiedAt: null };
+    const jobNoTags: Job = { ...job, locationRaw: "Unknown", locationTags: [] };
     const provider = new OpenRouterAiScoreProvider();
     await provider.score({ job: jobNoTags, resume });
 
@@ -292,7 +292,7 @@ describe("OpenRouterAiScoreProvider", () => {
     const fetchMock = vi.fn().mockResolvedValue(chatResponse({ score: 0.8, reasoning: "ok" }));
     vi.stubGlobal("fetch", fetchMock);
 
-    const seniorJob: Job = { ...job, minYears: 5, lastModifiedBy: null, lastModifiedAt: null };
+    const seniorJob: Job = { ...job, minYears: 5 };
     const provider = new OpenRouterAiScoreProvider();
     await provider.score({ job: seniorJob, resume });
 
@@ -343,7 +343,7 @@ describe("OpenRouterAiScoreProvider", () => {
     const fetchMock = vi.fn().mockResolvedValue(chatResponse({ score: 0.8, reasoning: "ok" }));
     vi.stubGlobal("fetch", fetchMock);
 
-    const longDescriptionJob: Job = { ...job, description: "b".repeat(100), lastModifiedBy: null, lastModifiedAt: null };
+    const longDescriptionJob: Job = { ...job, description: "b".repeat(100) };
     const provider = new OpenRouterAiScoreProvider();
     await provider.score({ job: longDescriptionJob, resume });
 

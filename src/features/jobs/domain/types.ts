@@ -61,8 +61,6 @@ export interface Job {
   ineligibleReason: IneligibleReason | null;
   // Conflict resolution metadata (Phase 4 Task 1): tracks if the user
   // manually edited the job's status or metadata, and when.
-  lastModifiedBy: 'user' | 'scraper' | null;
-  lastModifiedAt: string | null;
 }
 
 // Input to JobRepository.upsertMany() -- a TaggedRawJob ready to persist.

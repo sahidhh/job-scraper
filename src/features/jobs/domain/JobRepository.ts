@@ -1,4 +1,4 @@
-import type { CreateStatusInput, Job, JobFilters, JobsPage, JobStatus, NormalizedJob, UpdateStatusInput, UpsertResult } from "./types";
+import type { CreateStatusInput, Job, JobFilters, JobsPage, JobStatus, JobWithScore, NormalizedJob, UpdateStatusInput, UpsertResult } from "./types";
 
 export interface JobRepository {
   /**
@@ -104,5 +104,5 @@ export interface JobRepository {
   /**
    * Find other jobs by the same company name.
    */
-  findCompanyHistory(companyName: string): Promise<Job[]>;
+  findCompanyHistory(companyName: string): Promise<JobWithScore[]>;
 }

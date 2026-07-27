@@ -40,7 +40,7 @@ visaSponsorship: null,
 relocationAssistance: null,
 securityClearance: false,
 urgentHiring: false,
-ineligibleReason: null, lastModifiedBy: null, lastModifiedAt: null };
+ineligibleReason: null };
 
 const resume: Resume = {
   id: "resume-1",

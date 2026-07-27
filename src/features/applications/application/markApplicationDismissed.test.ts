@@ -28,6 +28,7 @@ function makeRepository(existing: Application | null): ApplicationRepository {
     updateContent: vi.fn(),
     markSent: vi.fn(),
     markDismissed: vi.fn().mockResolvedValue({ ...draft, status: "dismissed" }),
+    updateStatus: vi.fn(),
   };
 }
 
