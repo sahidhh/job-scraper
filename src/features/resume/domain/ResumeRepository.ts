@@ -27,4 +27,9 @@ export interface ResumeRepository {
 
   /** Manual edits to extracted skills, overriding dictionary extraction. */
   updateSkills(id: string, skills: string[]): Promise<Resume>;
+
+  /**
+   * Roll back to a previous resume version by making it active.
+   */
+  rollbackToVersion(version: number): Promise<Resume>;
 }

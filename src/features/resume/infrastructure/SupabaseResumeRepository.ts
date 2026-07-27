@@ -78,4 +78,16 @@ export class SupabaseResumeRepository implements ResumeRepository {
     if (error) throw toAppError(error);
     return toResume(data);
   }
+
+  async rollbackToVersion(version: number): Promise<Resume> {
+    const { data, error } = await this.client.rpc("set_active_resume_by_version", {
+      p_version: version,
+    });
+
+    if (error) throw toAppError(error);
+
+    const row = data?.[0];
+    if (!row) throw new Error("set_active_resume_by_version returned no row");
+    return toResume(row);
+  }
 }
