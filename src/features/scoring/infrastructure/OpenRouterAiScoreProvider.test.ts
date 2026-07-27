@@ -81,10 +81,33 @@ describe("OpenRouterAiScoreProvider", () => {
     const provider = new OpenRouterAiScoreProvider();
     const result = await provider.score({ job, resume });
 
-    expect(result).toEqual({ score: 0.85, reasoning: "Strong match", model: "test-model", tokensInput: null, tokensOutput: null });
+    expect(result).toEqual({
+      score: 0.85,
+      reasoning: "Strong match",
+      sponsorshipConfirmed: false,
+      model: "test-model",
+      tokensInput: null,
+      tokensOutput: null,
+    });
 
     const body = JSON.parse((fetchMock.mock.calls[0]![1] as RequestInit).body as string);
     expect(body.messages[1].content).toContain("Senior React Developer");
+  });
+
+  it("returns sponsorshipConfirmed from the response, defaulting to false when absent or mistyped (AD-53)", async () => {
+    const confirmed = vi.fn().mockResolvedValue(chatResponse({ score: 0.8, reasoning: "sponsors", sponsorshipConfirmed: true }));
+    vi.stubGlobal("fetch", confirmed);
+    expect((await new OpenRouterAiScoreProvider().score({ job, resume }))?.sponsorshipConfirmed).toBe(true);
+
+    // Absent -> conservative default of false (caps rather than frees).
+    const absent = vi.fn().mockResolvedValue(chatResponse({ score: 0.8, reasoning: "silent" }));
+    vi.stubGlobal("fetch", absent);
+    expect((await new OpenRouterAiScoreProvider().score({ job, resume }))?.sponsorshipConfirmed).toBe(false);
+
+    // Mistyped (string) -> also false, not a malformed-response failure.
+    const mistyped = vi.fn().mockResolvedValue(chatResponse({ score: 0.8, reasoning: "x", sponsorshipConfirmed: "yes" }));
+    vi.stubGlobal("fetch", mistyped);
+    expect((await new OpenRouterAiScoreProvider().score({ job, resume }))?.sponsorshipConfirmed).toBe(false);
   });
 
   it("clamps out-of-range scores into [0, 1]", async () => {
@@ -360,6 +383,21 @@ describe("OpenRouterAiScoreProvider", () => {
     expect(systemPrompt).toContain("Seniority mismatch");
     expect(systemPrompt).toContain("Primary-stack mismatch");
     expect(systemPrompt).toContain("silent on sponsorship");
+  });
+
+  it("expresses the caps as explicit numeric ceilings and asks for the sponsorshipConfirmed flag (AD-53)", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(chatResponse({ score: 0.8, reasoning: "ok", sponsorshipConfirmed: false }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const provider = new OpenRouterAiScoreProvider();
+    await provider.score({ job, resume });
+
+    const body = JSON.parse((fetchMock.mock.calls[0]![1] as RequestInit).body as string);
+    const systemPrompt = body.messages[0].content as string;
+    // Numeric ceilings, not adjectives -- the whole point of AD-53's prompt half.
+    expect(systemPrompt).toContain("MUST NOT exceed 0.40");
+    expect(systemPrompt).toContain("MUST NOT exceed 0.50");
+    expect(systemPrompt).toContain("sponsorshipConfirmed");
   });
 
   it("makes the preferred-geography signal subordinate to the sponsorship cap (a target location does not waive sponsorship)", async () => {

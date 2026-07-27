@@ -3,6 +3,7 @@ import type { Resume } from "@/features/resume/domain/types";
 import type { AiScoreProvider } from "@/features/scoring/domain/AiScoreProvider";
 import type { EmbeddingScoreProvider } from "@/features/scoring/domain/EmbeddingScoreProvider";
 import type { ScoreRepository } from "@/features/scoring/domain/ScoreRepository";
+import { capAiScoreForEligibility } from "@/features/scoring/domain/capAiScore";
 import type { EligibilityResult } from "@/features/scoring/domain/classifyEligibility";
 import { INELIGIBLE_REASON_LABELS, classifyEligibility } from "@/features/scoring/domain/classifyEligibility";
 import type { NewJobScore, RankingPreferences } from "@/features/scoring/domain/types";
@@ -75,8 +76,13 @@ export async function scoreJob(
   if (keywordScore >= deps.keywordThreshold && eligibility.eligible) {
     const result = await deps.aiScoreProvider.score({ job, resume });
     if (result) {
-      aiScore = result.score;
-      aiReasoning = result.reasoning;
+      // AD-53: the model won't reliably translate "unconfirmed sponsorship"
+      // into a low number, so cap it deterministically here (onsite Singapore/
+      // UAE without confirmed sponsorship -> at most the ceiling). The cap
+      // reason is appended so the stored reasoning explains the number.
+      const capped = capAiScoreForEligibility(job, result.score, result.sponsorshipConfirmed);
+      aiScore = capped.score;
+      aiReasoning = capped.capReason ? `${result.reasoning} ${capped.capReason}` : result.reasoning;
       model = result.model;
       tokensInput = result.tokensInput;
       tokensOutput = result.tokensOutput;

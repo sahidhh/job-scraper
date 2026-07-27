@@ -91,6 +91,9 @@ The original `findUnscored` implementation excluded "done" jobs by placing all t
 ### 3.4 AI Model Dependency
 Scoring quality depends entirely on the configured `OPENROUTER_MODEL`. Changing the model may alter score distributions and require re-scoring existing jobs (no automatic re-score on model change).
 
+### 3.4b Eligibility Score Cap — Residual Gaps (`docs/decisions.md` AD-53)
+The onsite-foreign-unconfirmed-sponsorship cap (`capAiScoreForEligibility`, ceiling 0.40) is enforced deterministically in code precisely because the model won't reliably obey a qualitative cap in the prompt. Two residuals remain by design: (1) an **onsite role with no `singapore`/`uae` location tag** (an untagged/unknown-location posting) is *not* capped — there is no positive signal that it needs sponsorship, so it passes through rather than risk a false cap, mirroring `classifyEligibility`'s explicit-signal-only philosophy (§3.11); (2) the cap keys off the model's `sponsorshipConfirmed` classification, which **defaults to `false` when the model omits it** — safe (a silent posting caps rather than frees), but a genuinely-sponsoring role the model fails to flag `true` is under-scored until manually reviewed. Separately, the **seniority and primary-stack caps remain prompt-enforced** (numeric ceilings of 0.50), so unlike the sponsorship cap they are not code-guaranteed and can still be imperfectly obeyed by a weaker model. Like all scoring changes, the cap applies to future scoring only — existing `job_scores` need a re-score (§3.5).
+
 ### 3.5 No Score Invalidation on Resume Change
 Existing `job_scores` rows are not deleted when a new resume is activated. The new resume's skills will affect only newly scored jobs. The user must understand that old scores reflect the previous resume.
 
