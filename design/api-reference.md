@@ -629,7 +629,7 @@ Buttons: `[← Prev]` `[Next →]` (conditional) · `[📊 Dashboard]`
 
 ---
 
-### 3.3 ATS Board APIs
+### 3.4 ATS Board APIs
 
 #### Greenhouse
 **Endpoint:** `GET https://boards-api.greenhouse.io/v1/boards/<board_token>/jobs`  
@@ -748,3 +748,71 @@ delay(ms: number): Promise<void>
 `fetchWithRetry` retries on: network errors, HTTP 5xx, HTTP 429. Used by all scrapers and external API clients.
 
 `delay` is the canonical sleep helper — re-exported by `rateLimit.ts` (scrapers) and used directly by `TelegramBotSender`.
+
+---
+
+## 7. Dashboard Job List Contract
+
+The dashboard is the only screen whose read path is driven entirely by URL parameters rather than by a
+server action, so it has a contract of its own. Sections 1–6 cover mutations; this covers the read.
+
+### 7.1 URL parameters (`/dashboard`)
+
+Parsed by `parseFilters()` in `src/app/(protected)/dashboard/page.tsx`. Every parameter is optional;
+an absent parameter means "no constraint", **except** the two inverted flags noted below.
+
+| Param | Type | Maps to `JobFilters` | Control |
+|---|---|---|---|
+| `q` | string (trimmed) | `search` — title OR company, case-insensitive substring | Search input |
+| `location` | `LocationTag` | `locationTags` | Location select |
+| `source` | `JobSource` | `sources` | Source select |
+| `status` | uuid | `statusIds` | Status select |
+| `minScore` | int 0–100 | `minAiScore` (÷100 → 0–1 float) | Min AI score input |
+| `maxYears` | int 0–50 | `maxYears`; falls back to the Settings desired-experience value when absent | Max experience input |
+| `remote` | `"1"` | `remoteOnly` | "Remote only" checkbox |
+| `ineligible` | `"1"` | `includeIneligible` | **Inverted** — "Hide jobs I can't apply to", default ON (AD-51) |
+| `lowmatch` | `"1"` | `includeLowMatch` | **Inverted** — "Hide low keyword matches", default ON (AD-52) |
+| `archived` | `"1"` | `includeArchived` | "Show archived jobs", default OFF |
+| `limit` | int | page size | Not a control — "Load more" rewrites it |
+
+The two inverted flags are the only ones whose *absence* narrows the result set. Both are named for
+what the checkbox says (`Hide …`), not for what the field means (`include…`), which is why the mapping
+is written out here.
+
+**Always applied, never user-facing:** `excludeCompanies`, `excludeEmploymentTypes`, and
+`excludeKeywords` are read from Notification Preferences (§ Notification Preferences) and injected into
+every dashboard query. A company muted for Telegram is muted on the dashboard too — one mute, enforced
+everywhere.
+
+### 7.2 Sorting
+
+**Fixed, not user-selectable.** `overall_score` descending, nulls last, `posted_at` descending as the
+tiebreaker. There is no column-header sort.
+
+The ranking is applied **in memory**, not in SQL: PostgREST cannot order parent `jobs` rows by the
+embedded one-to-many `job_scores.overall_score`, and attempting it is a silent no-op that leaves the
+list ordered by recency instead. `findForDashboard` therefore fetches the filtered set ordered by
+`posted_at`, bounded by `DASHBOARD_FETCH_CAP = 1000`, and sorts with the comparator above
+(decisions.md AD-49, limitations.md §3.12). Anything past that cap is not ranked — the ceiling, and
+the RPC that would remove it, are tracked as a limitation.
+
+### 7.3 Pagination
+
+**Grow-the-page, not discrete pages.** `DEFAULT_JOBS_LIMIT = 50`; the "Load more" control is a link
+that rewrites `?limit` to `limit + 50`, re-runs the server query, and re-renders a longer list. It is
+not infinite scroll (no observer, no auto-fetch) and it is not a numbered pager (there is no page 2 —
+page 1 simply gets longer). Server-side `limit` is clamped to a maximum of 500. `hasMore` from the
+repository decides whether the control renders at all.
+
+Consequences worth knowing before changing this: the URL always fully describes the visible list, so
+back/forward and link-sharing work without extra machinery; and raising `limit` re-fetches from the
+top rather than fetching a delta, which is acceptable at single-user scale and is the reason the
+simpler shape was chosen.
+
+### 7.4 Stats row
+
+`countJobStats` (§5) returns five buckets computed over the filtered set **before** the low-match and
+eligibility cuts, so the row can honestly report "N low match (hidden)". This means
+`stats.total` can legitimately exceed the number of rows rendered; the gap is exactly
+`lowMatchCount` (decisions.md AD-52). The chips render only when non-zero, except the AI-scored chip,
+which is always shown and is the one carrying accent tint as the row's key metric.

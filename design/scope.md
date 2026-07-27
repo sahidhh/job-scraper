@@ -142,6 +142,30 @@ parsing, no AI" extraction standard than `extractSalary`/`extractContactEmail`. 
 | Version history | `/resume`'s "Version history" card lists every resume version (`ResumeRepository.listVersions()`), newest first, with upload date and origin ("Uploaded" if it has a `content_hash`, "AI-applied" if it was produced by P1.12's apply-suggestions flow) |
 | Restore | `restoreResumeVersionAction` makes an old version active again by re-running `set_active_resume` seeded with that version's exact content -- never mutates or deletes the old row, so history stays intact and restoring is itself just another new version |
 
+### P1.16 — Design System Pass (design handoff integration, 2026-07-27)
+
+Applies the `Dashboard Optimization` handoff to the six screens that already exist. No new screens, no
+new routes, no data-model change — the handoff describes how the shipped product should look, not a
+different product.
+
+| Feature | Description |
+|---|---|
+| Accent token | `--primary` becomes `oklch(0.5 0.1 264)` indigo, replacing shadcn's near-black neutral. One variable; every `bg-primary`/`text-primary`/`accent-primary` call site inherits it (decisions.md AD-54) |
+| Documented token set | Colour, radius, spacing, and type scale written down in `design/tech-stack.md` §8 — previously undocumented anywhere |
+| Insights card order | "In demand" leads, "Level up" follows (decisions.md AD-55) |
+| Score badge legend | Pending state collapses to a single `Pending · N%` pill; bands documented in `design/user-guide.md` §4 (decisions.md AD-56) |
+| Presentation-layer conventions | Composition, navigation surfaces, state ownership, and loading/empty/error rules written down in `design/architecture.md` §12 |
+
+**Deferred, not built** (each recorded with a reason rather than left as an implied to-do):
+
+| Deferred item | Why | Tracked in |
+|---|---|---|
+| Per-source enable/disable toggles on `/settings` | Needs a persistence layer, a `scrape.ts` read, and a decision about already-scraped jobs — a data-model change, not a visual one | AD-57, limitations.md §10.1 |
+| Runtime theming (accent hue / corner style / density props) | Three settings for a single user who has already picked the defaults | AD-54, tech-stack.md §8 |
+| Mobile chart subsetting on `/analytics` Overview | Real perceived-performance win, but no measurement yet showing it matters at current data volume | limitations.md §10.5 |
+| Resume drag-and-drop dropzone | Cosmetic; the file input works | limitations.md §10.7 |
+| Nav-surface reconciliation (`BottomNav` label drift, orphaned `MobileNav.tsx`) | Touches shipped navigation behaviour; wants its own change, not a rider on a token pass | limitations.md §10.4 |
+
 ### P2 — Medium Priority
 
 | Feature | Description |

@@ -59,13 +59,14 @@ src/app/
 
 | Component | Used in | Built from shadcn primitives |
 |---|---|---|
-| `AppShell` | `(protected)/layout.tsx` | Desktop sidebar nav + mobile header/`BottomNav` — links to Dashboard, Roles, Resume, Insights, Analytics, Settings, Logout |
+| `AppShell` | `(protected)/layout.tsx` | Desktop sidebar (`hidden md:flex`) reading `NAV_ITEMS` from `components/layout/navItems.ts` — Dashboard, Roles, Resume, Insights, Analytics, Settings — plus a bottom-pinned Logout; mobile header + `BottomNav` |
+| `BottomNav` | via `AppShell`, mobile only | Client component, fixed bottom tab bar (`md:hidden`). **Declares its own `BOTTOM_NAV` array instead of reading `navItems.ts`**, and has already drifted from it (labels Dashboard as "Jobs", omits Resume) — see `design/limitations.md` §10.4 |
+| `MobileNav` | *nothing* | A `Sheet`-based hamburger menu built on `NAV_ITEMS`. Fully implemented, **imported nowhere** — mobile uses `BottomNav`. Orphaned; do not extend it without first deciding which surface wins (limitations.md §10.4) |
 | `RouteTabs` | `/analytics`, `/settings` layouts | Client component (`"use client"`): horizontally-scrollable, `usePathname`-driven tab nav (`Link`s to sub-routes, not client-side state) — mirrors `BottomNav`'s active-link pattern |
 | `JobsTable` | `/dashboard` | Client component (`"use client"`): holds multi-select state, renders the select-all checkbox header, the bulk-action bar (`Select` + Apply/Archive/Clear `Button`s), `Table` on desktop, `JobCard` list on mobile (`md:hidden`/`hidden md:block` split), `Badge` |
 | `JobRow` (expandable) | inside `JobsTable` | `Collapsible` — reveals `ai_reasoning`; row checkbox + per-row `JobStatusSelect` |
 | `JobStatusSelect` | inside `JobRow` | Client component: `Select` of statuses (colored dot) → `setJobStatusAction([jobId], statusId)` then `router.refresh()` |
-| `FilterBar` | `/dashboard` | `Select` (location tag, source, **status**), `Input` (min score, **max years**), **"show archived" checkbox**. `maxYears` defaults to the Settings desired-experience value; the input overrides per-view (P2) |
-| `InsightsPage` / `SkillRow` | `/insights` | `Card`, `Badge`, proportion bars — "Level up" (skill gaps) + "In demand" lists from `computeSkillGaps`/`computeSkillDemand` over role-matched jobs (P1) |
+| `FilterBar` | `/dashboard` | Client component. `Input` (search over title/company), `Select` (location tag, source, status), `Input` (min score, max years), and four checkboxes: "Remote only", "Hide jobs I can't apply to" (default on, AD-51), "Hide low keyword matches" (default on, AD-52), "Show archived jobs". Holds **no** filter state — reads `useSearchParams()` and navigates; the URL is the store (architecture.md §12.3). On mobile it collapses to a "Filters" pill with an active-count `Badge` opening a `Sheet`. Full param contract: `design/api-reference.md` §7.1 |
 | Analytics tab pages | `/analytics`, `/analytics/scraping`, `/analytics/breakdown`, `/analytics/sources` | Server components, one per tab — each fetches only its own slice via `SupabaseMatchedJobsRepository`/`getSourceHealthReport`/`getScoringQueueReport`; transforms with pure fns; passes to `AnalyticsCharts` |
 | `AnalyticsCharts` | all `/analytics/*` tabs | `"use client"` — recharts charts (`JobsOverTimeChart`, `JobsBySourceChart`, `ScoreHistogramChart`, `StatusBreakdownChart`, `JobsByExperienceChart`, `JobsByLocationChart`, `JobsByCompanyChart`, `ScoredBySourceChart`) + stat-card groups (`TokenStatsCards`, `SalaryStatsCards`, `RemoteStatCard`, `PipelineStatsCards`, `ScoringQueueStatsCards`). Empty-state guard per chart |
 | `ExperienceCard` | `/settings` | Client `Card` + numeric `Input` → `setDesiredExperienceAction`; blank clears the soft year filter (P2) |
@@ -77,7 +78,7 @@ src/app/
 | `CompanyFormDialog` | `/settings` | `Dialog`, `Input`, `Select` (source enum) |
 | `ScrapeRunsList` | `/settings/activity` | `Table` — recent `scrape_runs` (source, status, jobs_found, run_at, error) |
 | `ThresholdsCard` | `/settings` | `Card` — read-only display of `KEYWORD_THRESHOLD`/`NOTIFY_THRESHOLD` from config |
-| Insights "Level up" / "In demand" cards | `/insights` | `Card`, `Badge`, proportion bars. Server component recomputes job skills at read time (`extractSkills` over role-matched jobs), then `computeSkillGaps`/`computeSkillDemand`. Honest copy: demand is over the user's scraped role-matched jobs, not the market |
+| Insights cards + `SkillRow` | `/insights` | `Card`, `Badge`, proportion bars. Server component recomputes job skills at read time (`extractSkills` over role-matched jobs), then `computeSkillDemand`/`computeSkillGaps`. **"In demand" renders first, "Level up" second** (decisions.md AD-55). `SkillRow variant` is `info` for in-demand, `warning` for gaps. Honest copy: demand is over the user's scraped role-matched jobs, not the market |
 | `LoginForm` | `/login` | `Card`, `Input`, `Button`, `Form` (with `zod` validation) |
 
 All data-displaying components are server components receiving data as props from the page's server-side fetch (via repository → application use-case). Only interactive leaf components (`SkillsEditor`, `FilterBar`, forms) are client components (`"use client"`).

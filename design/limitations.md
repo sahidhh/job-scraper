@@ -200,3 +200,62 @@ The Telegram reminder for draft applications (`notifyPendingDrafts`) is stateles
 | Source-level health summary (`getSourceHealthReport`, Phase 1 Task 5/7) doesn't drive runtime behavior | Now surfaced on `/analytics` (Phase 4 Task 13), but still informational only — `scrape.ts`'s scraper-selection logic (`listActiveHealthy`) still only reads `companies.health_status`, not this summary | P2 |
 | Two independent, unreconciled source-health signals | `companies.health_status` (probe-driven, board-token sources only, drives auto-disable via `listActiveHealthy`) and the `scrape_runs`-derived summary (covers all sources, informational only) can disagree — e.g. a source can show `recommendation: "Healthy."` from recent scrape_runs while still `disabled` in `companies` if it hasn't been re-probed yet. `/analytics` now shows both tables side by side rather than merging them, so the disagreement is visible instead of hidden | P3 |
 | Scoring queue report (`getScoringQueueReport`, Phase 1 Task 6) has no alerting | Now surfaced on `/analytics` (Phase 4 Task 13) and still logged by `score.ts` every run; there's still no push alerting or auto-remediation for stuck jobs beyond the indefinite-retry behavior that already existed (AD-14) | P2 |
+
+---
+
+## 10. UI & Design System
+
+### 10.1 Settings → Sources Does Not Manage Sources (`docs/decisions.md` AD-57)
+
+The tab is named "Sources" but manages **companies and their ATS board tokens**. The aggregator
+sources (JSearch, Adzuna, Remotive, Himalayas, RemoteOK, MyCareersFuture) cannot be enabled or
+disabled from the UI at all — a source runs if its env key is configured and doesn't if it isn't, a
+deployment concern rather than a user setting. Per-source toggles would need somewhere to persist
+enablement, a read of it in `scrape.ts`, and a decision about what disabling does to already-scraped
+jobs; deferred rather than built. Read-only source health *is* surfaced, on `/analytics/sources`.
+
+### 10.2 Error Boundaries Are Not Built From Design Tokens
+
+`src/app/error.tsx` and `src/app/global-error.tsx` use raw Tailwind palette classes
+(`text-gray-500`, `bg-blue-600`) and a bare `<button>` rather than `text-muted-foreground`,
+`bg-primary`, and the `Button` primitive. They therefore do not inherit the accent (AD-54) and will
+not follow any future token change — the two screens most likely to be seen during an incident are
+the two least likely to look like the product. `global-error.tsx` genuinely cannot use the app's
+providers (it replaces the root layout), but it can still use literal token values.
+
+### 10.3 Score Badge Thresholds Are Duplicated Constants, Not Derived From Env
+
+`ScoreBadge` hardcodes `0.75` and `0.40`. The first is meant to track `NOTIFY_THRESHOLD`, which is an
+env var read server-side by `notify.ts` and never passed to the dashboard. If someone changes
+`NOTIFY_THRESHOLD`, the green badge silently stops meaning "this would have notified me" and nothing
+fails. A code comment points at `docs/scoring.md`; that is the whole enforcement mechanism
+(`docs/decisions.md` AD-56).
+
+### 10.4 Two Primary Nav Surfaces, Two Independent Lists
+
+`AppShell`'s desktop sidebar reads `NAV_ITEMS` from `src/components/layout/navItems.ts`, but
+`BottomNav` declares its own `BOTTOM_NAV` array. They have already drifted: the bottom bar labels
+Dashboard as **"Jobs"**, and **omits Resume entirely** — on mobile, `/resume` is reachable only via a
+single unlabelled icon button in the header. Separately, `src/components/layout/MobileNav.tsx` (a
+`Sheet`-based hamburger menu) is fully implemented but imported nowhere; mobile uses `BottomNav`
+instead. See architecture.md §12.2 for the rule this violates.
+
+### 10.5 Analytics Renders Every Overview Chart on Mobile
+
+Route-based tabs already give per-tab lazy loading, so Scraping/Breakdown/Sources cost nothing until
+opened. Within the Overview tab, however, all charts render at every breakpoint. The design handoff
+calls for mobile to show only the two highest-priority charts (Jobs over time, Status breakdown) and
+leave the rest one tab away, as a deliberate perceived-performance choice. Not implemented.
+
+### 10.6 No Accessibility Audit
+
+The conventions in architecture.md §12.5 are followed by habit, not verified. There is no axe/Lighthouse
+pass in CI, no keyboard-only walkthrough, and no contrast check of the accent tints (`/10`, `/12`) used
+behind small text. Reasonable for a single-user internal tool; stated so it isn't mistaken for a
+compliance claim.
+
+### 10.7 Resume Upload Has No Drag-and-Drop
+
+`ResumeUploadCard` is a file input and a button. The handoff specifies a dashed dropzone with
+drag-and-drop and a "Browse files" fallback. Cosmetically close, functionally a step down for the
+one action on that screen.

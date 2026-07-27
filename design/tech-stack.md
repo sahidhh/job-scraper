@@ -213,3 +213,75 @@ why the workflow now alerts on failure. If you see that alert, rotate the token 
 `supabase.com/dashboard/account/tokens`, update the repo secret, and re-run the workflow.
 
 The cron `schedule:` entry in `scrape.yml` is **active** (`0 */6 * * *`, every 6 hours), not commented out — whether this 6h cadence was a deliberate, approved choice is an open question tracked in `TECHNICAL_DEBT.md` #1, not a doc-accuracy issue.
+
+---
+
+## 8. Design System & Tokens
+
+The UI has exactly one source of visual truth: the CSS custom properties in `src/app/globals.css`.
+Tailwind v4 has no `tailwind.config.*` in this repo — the theme is declared in CSS via `@theme inline`,
+which maps each `--color-*` utility token onto the corresponding variable. Adding a colour means adding
+a variable there, not a hex value in a component.
+
+### Colour
+
+All colours are **oklch**, in both `:root` and `.dark`. No hex, no hsl, anywhere in the stylesheet.
+
+| Token | Value (light) | Used for |
+|---|---|---|
+| `--primary` | `oklch(0.5 0.1 264)` | The accent. Primary buttons, active sidebar item, active tab underline, active role chips, the AI-scored stat chip, progress bars, focus rings (decisions.md AD-54) |
+| `--primary-foreground` | `oklch(0.985 0 0)` | Text/icons on accent fills |
+| `--foreground` | `oklch(0.145 0 0)` | Body text |
+| `--muted-foreground` | `oklch(0.556 0 0)` | Captions, section labels, inactive nav |
+| `--border` | `oklch(0.922 0 0)` | Card, table, and toolbar borders |
+| `--success` | — | Score badge ≥ 0.75 (`Badge variant="success"`) |
+| `--warning` | — | Score badge ≥ 0.40 (`Badge variant="warning"`) |
+| `--info` | — | Insights "In demand" rows (`SkillRow variant="info"`) |
+
+The accent is used at low opacity for tints (`/10`, `/12`, `/25`, `/30`) for chip fills and tinted
+borders — always as `bg-primary/10`-style utilities, never as a separate hardcoded variable.
+
+### Radius and spacing
+
+`--radius: 0.625rem` (10px) is the base; `--radius-sm/md/lg/xl` derive from it with `calc()`.
+Cards, frames, and the filter toolbar use `--radius-lg` (10px); buttons, inputs, and small badges use
+`--radius-md`; chips and status pills use `rounded-full`.
+
+Spacing is plain Tailwind scale, applied consistently rather than tokenised: page padding `p-6`,
+card padding `p-4`, vertical rhythm between page sections `space-y-5`, chip/icon gaps `gap-1.5`–`gap-2`.
+
+### Typography
+
+System stack only (`ui-sans-serif, system-ui, -apple-system, sans-serif`) — **no webfont is loaded, and
+none should be added** without re-checking the cold-start budget (limitations.md §6.4). Page title
+`text-2xl font-semibold`; section labels `text-xs font-semibold uppercase tracking-wide
+text-muted-foreground`; body and table text `text-sm`; metadata and badges `text-xs`; stat numbers
+`text-lg font-bold tabular-nums` (`tabular-nums` is required on every changing number so filter
+changes don't jitter the layout).
+
+### Product name
+
+**"Job Intelligence"** is the product name, used in the `AppShell` heading and throughout these docs.
+The design handoff's wordmark reads "Job Intel"; that is the prototype's shorthand and is **not**
+adopted. Do not introduce a third variant.
+
+### Icons
+
+Lucide React only, stroke-based, 24×24 viewBox. `size-3.5`/`size-4` in content, `size-4` in nav.
+Do not mix in a second icon set or inline raw SVG paths — `components.json` pins `"iconLibrary": "lucide"`.
+
+### Theming
+
+**One fixed theme.** There is no runtime theme switcher, no density toggle, and no accent picker
+(decisions.md AD-54). Dark mode exists as a `.dark` class variant with a full parallel token set, but
+nothing currently toggles it.
+
+### What is *not* in `components/ui/`
+
+The shadcn primitives actually installed are: `badge`, `button`, `card`, `collapsible`, `dialog`,
+`input`, `label`, `progress`, `select`, `sheet`, `table`, `textarea`. Notably absent — and deliberately
+so, since each is currently served by a plainer construct — are `checkbox` (raw
+`<input type="checkbox" className="accent-primary">`), `tabs` (route-based `RouteTabs`, see
+architecture.md §12), `skeleton` (per-route `loading.tsx` with `animate-pulse` divs), and `switch`
+(no toggle-switch surface exists; see decisions.md AD-57). Add a primitive when a second call site
+appears, not before.

@@ -101,6 +101,34 @@ your AI relevance score plus any ranking bonuses you've configured (see "Ranking
 - **Status** — your workflow status for this job
 - **Actions** — open job URL in new tab, or draft an application (mail icon — see "Draft an Application" below)
 
+Click a row's title to expand it and read the AI's reasoning for the score.
+
+### Reading the score badge
+| Badge | Means |
+|---|---|
+| Green, e.g. `82%` | AI score ≥ 75% — this job cleared the notification threshold, so it's one you'd have been pinged about |
+| Amber, e.g. `58%` | AI score 40–74% — worth a look, not a strong match |
+| Grey outline, e.g. `31%` | AI score below 40% — scored, and scored low |
+| Grey outline, `Pending · 34%` | **Not scored yet.** The number shown is the cheap keyword score, standing in until the AI stage runs |
+
+The green cut-off is `NOTIFY_THRESHOLD` (0.75), the same number the Telegram notifier uses — a green
+badge and "this would have notified me" mean the same thing by design. `Pending` is a different state
+from a low score: pending means no AI verdict exists yet, not that the verdict was bad.
+
+### On mobile
+The dashboard reflows rather than shrinking:
+- The job table becomes a list of **cards** — title and score badge on the top row, company beneath,
+  location and source chips, then a footer strip with the status dropdown.
+- The filter toolbar collapses to a single **Filters** pill showing a count of how many filters are
+  active. Tapping it opens a bottom sheet with the full set of controls, plus **Clear all** and
+  **Done**.
+- Two filters are labelled for the action rather than the field: **Can apply** reads "Hide jobs I
+  can't apply to", **Good match** reads "Hide low keyword matches".
+- Primary navigation moves from the sidebar to a **bottom tab bar**.
+
+On desktop the table is sized to fit the window — long titles, company names, and sources truncate
+with an ellipsis (hover for the full value) instead of forcing a horizontal scrollbar.
+
 ### Filtering
 - **Search:** Filter by keyword in title or company name
 - **Location:** Filter by India / Singapore / UAE / Remote (single-select)
@@ -118,10 +146,9 @@ your AI relevance score plus any ranking bonuses you've configured (see "Ranking
 
 Applying a filter re-runs the query on the server. While it's in flight the job
 list dims and an "Updating…" indicator appears next to the filters, so a filter
-change reads as "loading" rather than a frozen page. On desktop the job table is
-sized to fit the window — long titles, company names, and sources are truncated
-with an ellipsis (hover to see the full value) instead of forcing a horizontal
-scrollbar.
+change reads as "loading" rather than a frozen page. The list you were looking at
+stays on screen while this happens — it dims rather than being replaced by a
+skeleton, so the page never flashes empty between filter changes.
 
 ### The stats row
 Above the filters: `X of Y jobs · N AI-scored · N low match · N queued`. Every number describes the
@@ -164,7 +191,10 @@ without double-counting. Leave everything blank (or click "Clear all") to rank b
 4. All selected jobs are updated at once
 
 ### Pagination
-Use the page controls at the bottom to navigate pages.
+The list starts at 50 jobs. **Load more** at the bottom adds another 50 to the same page — it grows
+the list rather than paging to a separate screen, so there is no "page 2" and nothing you've already
+scrolled past disappears. The count is carried in the URL, so a reloaded or shared link shows exactly
+the same list you were looking at.
 
 ### Draft an Application
 Click the mail icon on any job row/card to open the application dialog.
@@ -241,11 +271,19 @@ When on, those postings are discarded during the scrape and never saved at all.
 
 **Location:** `/insights`
 
-### Skill Gaps
-Shows skills appearing frequently in matched job descriptions that are not present in your active resume. These are the highest-leverage skills to learn or add to your resume.
+The page shows two cards, in this order.
 
-### Skill Demand
-Shows the most-requested skills across all matched and scored jobs — regardless of whether you have them.
+### In demand
+**First on the page** (and first when stacked on mobile). The most-requested skills across all matched
+and scored jobs that you already have on your resume — what your current profile is genuinely strong
+at, shown as a labelled percentage bar per skill.
+
+### Skill Gaps ("Level up")
+**Second.** Skills appearing frequently in matched job descriptions that are *not* present in your
+active resume. These are the highest-leverage skills to learn or add.
+
+> The order is deliberate: what you're already strong at leads, the gap analysis follows
+> (`docs/decisions.md` AD-55).
 
 > Insights are meaningful only after you have an active resume, an active role, and at least one scoring run completed.
 

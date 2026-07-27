@@ -221,7 +221,7 @@ sequenceDiagram
 
 All runtime behaviour is controlled via environment variables. See [tech-stack.md](tech-stack.md) for the full list and defaults.
 
-## 10. Testing Approach
+## 11. Testing Approach
 
 - **Unit tests** with vitest covering all application-layer use-cases and infrastructure adapters.
 - **Mocked dependencies** — no live network or database calls in tests.
