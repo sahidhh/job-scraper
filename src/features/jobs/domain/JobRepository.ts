@@ -101,4 +101,8 @@ export interface JobRepository {
    * after all sources have been ingested. Returns the count of jobs marked.
    */
   markExpiredJobs(thresholdDays: number): Promise<number>;
+  /**
+   * Find other jobs by the same company name.
+   */
+  findCompanyHistory(companyName: string): Promise<Job[]>;
 }

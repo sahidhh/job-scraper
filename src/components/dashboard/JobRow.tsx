@@ -1,13 +1,17 @@
 "use client";
 
-import { ChevronDown, ChevronRight, ExternalLink } from "lucide-react";
+import { Archive, ChevronDown, ChevronRight, ExternalLink, ThumbsDown } from "lucide-react";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { TableCell, TableRow } from "@/components/ui/table";
 import type { JobStatus, JobWithScore } from "@/features/jobs/domain/types";
 import { INELIGIBLE_REASON_LABELS } from "@/features/scoring/domain/classifyEligibility";
 import { ApplicationDraftDialog } from "./ApplicationDraftDialog";
+import { CompanyHistoryPanel } from "./CompanyHistoryPanel";
 import { JobStatusSelect } from "./JobStatusSelect";
+import { setJobStatusAction } from "@/features/jobs/actions";
+import { useDashboardHotkeys } from "@/hooks/useDashboardHotkeys";
+import { Button } from "@/components/ui/button";
 
 // Total column count, used for the expanded-reasoning row's colSpan:
 // select, title, company, location, source, status, score, link.
@@ -66,6 +70,20 @@ export function JobRow({
   selected: boolean;
   onToggleSelect: (jobId: string) => void;
 }) {
+  const rejectStatus = statuses.find(s => s.label === "Rejected")?.id;
+  const archiveStatus = statuses.find(s => s.label === "Archived")?.id;
+
+  const onAction = async (statusId: string | undefined) => {
+    if (!statusId) return;
+    await setJobStatusAction([job.id], statusId);
+  };
+
+  useDashboardHotkeys(job.id, {
+    onReject: () => rejectStatus && onAction(rejectStatus),
+    onArchive: () => archiveStatus && onAction(archiveStatus),
+    onDraft: () => {}, // TODO
+  });
+
   const [open, setOpen] = useState(false);
 
   return (
@@ -131,24 +149,46 @@ export function JobRow({
           </div>
         </TableCell>
         <TableCell>
-          <div className="flex items-center">
-            <a
-              href={job.url}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex size-8 items-center justify-center rounded-md text-primary transition-opacity hover:opacity-70"
-              aria-label={`View ${job.title}`}
-            >
-              <ExternalLink className="size-4" />
-            </a>
-            <ApplicationDraftDialog jobId={job.id} jobTitle={job.title} />
-          </div>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="size-8 p-0"
+                onClick={() => rejectStatus && onAction(rejectStatus)}
+                title="Reject"
+              >
+                <ThumbsDown className="size-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="size-8 p-0"
+                onClick={() => archiveStatus && onAction(archiveStatus)}
+                title="Archive"
+              >
+                <Archive className="size-4" />
+              </Button>
+              <a
+                href={job.url}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex size-8 items-center justify-center rounded-md text-primary transition-opacity hover:opacity-70"
+                aria-label={`View ${job.title}`}
+              >
+                <ExternalLink className="size-4" />
+              </a>
+              <ApplicationDraftDialog jobId={job.id} jobTitle={job.title} />
+            </div>
         </TableCell>
       </TableRow>
       {open && (
         <TableRow>
-          <TableCell colSpan={COLUMN_COUNT} className="whitespace-normal text-sm text-muted-foreground">
-            {job.aiReasoning ?? "AI review pending — keyword match score shown above."}
+          <TableCell colSpan={COLUMN_COUNT} className="space-y-4 whitespace-normal p-4 text-sm">
+            <div className="text-muted-foreground">
+              {job.aiReasoning ?? "AI review pending — keyword match score shown above."}
+            </div>
+            <div className="font-semibold">Company History</div>
+            <CompanyHistoryPanel companyName={job.companyName} />
           </TableCell>
         </TableRow>
       )}

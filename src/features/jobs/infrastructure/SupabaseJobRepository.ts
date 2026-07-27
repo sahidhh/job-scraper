@@ -677,4 +677,14 @@ export class SupabaseJobRepository implements JobRepository {
     if (error) throw toAppError(error);
     return (data ?? []).length;
   }
+
+  async findCompanyHistory(companyName: string): Promise<Job[]> {
+    const { data, error } = await this.client
+      .from("jobs")
+      .select(DASHBOARD_SELECT)
+      .eq("company_name", companyName)
+      .order("posted_at", { ascending: false });
+    if (error) throw toAppError(error);
+    return (data ?? []).map(toDashboardJob);
+  }
 }
