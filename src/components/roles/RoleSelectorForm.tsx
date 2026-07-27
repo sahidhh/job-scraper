@@ -66,6 +66,21 @@ export function RoleSelectorForm({ activeSelection }: { activeSelection: RoleSel
     });
   }
 
+  // A role typed into the "+ Add role" chip joins the preview list already
+  // selected -- you added it on purpose, so making you click it again to
+  // select it would be busywork. Duplicates are ignored (case-insensitive).
+  function addCustomRole(role: string) {
+    const trimmed = role.trim();
+    if (trimmed.length === 0 || !preview) return;
+    const exists = preview.relatedRoles.some((r) => r.toLowerCase() === trimmed.toLowerCase());
+    if (!exists) {
+      setPreview({ ...preview, relatedRoles: [...preview.relatedRoles, trimmed] });
+    }
+    setSelectedRoles((current) =>
+      current.some((r) => r.toLowerCase() === trimmed.toLowerCase()) ? current : [...current, trimmed],
+    );
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex gap-2">
@@ -87,6 +102,7 @@ export function RoleSelectorForm({ activeSelection }: { activeSelection: RoleSel
           relatedRoles={preview.relatedRoles}
           selectedRoles={selectedRoles}
           onToggleRole={toggleRole}
+          onAddRole={addCustomRole}
           source={preview.source}
           onConfirm={handleConfirm}
           isPending={isPending}

@@ -156,8 +156,10 @@ function SkillRow({
     <li className="space-y-1">
       <div className="flex items-center justify-between text-sm">
         <span className="font-medium">{skill}</span>
-        <Badge variant="outline">
-          {count} / {total}
+        {/* Percentage leads (design handoff); the raw counts stay available on
+            hover so the sample size behind the number isn't lost. */}
+        <Badge variant="outline" className="tabular-nums" title={`${count} of ${total} matched jobs`}>
+          {pct}%
         </Badge>
       </div>
       <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">

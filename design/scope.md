@@ -163,6 +163,10 @@ different product.
 | Resume dropzone | Drag-and-drop with a "Browse files" fallback and a selected-file row (limitations.md §10.7) |
 | Role chips | Selected related-role chips carry the accent tint at 600 weight; unselected stay plain outlined grey |
 | Tokenised error boundaries | `error.tsx` / `global-error.tsx` rebuilt on design tokens so they inherit the accent (limitations.md §10.2) |
+| Dashed "+ Add" chips | Roles gains a trailing "+ Add role" chip (custom roles join the list already selected); Resume's skills editor gains a matching "+ Add skill" chip, replacing the separate input row |
+| Insights percentages | Skill rows lead with a percentage rather than `count / total`; the raw counts stay on hover |
+| Resume card caption | "Extracted skills" card gains a `{type} · parsed {n}h ago` caption (AD-59) |
+| Distinct nav landmarks | The two primary `<nav>` elements no longer share one `aria-label` — both sit in the DOM at all times, and duplicate landmark names are ambiguous to a screen reader |
 
 **Deferred, not built** (each recorded with a reason rather than left as an implied to-do):
 
@@ -173,6 +177,9 @@ different product.
 | Mobile chart subsetting on `/analytics` Overview | Real perceived-performance win, but no measurement yet showing it matters at current data volume | limitations.md §10.5 |
 | Score-badge bands derived from `NOTIFY_THRESHOLD` rather than duplicated constants | Needs the env value threaded to the dashboard; the constants carry a pointer comment meanwhile | AD-56, limitations.md §10.3 |
 | Formal accessibility audit (axe/Lighthouse in CI) | Conventions are followed by habit; no automated verification | limitations.md §10.6 |
+| Analytics Overview as a 2×2 chart grid | The handoff's Analytics assumes a different tab IA; all four charts already exist on other tabs, and moving them is a product change, not a visual one | AD-58, limitations.md §10.5 |
+| Resume "Reprocess" button | Would promise re-parsing that AD-30's parse-once cache never does; the honest version ("re-extract skills") is a new server action needing its own change | AD-59, limitations.md §10.7 |
+| Mobile chart subsetting within the Breakdown tab | Real perceived-performance idea, but unmeasured at current data volume | limitations.md §10.5 |
 
 ### P2 — Medium Priority
 

@@ -240,12 +240,19 @@ list, and the mobile header's resume shortcut has been removed as redundant. The
 The desktop sidebar, which previously had no active state at all, now renders one via the new
 `SidebarNav` client component. See architecture.md §12.2.
 
-### 10.5 Analytics Renders Every Overview Chart on Mobile
+### 10.5 Analytics' Tab Layout Differs From the Design Handoff (`docs/decisions.md` AD-58)
 
-Route-based tabs already give per-tab lazy loading, so Scraping/Breakdown/Sources cost nothing until
-opened. Within the Overview tab, however, all charts render at every breakpoint. The design handoff
-calls for mobile to show only the two highest-priority charts (Jobs over time, Status breakdown) and
-leave the rest one tab away, as a deliberate perceived-performance choice. Not implemented.
+The handoff's Analytics Overview is a 2×2 chart grid (Jobs over time, By source, Score histogram,
+Status breakdown). This app's Overview is the *operational* screen — pipeline stats, scoring-queue
+depth, token usage — and those four charts live on the Scraping & Scoring and Job Breakdown tabs
+instead. Tab names match; contents were designed against a different IA. Deliberately not
+reconciled, because moving the charts is a product change rather than a visual one.
+
+Separately, and still open: the handoff's mobile guidance — render only the two highest-priority
+charts and leave the rest a tab away — is not implemented on the Breakdown tab, which renders four
+charts at every breakpoint. Route-based tabs already give per-tab lazy loading, so nothing is fetched
+for a tab you don't open; the gap is only *within* a tab. No measurement yet shows this matters at
+current data volume.
 
 ### 10.6 No Accessibility Audit
 
@@ -254,10 +261,16 @@ pass in CI, no keyboard-only walkthrough, and no contrast check of the accent ti
 behind small text. Reasonable for a single-user internal tool; stated so it isn't mistaken for a
 compliance claim.
 
-### 10.7 Resume Upload Has No Drag-and-Drop — Resolved
+### 10.7 Resume Screen: Dropzone Resolved, "Reprocess" Deliberately Absent
 
 `ResumeUploadCard` is now a dashed dropzone with drag-and-drop, a "Browse files" fallback, and a
 selected-file row with a remove affordance. The file input remains in the DOM (visually hidden, not
 removed) so keyboard and assistive-tech users get the real control. Client-side type checking is by
 extension, since a dropped file can carry an empty or wrong MIME type; server-side validation is
 unchanged and remains the real gate.
+
+The handoff's "Reprocess" button is **not** built — it would promise re-parsing that AD-30's
+parse-once cache deliberately never does (`docs/decisions.md` AD-59). The metadata caption beside it
+is built, but reads "PDF resume · parsed 3h ago" rather than a filename: storage paths are
+content-hash-based, so the original filename is not retained anywhere and inventing one would be
+worse than omitting it.

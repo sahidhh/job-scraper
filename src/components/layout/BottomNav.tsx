@@ -16,7 +16,10 @@ export function BottomNav() {
   return (
     <nav
       className="fixed bottom-0 left-0 right-0 z-50 flex h-16 items-stretch border-t bg-background md:hidden"
-      aria-label="Primary"
+      /* Distinct from SidebarNav's landmark: both are in the DOM at all times
+         (each hidden at the other's breakpoint), and two nav landmarks sharing
+         one name is ambiguous to a screen reader. */
+      aria-label="Primary (mobile)"
     >
       {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
         const isActive = pathname === href || pathname.startsWith(`${href}/`);

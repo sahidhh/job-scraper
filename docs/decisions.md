@@ -635,3 +635,29 @@ It is also not obviously wanted. Source enablement today is a deployment concern
 **Alternatives considered:** Rendering the handoff's list read-only, as a "sources currently active" panel (rejected — `/analytics/sources` already shows exactly this with real health data; a second, thinner copy on `/settings` is the duplicate-surface problem this pass is supposed to be removing). Reading the toggle state from env at render and disabling the switch (rejected — a switch you can't switch is worse than no switch).
 
 **Consequences:** No code change. Recorded in `design/scope.md` §3 under deferred items and in `design/limitations.md` §10.1 so the gap between the handoff and the shipped screen is documented rather than rediscovered. The visual half of the handoff's Settings screen — bordered list container, consistent row rhythm — is still applied to the existing cards.
+
+### AD-58: Keep Analytics' existing tab information architecture; don't move four charts onto Overview (scope, 2026-07-27)
+
+**Decision:** Do not restructure `/analytics` to match the handoff's Overview screen (a 2×2 grid of Jobs over time / By source / Score histogram / Status breakdown). Overview keeps its current content — pipeline stats, scoring-queue stats, token usage — and the charts stay where they are, split across the Scraping & Scoring and Job Breakdown tabs. The handoff's mobile chart-subsetting note is therefore moot for Overview, which renders stat cards, not charts.
+
+**Rationale:** The tab *names* match (Overview / Scraping / Breakdown / Sources) but the contents were designed against a different information architecture. In this app, Overview answers "is the pipeline healthy right now" — it is the operational screen, and the only one whose numbers are actionable without a role selection. The handoff's Overview answers "what does my job corpus look like", which here is the Breakdown tab's job. All four of the handoff's charts already exist (`JobsOverTimeChart`, `JobsBySourceChart`, `ScoreHistogramChart`, `StatusBreakdownChart`); moving them to Overview would either duplicate them or hollow out the two tabs they currently justify.
+
+That is a product-IA change, not a visual one, and the design pass this decision belongs to was explicitly scoped to applying a look to screens that already exist.
+
+**Alternatives considered:** Adding the four charts to Overview *alongside* the stat cards (rejected — Overview becomes the longest page in the app and duplicates two other tabs; it also defeats the per-tab lazy-fetch rationale in `docs/frontend.md` §1, since Overview would then pull four more queries on every visit). Renaming the app's Overview to something like "Health" so the handoff's Overview could be added as a new tab (rejected — a five-tab strip on mobile for a single-user tool, and the handoff never asked for five). Adopting the mobile two-chart subset on the Breakdown tab instead (deferred, not rejected — it's a real perceived-performance idea, but there's no measurement yet showing four charts is a problem at current data volume; tracked in `design/limitations.md` §10.5).
+
+**Consequences:** No code change to `/analytics`. `design/limitations.md` §10.5 is rewritten to describe the IA difference rather than implying a missing feature. The handoff's Analytics screen is the one screen of the six whose layout is deliberately not reproduced.
+
+### AD-59: No "Reprocess" button on the resume screen — it contradicts the parse-once cache (scope, 2026-07-27)
+
+**Decision:** Do not build the handoff's "Reprocess" button on the extracted-skills card. The metadata caption beside it (`{filename} · parsed {n}h ago`) *is* built, using the file extension and upload timestamp.
+
+**Rationale:** "Reprocess" implies re-deriving something from the uploaded file, and this app deliberately never re-parses identical content — a resume's extracted text is cached by sha256 and reused on re-upload (AD-30, and one of the five design rules carried over from jobhunt-app). A button whose label promises re-parsing and whose implementation would return the cached text is a lie in the UI.
+
+The defensible version — re-run *skill extraction* over the already-cached text, e.g. after the skills dictionary changes — is a genuinely different feature: a new server action, a new use case, and tests, which CLAUDE.md requires before any UI. It is also thin value today, since the dictionary is static and the skills list is directly editable by hand right there on the same card.
+
+The caption is a different matter and was built. Note it says "PDF resume" / "DOCX resume" rather than an actual filename: the storage path is content-hash-based (AD-30), so the original filename is not retained anywhere. Inventing one would be worse than omitting it.
+
+**Alternatives considered:** A "Re-extract skills" button wired to a new action (deferred, not rejected — the honest version of this feature; wants its own change with domain/application/infrastructure/tests, per CLAUDE.md). Relabelling the existing upload flow as "Reprocess" (rejected — re-uploading the same file already hits the parse-once cache, so the button would appear to do nothing). Persisting the original filename on `resumes` to make the caption literal (rejected for now — a schema change to improve one caption).
+
+**Consequences:** `describeSource()` in `src/app/(protected)/resume/page.tsx` renders the caption; the card title becomes "Extracted skills" to match the handoff. No new action, no migration. Recorded in `design/limitations.md` §10.7 alongside the dropzone note.

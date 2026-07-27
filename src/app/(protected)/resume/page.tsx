@@ -31,9 +31,10 @@ export default async function ResumePage() {
       {resume && (
         <Card>
           <CardHeader>
-            <CardTitle>Skills</CardTitle>
+            <CardTitle>Extracted skills</CardTitle>
             <CardDescription>
-              Extracted from your resume. Add or remove skills to refine job scoring.
+              {describeSource(resume.filePath, resume.uploadedAt)} — add or remove skills to refine job
+              scoring.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -70,4 +71,16 @@ export default async function ResumePage() {
       )}
     </div>
   );
+}
+
+// "{filename} · parsed {n}h ago" caption on the extracted-skills card (design
+// handoff). The stored path is content-hash-based (AD-30), so it carries no
+// original filename -- the extension is the only honest thing to show, and
+// claiming a filename we don't have would be worse than not showing one.
+function describeSource(filePath: string, uploadedAt: string): string {
+  const ext = filePath.split(".").pop()?.toUpperCase();
+  const label = ext === "PDF" || ext === "DOCX" ? `${ext} resume` : "Resume";
+  const diffH = Math.floor((Date.now() - new Date(uploadedAt).getTime()) / 3_600_000);
+  const when = diffH < 1 ? "parsed < 1h ago" : diffH < 24 ? `parsed ${diffH}h ago` : `parsed ${Math.floor(diffH / 24)}d ago`;
+  return `${label} · ${when}`;
 }
