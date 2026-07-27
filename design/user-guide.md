@@ -28,7 +28,8 @@ After the first scrape+score+notify run, your dashboard will show scored jobs an
 **Location:** `/resume`
 
 ### Upload a Resume
-1. Choose a PDF or DOCX resume file and click "Upload"
+1. Drag a PDF or DOCX resume onto the dropzone, or click "Browse files" to pick one. The chosen file is
+   listed below the dropzone — click the ✕ beside it to swap for a different one. Then click "Upload"
 2. The platform extracts text (including table content in DOCX resumes) and matches skills against the built-in skills dictionary. Re-uploading a file you've already uploaded before reuses the cached extracted text instead of re-parsing it
 3. The extracted skills list is displayed for review
 

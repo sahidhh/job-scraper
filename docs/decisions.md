@@ -610,7 +610,7 @@ The theme props are a different matter. The handoff itself says "if the target p
 
 **Alternatives considered:** Leaving the order and re-titling the cards to soften the gap framing (rejected — retitling loses the meaning; "Level up" and "In demand" are already the clearest names for the two lists, and the handoff keeps both). Merging them into one ranked list with a have/lack marker per row (rejected — it hides the thing the split makes obvious, which is the *size* of each list; also not what the handoff shows).
 
-**Consequences:** One reorder in `src/app/(protected)/insights/page.tsx`. `design/user-guide.md` §7's subsection order is updated to match, so the doc reads in screen order. `SkillRow`'s `variant` props (`info` for in-demand, `warning` for gaps) are unchanged — the colour semantics were never tied to position.
+**Consequences:** One reorder in `src/app/(protected)/insights/page.tsx`. `design/user-guide.md` §7's subsection order is updated to match, so the doc reads in screen order. `SkillRow`'s `variant` prop changes from `"warning" | "info"` to `"accent" | "neutral"`: the leading card is accent-tinted (border, wash, and bars) and the gap card is neutral grey, per the handoff. The old amber/blue pairing implied the gap list was a *warning*, which is the framing this decision is reversing — the tint now reinforces the ordering rather than fighting it.
 
 ### AD-56: Keep the shipped 0.75/0.40 score bands; take only the handoff's "Pending · N%" wording (scoring UI, 2026-07-27)
 

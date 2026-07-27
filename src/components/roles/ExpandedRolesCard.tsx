@@ -35,11 +35,17 @@ export function ExpandedRolesCard({
         {relatedRoles.map((role) => {
           const isSelected = selectedRoles.includes(role);
           return (
+            // Selected chips carry the accent tint at 600 weight; unselected
+            // stay plain outlined grey (design handoff).
             <Badge
               key={role}
               asChild
-              variant={isSelected ? "secondary" : "outline"}
-              className={isSelected ? "" : "text-muted-foreground"}
+              variant="outline"
+              className={
+                isSelected
+                  ? "border-primary/30 bg-primary/10 font-semibold text-primary"
+                  : "text-muted-foreground"
+              }
             >
               <button
                 type="button"

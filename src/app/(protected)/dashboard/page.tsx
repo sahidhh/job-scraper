@@ -4,6 +4,7 @@ import { DashboardNavigationProvider } from "@/components/dashboard/DashboardNav
 import { FilterBar } from "@/components/dashboard/FilterBar";
 import { JobsTable } from "@/components/dashboard/JobsTable";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { SupabaseCompanyRepository } from "@/features/companies/infrastructure/SupabaseCompanyRepository";
 import type { JobFilters } from "@/features/jobs/domain/types";
 import { SupabaseJobRepository } from "@/features/jobs/infrastructure/SupabaseJobRepository";
@@ -171,6 +172,36 @@ async function DashboardContent({
   );
 }
 
+// Stat chip: value over label, per the design handoff. `accent` marks the one
+// chip that is the row's key metric. tabular-nums keeps the row from jittering
+// as filter changes swap the numbers.
+function StatChip({
+  value,
+  label,
+  accent = false,
+  title,
+}: {
+  value: string;
+  label: string;
+  accent?: boolean;
+  title?: string;
+}) {
+  return (
+    <div
+      title={title}
+      className={cn(
+        "flex min-w-[88px] flex-col justify-center rounded-lg border px-3 py-2",
+        accent ? "border-primary/30 bg-primary/10" : "border-border bg-muted/30",
+      )}
+    >
+      <span className={cn("text-lg font-bold leading-tight tabular-nums", accent && "text-primary")}>
+        {value}
+      </span>
+      <span className="text-[11px] leading-tight text-muted-foreground">{label}</span>
+    </div>
+  );
+}
+
 function JobsSectionFallback() {
   return (
     <div className="space-y-4">
@@ -245,41 +276,31 @@ async function JobsSection({
 
   return (
     <div className="space-y-4">
-      {/* Compact stats row -- every number describes the filtered set below,
-          so "showing X of Y" and the breakdown always reconcile. */}
-      <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-        <span className="text-sm">
-          <span className="font-semibold tabular-nums">
-            {jobs.length < total ? `${jobs.length} of ${total}` : total}
-          </span>
-          <span className="ml-1 text-muted-foreground">jobs</span>
-        </span>
-        <span className="text-sm">
-          <span className="font-semibold tabular-nums">{stats.scoredCount}</span>
-          <span className="ml-1 text-muted-foreground">AI-scored</span>
-        </span>
+      {/* Stat chips -- every number describes the filtered set below, so
+          "showing X of Y" and the breakdown always reconcile. AI-scored is
+          accent-tinted as the row's key metric (design handoff). */}
+      <div className="flex flex-wrap items-stretch gap-2">
+        <StatChip
+          value={jobs.length < total ? `${jobs.length} of ${total}` : String(total)}
+          label="jobs"
+        />
+        <StatChip value={String(stats.scoredCount)} label="AI-scored" accent />
         {stats.lowMatchCount > 0 && (
-          <span className="text-sm">
-            <span className="font-semibold tabular-nums">{stats.lowMatchCount}</span>
-            <span className="ml-1 text-muted-foreground">
-              low match{effectiveFilters.includeLowMatch ? "" : " (hidden)"}
-            </span>
-          </span>
+          <StatChip
+            value={String(stats.lowMatchCount)}
+            label={`low match${effectiveFilters.includeLowMatch ? "" : " (hidden)"}`}
+          />
         )}
-        {stats.awaitingAiCount > 0 && (
-          <span className="text-sm">
-            <span className="font-semibold tabular-nums">{stats.awaitingAiCount}</span>
-            <span className="ml-1 text-muted-foreground">queued</span>
-          </span>
-        )}
+        {stats.awaitingAiCount > 0 && <StatChip value={String(stats.awaitingAiCount)} label="queued" />}
         {stats.abandonedCount > 0 && (
-          <span className="text-sm" title={`AI scoring failed ${SCORING_QUEUE_CONFIG.maxAiRetries}x — no longer retried`}>
-            <span className="font-semibold tabular-nums">{stats.abandonedCount}</span>
-            <span className="ml-1 text-muted-foreground">gave up</span>
-          </span>
+          <StatChip
+            value={String(stats.abandonedCount)}
+            label="gave up"
+            title={`AI scoring failed ${SCORING_QUEUE_CONFIG.maxAiRetries}x — no longer retried`}
+          />
         )}
         {lastRun && (
-          <span className="text-xs text-muted-foreground md:ml-auto">
+          <span className="self-center text-xs text-muted-foreground md:ml-auto">
             Updated {formatRelative(lastRun.runAt)}
           </span>
         )}

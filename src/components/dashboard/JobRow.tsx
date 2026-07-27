@@ -28,12 +28,15 @@ function ScoreBadge({
   keywordScore: number | null;
   overallScoreReasons: string[] | null;
 }) {
+  // Unscored reads as one self-describing pill carrying the keyword score that
+  // stands in until the AI stage runs -- "Pending" over a separate "Keyword: N%"
+  // caption was indistinguishable at a glance from a genuinely low AI score,
+  // since both rendered as outlined pills (docs/decisions.md AD-56).
   if (aiScore === null) {
     return (
-      <div className="flex flex-col gap-0.5">
-        <Badge variant="outline">Pending</Badge>
-        <span className="text-xs text-muted-foreground">Keyword: {formatScore(keywordScore)}</span>
-      </div>
+      <Badge variant="outline" className="font-normal text-muted-foreground">
+        {keywordScore === null ? "Pending" : `Pending · ${formatScore(keywordScore)}`}
+      </Badge>
     );
   }
 

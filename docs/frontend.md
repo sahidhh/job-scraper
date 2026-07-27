@@ -59,9 +59,10 @@ src/app/
 
 | Component | Used in | Built from shadcn primitives |
 |---|---|---|
-| `AppShell` | `(protected)/layout.tsx` | Desktop sidebar (`hidden md:flex`) reading `NAV_ITEMS` from `components/layout/navItems.ts` — Dashboard, Roles, Resume, Insights, Analytics, Settings — plus a bottom-pinned Logout; mobile header + `BottomNav` |
-| `BottomNav` | via `AppShell`, mobile only | Client component, fixed bottom tab bar (`md:hidden`). **Declares its own `BOTTOM_NAV` array instead of reading `navItems.ts`**, and has already drifted from it (labels Dashboard as "Jobs", omits Resume) — see `design/limitations.md` §10.4 |
-| `MobileNav` | *nothing* | A `Sheet`-based hamburger menu built on `NAV_ITEMS`. Fully implemented, **imported nowhere** — mobile uses `BottomNav`. Orphaned; do not extend it without first deciding which surface wins (limitations.md §10.4) |
+| `AppShell` | `(protected)/layout.tsx` | Server component. Desktop sidebar (`hidden md:flex`) = `Wordmark` + `SidebarNav` + bottom-pinned Logout form; mobile = `Wordmark` header + `BottomNav`. Holds no nav list of its own |
+| `SidebarNav` | via `AppShell`, desktop only | Client component (needs `usePathname`). Renders `NAV_ITEMS`; one item active at a time — `bg-primary/10` + `text-primary` + 600 weight, `aria-current="page"`; the rest muted at 500 |
+| `BottomNav` | via `AppShell`, mobile only | Client component, fixed bottom tab bar (`md:hidden`). Reads the same `NAV_ITEMS`, so both primary surfaces render one list (`design/architecture.md` §12.2) |
+| `Wordmark` | `AppShell` (both breakpoints) | Server component. Near-black rounded square with a bold white "J" + the product name; `size="mobile"` shrinks it to 20px |
 | `RouteTabs` | `/analytics`, `/settings` layouts | Client component (`"use client"`): horizontally-scrollable, `usePathname`-driven tab nav (`Link`s to sub-routes, not client-side state) — mirrors `BottomNav`'s active-link pattern |
 | `JobsTable` | `/dashboard` | Client component (`"use client"`): holds multi-select state, renders the select-all checkbox header, the bulk-action bar (`Select` + Apply/Archive/Clear `Button`s), `Table` on desktop, `JobCard` list on mobile (`md:hidden`/`hidden md:block` split), `Badge` |
 | `JobRow` (expandable) | inside `JobsTable` | `Collapsible` — reveals `ai_reasoning`; row checkbox + per-row `JobStatusSelect` |
@@ -71,14 +72,14 @@ src/app/
 | `AnalyticsCharts` | all `/analytics/*` tabs | `"use client"` — recharts charts (`JobsOverTimeChart`, `JobsBySourceChart`, `ScoreHistogramChart`, `StatusBreakdownChart`, `JobsByExperienceChart`, `JobsByLocationChart`, `JobsByCompanyChart`, `ScoredBySourceChart`) + stat-card groups (`TokenStatsCards`, `SalaryStatsCards`, `RemoteStatCard`, `PipelineStatsCards`, `ScoringQueueStatsCards`). Empty-state guard per chart |
 | `ExperienceCard` | `/settings` | Client `Card` + numeric `Input` → `setDesiredExperienceAction`; blank clears the soft year filter (P2) |
 | `RoleSelectorForm` | `/roles` | `Input`, `Button` |
-| `ExpandedRolesCard` | `/roles` | `Card`, `Badge` (toggleable chips per related role, click to include/exclude from selection), confirm `Button` |
-| `ResumeUploadCard` | `/resume` | `Card`, `Input type=file`, `Button` |
+| `ExpandedRolesCard` | `/roles` | `Card`, `Badge` (toggleable chips per related role, click to include/exclude). Selected chips carry the accent tint at 600 weight, unselected stay plain outlined grey; `aria-pressed` reflects state. Confirm `Button` |
+| `ResumeUploadCard` | `/resume` | Client component. Dashed dropzone with drag-and-drop + "Browse files" fallback over a visually-hidden `input type=file` (kept in the DOM for keyboard/AT users), selected-file row with a remove affordance, then `Button` → `uploadResumeAction`. Client-side type check is by extension — a dropped file can carry an empty MIME type; server-side validation is still the real gate |
 | `SkillsEditor` | `/resume` | `Badge` (removable chips) + `Input` for adding new skills |
 | `CompaniesTable` | `/settings` | `Table`, `Button` (edit/delete), `Dialog` |
 | `CompanyFormDialog` | `/settings` | `Dialog`, `Input`, `Select` (source enum) |
 | `ScrapeRunsList` | `/settings/activity` | `Table` — recent `scrape_runs` (source, status, jobs_found, run_at, error) |
 | `ThresholdsCard` | `/settings` | `Card` — read-only display of `KEYWORD_THRESHOLD`/`NOTIFY_THRESHOLD` from config |
-| Insights cards + `SkillRow` | `/insights` | `Card`, `Badge`, proportion bars. Server component recomputes job skills at read time (`extractSkills` over role-matched jobs), then `computeSkillDemand`/`computeSkillGaps`. **"In demand" renders first, "Level up" second** (decisions.md AD-55). `SkillRow variant` is `info` for in-demand, `warning` for gaps. Honest copy: demand is over the user's scraped role-matched jobs, not the market |
+| Insights cards + `SkillRow` | `/insights` | `Card`, `Badge`, proportion bars. Server component recomputes job skills at read time (`extractSkills` over role-matched jobs), then `computeSkillDemand`/`computeSkillGaps`. **"In demand" renders first, "Level up" second** (decisions.md AD-55). `SkillRow variant` is `accent` for in-demand (tinted card + accent bars), `neutral` for gaps. Honest copy: demand is over the user's scraped role-matched jobs, not the market |
 | `LoginForm` | `/login` | `Card`, `Input`, `Button`, `Form` (with `zod` validation) |
 
 All data-displaying components are server components receiving data as props from the page's server-side fetch (via repository → application use-case). Only interactive leaf components (`SkillsEditor`, `FilterBar`, forms) are client components (`"use client"`).

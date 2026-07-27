@@ -13,14 +13,14 @@ function formatScore(score: number | null): string {
 }
 
 function ScorePill({ aiScore, keywordScore }: { aiScore: number | null; keywordScore: number | null }) {
+  // Unscored reads as one self-describing pill carrying the keyword score that
+  // stands in until the AI stage runs -- "Pending" alone was indistinguishable
+  // at a glance from a genuinely low AI score (docs/decisions.md AD-56).
   if (aiScore === null) {
     return (
-      <div className="flex flex-col items-end gap-0.5">
-        <Badge variant="outline" className="text-xs">Pending</Badge>
-        {keywordScore !== null && (
-          <span className="text-[10px] text-muted-foreground">{formatScore(keywordScore)} kw</span>
-        )}
-      </div>
+      <Badge variant="outline" className="text-xs font-normal text-muted-foreground">
+        {keywordScore === null ? "Pending" : `Pending · ${formatScore(keywordScore)}`}
+      </Badge>
     );
   }
   const variant = aiScore >= 0.75 ? "success" : aiScore >= 0.4 ? "warning" : "outline";

@@ -214,14 +214,13 @@ deployment concern rather than a user setting. Per-source toggles would need som
 enablement, a read of it in `scrape.ts`, and a decision about what disabling does to already-scraped
 jobs; deferred rather than built. Read-only source health *is* surfaced, on `/analytics/sources`.
 
-### 10.2 Error Boundaries Are Not Built From Design Tokens
+### 10.2 Error Boundaries Are Not Built From Design Tokens — Resolved
 
-`src/app/error.tsx` and `src/app/global-error.tsx` use raw Tailwind palette classes
-(`text-gray-500`, `bg-blue-600`) and a bare `<button>` rather than `text-muted-foreground`,
-`bg-primary`, and the `Button` primitive. They therefore do not inherit the accent (AD-54) and will
-not follow any future token change — the two screens most likely to be seen during an incident are
-the two least likely to look like the product. `global-error.tsx` genuinely cannot use the app's
-providers (it replaces the root layout), but it can still use literal token values.
+`src/app/error.tsx` and `src/app/global-error.tsx` previously used raw Tailwind palette classes
+(`text-gray-500`, `bg-blue-600`) and so did not inherit the accent. Both now use design tokens.
+`error.tsx` uses the `Button` primitive; `global-error.tsx` imports `globals.css` itself and uses
+token utilities directly rather than the primitive, because it replaces the root layout and must stay
+dependency-free — it is the boundary that catches a root-layout crash.
 
 ### 10.3 Score Badge Thresholds Are Duplicated Constants, Not Derived From Env
 
@@ -231,14 +230,15 @@ env var read server-side by `notify.ts` and never passed to the dashboard. If so
 fails. A code comment points at `docs/scoring.md`; that is the whole enforcement mechanism
 (`docs/decisions.md` AD-56).
 
-### 10.4 Two Primary Nav Surfaces, Two Independent Lists
+### 10.4 Two Primary Nav Surfaces, Two Independent Lists — Resolved
 
-`AppShell`'s desktop sidebar reads `NAV_ITEMS` from `src/components/layout/navItems.ts`, but
-`BottomNav` declares its own `BOTTOM_NAV` array. They have already drifted: the bottom bar labels
-Dashboard as **"Jobs"**, and **omits Resume entirely** — on mobile, `/resume` is reachable only via a
-single unlabelled icon button in the header. Separately, `src/components/layout/MobileNav.tsx` (a
-`Sheet`-based hamburger menu) is fully implemented but imported nowhere; mobile uses `BottomNav`
-instead. See architecture.md §12.2 for the rule this violates.
+`BottomNav` declared its own `BOTTOM_NAV` array and had drifted from `NAV_ITEMS` (labelled Dashboard
+"Jobs", omitted Resume entirely, leaving `/resume` reachable only via an unlabelled mobile-header
+icon). It now reads `NAV_ITEMS`, so both primary surfaces render the same six destinations from one
+list, and the mobile header's resume shortcut has been removed as redundant. The orphaned
+`MobileNav.tsx` — implemented but imported nowhere — was deleted rather than left as a third surface.
+The desktop sidebar, which previously had no active state at all, now renders one via the new
+`SidebarNav` client component. See architecture.md §12.2.
 
 ### 10.5 Analytics Renders Every Overview Chart on Mobile
 
@@ -254,8 +254,10 @@ pass in CI, no keyboard-only walkthrough, and no contrast check of the accent ti
 behind small text. Reasonable for a single-user internal tool; stated so it isn't mistaken for a
 compliance claim.
 
-### 10.7 Resume Upload Has No Drag-and-Drop
+### 10.7 Resume Upload Has No Drag-and-Drop — Resolved
 
-`ResumeUploadCard` is a file input and a button. The handoff specifies a dashed dropzone with
-drag-and-drop and a "Browse files" fallback. Cosmetically close, functionally a step down for the
-one action on that screen.
+`ResumeUploadCard` is now a dashed dropzone with drag-and-drop, a "Browse files" fallback, and a
+selected-file row with a remove affordance. The file input remains in the DOM (visually hidden, not
+removed) so keyboard and assistive-tech users get the real control. Client-side type checking is by
+extension, since a dropped file can carry an empty or wrong MIME type; server-side validation is
+unchanged and remains the real gate.

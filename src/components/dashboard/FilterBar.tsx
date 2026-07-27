@@ -326,8 +326,9 @@ export function FilterBar({
         )}
       </div>
 
-      {/* Desktop: horizontal row */}
-      <div className="hidden flex-wrap items-center gap-2 md:flex">
+      {/* Desktop: one bordered toolbar with divider-separated groups --
+          search | selects | numeric ranges | toggles | clear (design handoff). */}
+      <div className="hidden flex-wrap items-center gap-2 rounded-lg border border-border bg-muted/20 px-3 py-2.5 md:flex">
         <Input
           key={`search-${searchParams.get("q") ?? ""}`}
           type="text"
@@ -336,6 +337,8 @@ export function FilterBar({
           onBlur={(e) => updateSearch(e.target.value)}
           className="w-52"
         />
+
+        <ToolbarDivider />
 
         <Select
           value={searchParams.get("location") ?? "all"}
@@ -382,6 +385,8 @@ export function FilterBar({
           </SelectContent>
         </Select>
 
+        <ToolbarDivider />
+
         <div className="relative flex items-center">
           <Input
             key={`score-${minScoreDisplay}`}
@@ -413,6 +418,8 @@ export function FilterBar({
           />
           <span className="pointer-events-none absolute right-3 text-sm text-muted-foreground">yrs</span>
         </div>
+
+        <ToolbarDivider />
 
         <label className="flex cursor-pointer items-center gap-1.5 text-sm text-muted-foreground">
           <input
@@ -461,7 +468,7 @@ export function FilterBar({
         </label>
 
         {activeCount > 0 && (
-          <Button variant="ghost" size="sm" onClick={clearAll} className="gap-1 text-muted-foreground">
+          <Button variant="ghost" size="sm" onClick={clearAll} className="ml-auto gap-1 text-muted-foreground">
             <X className="size-3.5" />
             Clear
           </Button>
@@ -484,4 +491,10 @@ function FilterField({ label, children }: { label: string; children: React.React
       {children}
     </div>
   );
+}
+
+// Separates the toolbar's control groups so the row reads as grouped rather
+// than as one undifferentiated wrap of inputs (design handoff).
+function ToolbarDivider() {
+  return <span aria-hidden className="h-6 w-px shrink-0 bg-border" />;
 }

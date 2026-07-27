@@ -155,6 +155,14 @@ different product.
 | Insights card order | "In demand" leads, "Level up" follows (decisions.md AD-55) |
 | Score badge legend | Pending state collapses to a single `Pending · N%` pill; bands documented in `design/user-guide.md` §4 (decisions.md AD-56) |
 | Presentation-layer conventions | Composition, navigation surfaces, state ownership, and loading/empty/error rules written down in `design/architecture.md` §12 |
+| Dashboard stat chips | The stats row becomes bordered value-over-label chips; the AI-scored chip is accent-tinted as the row's key metric |
+| Dashboard filter toolbar | One bordered container with divider-separated groups (search / selects / numeric ranges / toggles / clear) instead of a loose wrap |
+| Sidebar active state | The desktop sidebar previously highlighted nothing; `SidebarNav` renders one active item, accent-tinted at 600 weight |
+| Single nav source | `BottomNav` reads `NAV_ITEMS` instead of its own drifted copy; orphaned `MobileNav.tsx` deleted (limitations.md §10.4) |
+| Logo + wordmark | `Wordmark` component — near-black rounded square with a bold white "J", product name beside it |
+| Resume dropzone | Drag-and-drop with a "Browse files" fallback and a selected-file row (limitations.md §10.7) |
+| Role chips | Selected related-role chips carry the accent tint at 600 weight; unselected stay plain outlined grey |
+| Tokenised error boundaries | `error.tsx` / `global-error.tsx` rebuilt on design tokens so they inherit the accent (limitations.md §10.2) |
 
 **Deferred, not built** (each recorded with a reason rather than left as an implied to-do):
 
@@ -163,8 +171,8 @@ different product.
 | Per-source enable/disable toggles on `/settings` | Needs a persistence layer, a `scrape.ts` read, and a decision about already-scraped jobs — a data-model change, not a visual one | AD-57, limitations.md §10.1 |
 | Runtime theming (accent hue / corner style / density props) | Three settings for a single user who has already picked the defaults | AD-54, tech-stack.md §8 |
 | Mobile chart subsetting on `/analytics` Overview | Real perceived-performance win, but no measurement yet showing it matters at current data volume | limitations.md §10.5 |
-| Resume drag-and-drop dropzone | Cosmetic; the file input works | limitations.md §10.7 |
-| Nav-surface reconciliation (`BottomNav` label drift, orphaned `MobileNav.tsx`) | Touches shipped navigation behaviour; wants its own change, not a rider on a token pass | limitations.md §10.4 |
+| Score-badge bands derived from `NOTIFY_THRESHOLD` rather than duplicated constants | Needs the env value threaded to the dashboard; the constants carry a pointer comment meanwhile | AD-56, limitations.md §10.3 |
+| Formal accessibility audit (axe/Lighthouse in CI) | Conventions are followed by habit; no automated verification | limitations.md §10.6 |
 
 ### P2 — Medium Priority
 
