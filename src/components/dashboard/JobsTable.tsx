@@ -115,7 +115,7 @@ export function JobsTable({ jobs, statuses }: { jobs: JobWithScore[]; statuses: 
           <Table className="table-fixed">
             <TableHeader>
               <TableRow>
-                <TableHead className="w-10">
+                <TableHead className="w-[4%]">
                   <input
                     type="checkbox"
                     checked={allSelected}
@@ -124,13 +124,13 @@ export function JobsTable({ jobs, statuses }: { jobs: JobWithScore[]; statuses: 
                     className="size-4 accent-primary"
                   />
                 </TableHead>
-                <TableHead className="w-[28%]">Title</TableHead>
-                <TableHead className="w-[16%]">Company</TableHead>
-                <TableHead className="hidden w-[13%] md:table-cell">Location</TableHead>
-                <TableHead className="hidden w-[10%] md:table-cell">Source</TableHead>
-                <TableHead className="w-[15%]">Status</TableHead>
-                <TableHead className="w-[12%]">Score</TableHead>
-                <TableHead className="w-16">Link</TableHead>
+                <TableHead className="w-[23%]">Title</TableHead>
+                <TableHead className="w-[15%]">Company</TableHead>
+                <TableHead className="hidden w-[12%] md:table-cell">Location</TableHead>
+                <TableHead className="hidden w-[9%] md:table-cell">Source</TableHead>
+                <TableHead className="w-[13%]">Status</TableHead>
+                <TableHead className="w-[10%]">Score</TableHead>
+                <TableHead className="w-[14%]">Link</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

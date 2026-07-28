@@ -1,6 +1,7 @@
 "use client";
 
 import { Archive, ChevronDown, ChevronRight, ExternalLink, ThumbsDown } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { TableCell, TableRow } from "@/components/ui/table";
@@ -73,12 +74,14 @@ export function JobRow({
   selected: boolean;
   onToggleSelect: (jobId: string) => void;
 }) {
+  const router = useRouter();
   const rejectStatus = statuses.find(s => s.label === "Rejected")?.id;
   const archiveStatus = statuses.find(s => s.label === "Archived")?.id;
 
   const onAction = async (statusId: string | undefined) => {
     if (!statusId) return;
     await setJobStatusAction([job.id], statusId);
+    router.refresh();
   };
 
   useDashboardHotkeys(job.id, {
@@ -151,8 +154,8 @@ export function JobRow({
             )}
           </div>
         </TableCell>
-        <TableCell>
-            <div className="flex items-center gap-1">
+        <TableCell className="whitespace-normal">
+            <div className="flex flex-wrap items-center gap-1">
               <Button
                 variant="ghost"
                 size="sm"
