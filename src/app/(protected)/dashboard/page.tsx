@@ -247,39 +247,42 @@ async function JobsSection({
     <div className="space-y-4">
       {/* Compact stats row -- every number describes the filtered set below,
           so "showing X of Y" and the breakdown always reconcile. */}
-      <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-        <span className="text-sm">
-          <span className="font-semibold tabular-nums">
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex min-w-[88px] flex-col gap-0.5 rounded-lg border border-border px-3.5 py-2">
+          <span className="text-lg font-bold tabular-nums">
             {jobs.length < total ? `${jobs.length} of ${total}` : total}
           </span>
-          <span className="ml-1 text-muted-foreground">jobs</span>
-        </span>
-        <span className="text-sm">
-          <span className="font-semibold tabular-nums">{stats.scoredCount}</span>
-          <span className="ml-1 text-muted-foreground">AI-scored</span>
-        </span>
+          <span className="text-[11px] text-muted-foreground">jobs</span>
+        </div>
+        <div className="flex min-w-[88px] flex-col gap-0.5 rounded-lg border border-primary/30 bg-primary/[0.06] px-3.5 py-2">
+          <span className="text-lg font-bold tabular-nums text-primary">{stats.scoredCount}</span>
+          <span className="text-[11px] text-primary">AI-scored</span>
+        </div>
         {stats.lowMatchCount > 0 && (
-          <span className="text-sm">
-            <span className="font-semibold tabular-nums">{stats.lowMatchCount}</span>
-            <span className="ml-1 text-muted-foreground">
-              low match{effectiveFilters.includeLowMatch ? "" : " (hidden)"}
+          <div className="flex min-w-[88px] flex-col gap-0.5 rounded-lg border border-border px-3.5 py-2">
+            <span className="text-lg font-bold tabular-nums">{stats.lowMatchCount}</span>
+            <span className="text-[11px] text-muted-foreground">
+              low match{effectiveFilters.includeLowMatch ? "" : ", hidden"}
             </span>
-          </span>
+          </div>
         )}
         {stats.awaitingAiCount > 0 && (
-          <span className="text-sm">
-            <span className="font-semibold tabular-nums">{stats.awaitingAiCount}</span>
-            <span className="ml-1 text-muted-foreground">queued</span>
-          </span>
+          <div className="flex min-w-[88px] flex-col gap-0.5 rounded-lg border border-border px-3.5 py-2">
+            <span className="text-lg font-bold tabular-nums">{stats.awaitingAiCount}</span>
+            <span className="text-[11px] text-muted-foreground">queued</span>
+          </div>
         )}
         {stats.abandonedCount > 0 && (
-          <span className="text-sm" title={`AI scoring failed ${SCORING_QUEUE_CONFIG.maxAiRetries}x — no longer retried`}>
-            <span className="font-semibold tabular-nums">{stats.abandonedCount}</span>
-            <span className="ml-1 text-muted-foreground">gave up</span>
-          </span>
+          <div
+            className="flex min-w-[88px] flex-col gap-0.5 rounded-lg border border-border px-3.5 py-2"
+            title={`AI scoring failed ${SCORING_QUEUE_CONFIG.maxAiRetries}x — no longer retried`}
+          >
+            <span className="text-lg font-bold tabular-nums">{stats.abandonedCount}</span>
+            <span className="text-[11px] text-muted-foreground">gave up</span>
+          </div>
         )}
         {lastRun && (
-          <span className="text-xs text-muted-foreground md:ml-auto">
+          <span className="ml-auto self-center text-xs text-muted-foreground">
             Updated {formatRelative(lastRun.runAt)}
           </span>
         )}

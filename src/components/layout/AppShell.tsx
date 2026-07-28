@@ -9,7 +9,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col md:flex-row">
       {/* Desktop sidebar */}
-      <aside className="hidden w-56 flex-col border-r p-4 md:flex">
+      <aside className="hidden w-56 flex-col border-r p-4 md:sticky md:top-0 md:flex md:h-screen md:overflow-y-auto">
         <span className="mb-4 px-2 text-lg font-semibold">Job Intelligence</span>
         <nav className="flex flex-col gap-1">
           {NAV_ITEMS.map(({ href, label, icon: Icon }) => (
