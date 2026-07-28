@@ -124,7 +124,7 @@ export function JobsTable({ jobs, statuses }: { jobs: JobWithScore[]; statuses: 
                     className="size-4 accent-primary"
                   />
                 </TableHead>
-                <TableHead className="w-[26%]">Title</TableHead>
+                <TableHead className="w-[28%]">Title</TableHead>
                 <TableHead className="w-[16%]">Company</TableHead>
                 <TableHead className="hidden w-[13%] md:table-cell">Location</TableHead>
                 <TableHead className="hidden w-[10%] md:table-cell">Source</TableHead>

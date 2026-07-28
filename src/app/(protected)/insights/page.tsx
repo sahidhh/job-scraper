@@ -87,7 +87,29 @@ async function InsightsContent({
   }
 
   return (
+    // "In demand" leads and carries the accent tint; the gap analysis follows in
+    // neutral. Positive reinforcement first -- docs/decisions.md AD-55.
     <div className="grid gap-4 md:grid-cols-2">
+      <Card className="border-primary/25 bg-primary/[0.04]">
+        <CardHeader>
+          <CardTitle>In demand</CardTitle>
+          <CardDescription>
+            Skills you already have that your {jobCount} matched jobs ask for most.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {demand.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No recognised skills mentioned in these jobs yet.</p>
+          ) : (
+            <ul className="space-y-2">
+              {demand.slice(0, MAX_ROWS).map((item) => (
+                <SkillRow key={item.skill} skill={item.skill} count={item.count} total={jobCount} variant="accent" />
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle>Level up</CardTitle>
@@ -105,25 +127,7 @@ async function InsightsContent({
           ) : (
             <ul className="space-y-2">
               {gaps.slice(0, MAX_ROWS).map((gap) => (
-                <SkillRow key={gap.skill} skill={gap.skill} count={gap.demandCount} total={jobCount} variant="warning" />
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>In demand</CardTitle>
-          <CardDescription>Most-requested skills across your {jobCount} matched jobs.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {demand.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No recognised skills mentioned in these jobs yet.</p>
-          ) : (
-            <ul className="space-y-2">
-              {demand.slice(0, MAX_ROWS).map((item) => (
-                <SkillRow key={item.skill} skill={item.skill} count={item.count} total={jobCount} variant="info" />
+                <SkillRow key={gap.skill} skill={gap.skill} count={gap.demandCount} total={jobCount} variant="neutral" />
               ))}
             </ul>
           )}
@@ -143,17 +147,19 @@ function SkillRow({
   skill: string;
   count: number;
   total: number;
-  variant: "warning" | "info";
+  variant: "accent" | "neutral";
 }) {
   const pct = total > 0 ? Math.round((count / total) * 100) : 0;
-  const barColor = variant === "warning" ? "bg-warning" : "bg-info";
+  const barColor = variant === "accent" ? "bg-primary" : "bg-muted-foreground/50";
 
   return (
     <li className="space-y-1">
       <div className="flex items-center justify-between text-sm">
         <span className="font-medium">{skill}</span>
-        <Badge variant="outline">
-          {count} / {total}
+        {/* Percentage leads (design handoff); the raw counts stay available on
+            hover so the sample size behind the number isn't lost. */}
+        <Badge variant="outline" className="tabular-nums" title={`${count} of ${total} matched jobs`}>
+          {pct}%
         </Badge>
       </div>
       <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">

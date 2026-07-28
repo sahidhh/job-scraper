@@ -142,6 +142,45 @@ parsing, no AI" extraction standard than `extractSalary`/`extractContactEmail`. 
 | Version history | `/resume`'s "Version history" card lists every resume version (`ResumeRepository.listVersions()`), newest first, with upload date and origin ("Uploaded" if it has a `content_hash`, "AI-applied" if it was produced by P1.12's apply-suggestions flow) |
 | Restore | `restoreResumeVersionAction` makes an old version active again by re-running `set_active_resume` seeded with that version's exact content -- never mutates or deletes the old row, so history stays intact and restoring is itself just another new version |
 
+### P1.16 — Design System Pass (design handoff integration, 2026-07-27)
+
+Applies the `Dashboard Optimization` handoff to the six screens that already exist. No new screens, no
+new routes, no data-model change — the handoff describes how the shipped product should look, not a
+different product.
+
+| Feature | Description |
+|---|---|
+| Accent token | `--primary` becomes `oklch(0.5 0.1 264)` indigo, replacing shadcn's near-black neutral. One variable; every `bg-primary`/`text-primary`/`accent-primary` call site inherits it (decisions.md AD-54) |
+| Documented token set | Colour, radius, spacing, and type scale written down in `design/tech-stack.md` §8 — previously undocumented anywhere |
+| Insights card order | "In demand" leads, "Level up" follows (decisions.md AD-55) |
+| Score badge legend | Pending state collapses to a single `Pending · N%` pill; bands documented in `design/user-guide.md` §4 (decisions.md AD-56) |
+| Presentation-layer conventions | Composition, navigation surfaces, state ownership, and loading/empty/error rules written down in `design/architecture.md` §12 |
+| Dashboard stat chips | The stats row becomes bordered value-over-label chips; the AI-scored chip is accent-tinted as the row's key metric |
+| Dashboard filter toolbar | One bordered container with divider-separated groups (search / selects / numeric ranges / toggles / clear) instead of a loose wrap |
+| Sidebar active state | The desktop sidebar previously highlighted nothing; `SidebarNav` renders one active item, accent-tinted at 600 weight |
+| Single nav source | `BottomNav` reads `NAV_ITEMS` instead of its own drifted copy; orphaned `MobileNav.tsx` deleted (limitations.md §10.4) |
+| Logo + wordmark | `Wordmark` component — near-black rounded square with a bold white "J", product name beside it |
+| Resume dropzone | Drag-and-drop with a "Browse files" fallback and a selected-file row (limitations.md §10.7) |
+| Role chips | Selected related-role chips carry the accent tint at 600 weight; unselected stay plain outlined grey |
+| Tokenised error boundaries | `error.tsx` / `global-error.tsx` rebuilt on design tokens so they inherit the accent (limitations.md §10.2) |
+| Dashed "+ Add" chips | Roles gains a trailing "+ Add role" chip (custom roles join the list already selected); Resume's skills editor gains a matching "+ Add skill" chip, replacing the separate input row |
+| Insights percentages | Skill rows lead with a percentage rather than `count / total`; the raw counts stay on hover |
+| Resume card caption | "Extracted skills" card gains a `{type} · parsed {n}h ago` caption (AD-59) |
+| Distinct nav landmarks | The two primary `<nav>` elements no longer share one `aria-label` — both sit in the DOM at all times, and duplicate landmark names are ambiguous to a screen reader |
+
+**Deferred, not built** (each recorded with a reason rather than left as an implied to-do):
+
+| Deferred item | Why | Tracked in |
+|---|---|---|
+| Per-source enable/disable toggles on `/settings` | Needs a persistence layer, a `scrape.ts` read, and a decision about already-scraped jobs — a data-model change, not a visual one | AD-57, limitations.md §10.1 |
+| Runtime theming (accent hue / corner style / density props) | Three settings for a single user who has already picked the defaults | AD-54, tech-stack.md §8 |
+| Mobile chart subsetting on `/analytics` Overview | Real perceived-performance win, but no measurement yet showing it matters at current data volume | limitations.md §10.5 |
+| Score-badge bands derived from `NOTIFY_THRESHOLD` rather than duplicated constants | Needs the env value threaded to the dashboard; the constants carry a pointer comment meanwhile | AD-56, limitations.md §10.3 |
+| Formal accessibility audit (axe/Lighthouse in CI) | Conventions are followed by habit; no automated verification | limitations.md §10.6 |
+| Analytics Overview as a 2×2 chart grid | The handoff's Analytics assumes a different tab IA; all four charts already exist on other tabs, and moving them is a product change, not a visual one | AD-58, limitations.md §10.5 |
+| Resume "Reprocess" button | Would promise re-parsing that AD-30's parse-once cache never does; the honest version ("re-extract skills") is a new server action needing its own change | AD-59, limitations.md §10.7 |
+| Mobile chart subsetting within the Breakdown tab | Real perceived-performance idea, but unmeasured at current data volume | limitations.md §10.5 |
+
 ### P2 — Medium Priority
 
 | Feature | Description |

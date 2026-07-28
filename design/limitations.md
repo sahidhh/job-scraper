@@ -200,3 +200,77 @@ The Telegram reminder for draft applications (`notifyPendingDrafts`) is stateles
 | Source-level health summary (`getSourceHealthReport`, Phase 1 Task 5/7) doesn't drive runtime behavior | Now surfaced on `/analytics` (Phase 4 Task 13), but still informational only — `scrape.ts`'s scraper-selection logic (`listActiveHealthy`) still only reads `companies.health_status`, not this summary | P2 |
 | Two independent, unreconciled source-health signals | `companies.health_status` (probe-driven, board-token sources only, drives auto-disable via `listActiveHealthy`) and the `scrape_runs`-derived summary (covers all sources, informational only) can disagree — e.g. a source can show `recommendation: "Healthy."` from recent scrape_runs while still `disabled` in `companies` if it hasn't been re-probed yet. `/analytics` now shows both tables side by side rather than merging them, so the disagreement is visible instead of hidden | P3 |
 | Scoring queue report (`getScoringQueueReport`, Phase 1 Task 6) has no alerting | Now surfaced on `/analytics` (Phase 4 Task 13) and still logged by `score.ts` every run; there's still no push alerting or auto-remediation for stuck jobs beyond the indefinite-retry behavior that already existed (AD-14) | P2 |
+
+---
+
+## 10. UI & Design System
+
+### 10.1 Settings → Sources Does Not Manage Sources (`docs/decisions.md` AD-57)
+
+The tab is named "Sources" but manages **companies and their ATS board tokens**. The aggregator
+sources (JSearch, Adzuna, Remotive, Himalayas, RemoteOK, MyCareersFuture) cannot be enabled or
+disabled from the UI at all — a source runs if its env key is configured and doesn't if it isn't, a
+deployment concern rather than a user setting. Per-source toggles would need somewhere to persist
+enablement, a read of it in `scrape.ts`, and a decision about what disabling does to already-scraped
+jobs; deferred rather than built. Read-only source health *is* surfaced, on `/analytics/sources`.
+
+### 10.2 Error Boundaries Are Not Built From Design Tokens — Resolved
+
+`src/app/error.tsx` and `src/app/global-error.tsx` previously used raw Tailwind palette classes
+(`text-gray-500`, `bg-blue-600`) and so did not inherit the accent. Both now use design tokens.
+`error.tsx` uses the `Button` primitive; `global-error.tsx` imports `globals.css` itself and uses
+token utilities directly rather than the primitive, because it replaces the root layout and must stay
+dependency-free — it is the boundary that catches a root-layout crash.
+
+### 10.3 Score Badge Thresholds Are Duplicated Constants, Not Derived From Env
+
+`ScoreBadge` hardcodes `0.75` and `0.40`. The first is meant to track `NOTIFY_THRESHOLD`, which is an
+env var read server-side by `notify.ts` and never passed to the dashboard. If someone changes
+`NOTIFY_THRESHOLD`, the green badge silently stops meaning "this would have notified me" and nothing
+fails. A code comment points at `docs/scoring.md`; that is the whole enforcement mechanism
+(`docs/decisions.md` AD-56).
+
+### 10.4 Two Primary Nav Surfaces, Two Independent Lists — Resolved
+
+`BottomNav` declared its own `BOTTOM_NAV` array and had drifted from `NAV_ITEMS` (labelled Dashboard
+"Jobs", omitted Resume entirely, leaving `/resume` reachable only via an unlabelled mobile-header
+icon). It now reads `NAV_ITEMS`, so both primary surfaces render the same six destinations from one
+list, and the mobile header's resume shortcut has been removed as redundant. The orphaned
+`MobileNav.tsx` — implemented but imported nowhere — was deleted rather than left as a third surface.
+The desktop sidebar, which previously had no active state at all, now renders one via the new
+`SidebarNav` client component. See architecture.md §12.2.
+
+### 10.5 Analytics' Tab Layout Differs From the Design Handoff (`docs/decisions.md` AD-58)
+
+The handoff's Analytics Overview is a 2×2 chart grid (Jobs over time, By source, Score histogram,
+Status breakdown). This app's Overview is the *operational* screen — pipeline stats, scoring-queue
+depth, token usage — and those four charts live on the Scraping & Scoring and Job Breakdown tabs
+instead. Tab names match; contents were designed against a different IA. Deliberately not
+reconciled, because moving the charts is a product change rather than a visual one.
+
+Separately, and still open: the handoff's mobile guidance — render only the two highest-priority
+charts and leave the rest a tab away — is not implemented on the Breakdown tab, which renders four
+charts at every breakpoint. Route-based tabs already give per-tab lazy loading, so nothing is fetched
+for a tab you don't open; the gap is only *within* a tab. No measurement yet shows this matters at
+current data volume.
+
+### 10.6 No Accessibility Audit
+
+The conventions in architecture.md §12.5 are followed by habit, not verified. There is no axe/Lighthouse
+pass in CI, no keyboard-only walkthrough, and no contrast check of the accent tints (`/10`, `/12`) used
+behind small text. Reasonable for a single-user internal tool; stated so it isn't mistaken for a
+compliance claim.
+
+### 10.7 Resume Screen: Dropzone Resolved, "Reprocess" Deliberately Absent
+
+`ResumeUploadCard` is now a dashed dropzone with drag-and-drop, a "Browse files" fallback, and a
+selected-file row with a remove affordance. The file input remains in the DOM (visually hidden, not
+removed) so keyboard and assistive-tech users get the real control. Client-side type checking is by
+extension, since a dropped file can carry an empty or wrong MIME type; server-side validation is
+unchanged and remains the real gate.
+
+The handoff's "Reprocess" button is **not** built — it would promise re-parsing that AD-30's
+parse-once cache deliberately never does (`docs/decisions.md` AD-59). The metadata caption beside it
+is built, but reads "PDF resume · parsed 3h ago" rather than a filename: storage paths are
+content-hash-based, so the original filename is not retained anywhere and inventing one would be
+worse than omitting it.

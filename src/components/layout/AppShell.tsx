@@ -1,28 +1,21 @@
-import Link from "next/link";
-import { FileText, LogOut } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { logoutAction } from "@/features/auth/actions";
 import { Button } from "@/components/ui/button";
 import { BottomNav } from "./BottomNav";
-import { NAV_ITEMS } from "./navItems";
+import { SidebarNav } from "./SidebarNav";
+import { Wordmark } from "./Wordmark";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col md:flex-row">
       {/* Desktop sidebar */}
       <aside className="hidden w-56 flex-col border-r p-4 md:sticky md:top-0 md:flex md:h-screen md:overflow-y-auto">
-        <span className="mb-4 px-2 text-lg font-semibold">Job Intelligence</span>
-        <nav className="flex flex-col gap-1">
-          {NAV_ITEMS.map(({ href, label, icon: Icon }) => (
-            <Button key={href} variant="ghost" asChild className="justify-start gap-2">
-              <Link href={href}>
-                <Icon className="size-4" />
-                {label}
-              </Link>
-            </Button>
-          ))}
-        </nav>
+        <span className="mb-5 px-1">
+          <Wordmark />
+        </span>
+        <SidebarNav />
         <form action={logoutAction} className="mt-auto">
-          <Button type="submit" variant="ghost" className="w-full justify-start gap-2">
+          <Button type="submit" variant="ghost" className="w-full justify-start gap-2 text-muted-foreground">
             <LogOut className="size-4" />
             Logout
           </Button>
@@ -30,14 +23,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        {/* Mobile header */}
-        <header className="flex items-center justify-between border-b px-4 py-3 md:hidden">
-          <span className="font-semibold tracking-tight">Job Intelligence</span>
-          <Button variant="ghost" size="icon" asChild className="size-9 text-muted-foreground">
-            <Link href="/resume" aria-label="Resume">
-              <FileText className="size-5" />
-            </Link>
-          </Button>
+        {/* Mobile header. No nav shortcut here -- every destination including
+            Resume is in BottomNav now, which reads the same NAV_ITEMS list. */}
+        <header className="flex items-center border-b px-4 py-3 md:hidden">
+          <Wordmark size="mobile" />
         </header>
 
         {/* pb-20 clears the 64px bottom nav on mobile */}

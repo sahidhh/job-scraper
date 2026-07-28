@@ -48,9 +48,13 @@
 4. A stats row reports the filtered set's breakdown (AI-scored / low match / queued for AI / gave up
    after repeated AI failures), computed from the same rows the table renders so the numbers always
    reconcile. Only "queued" costs tokens on subsequent runs
-5. Pagination loads next page on demand
+5. "Load more" grows the current page by another `DEFAULT_JOBS_LIMIT` (50) by rewriting `?limit` in the
+   URL and re-running the query — not a numbered pager, and not infinite scroll
+   (`design/api-reference.md` §7.3)
 
-**Postcondition:** User sees paginated, filtered job list with scores, ranking-bonus reasons, and statuses
+**Postcondition:** User sees a filtered, score-ranked job list with scores, ranking-bonus reasons, and
+statuses. The URL fully describes the visible list, so reload, back/forward, and link-sharing all
+reproduce it exactly
 
 ---
 
@@ -101,7 +105,7 @@
 ### UC-05a — Get and Apply AI Resume Suggestions (decisions.md AD-32/AD-33)
 
 **Actor:** User  
-**Trigger:** `suggestResumeImprovementsAction(targetRole)` (no UI wired up yet — `design/limitations.md` §2.5)  
+**Trigger:** User clicks "Get AI suggestions" on the `/resume` "AI suggestions" card (scope.md P1.12 — the UI was wired post-audit closure)  
 **Precondition:** Active resume exists  
 **Main Flow:**
 1. Active resume's `parsedText` is chunked (not truncated — jobhunt bug #2) and each chunk is sent to the configured LLM (`LLM_PROVIDER`: `openrouter` default, same key as job scoring, decisions.md AD-42; `gemini`/`anthropic` direct optional) asking for concrete, non-fabricated improvement suggestions
@@ -325,26 +329,6 @@
 5. Console report is always printed; `--format=all` (the `verify:production` default) additionally writes `verification-reports/latest.md` and `latest.json`
 6. Process exits `1` only if the verdict is `not_ready`
 
----
-
-### UC-17 — Fetch Jobs From a Static Careers URL (merge-workspace Phase 5)
-
-**Actor:** Operator
-**Trigger:** Manual run of `npm run scrape:careers-url -- <careers-page-url>`
-**Precondition:** An active role selection exists (same precondition `scrape.ts` has); the target page is a public, static-HTML careers page (JS-rendered pages are not supported); `OPENROUTER_API_KEY` is configured for `llmClient.ts`'s default provider (decisions.md AD-42), or `GEMINI_API_KEY`/`ANTHROPIC_API_KEY` if `LLM_PROVIDER` is switched away from the default
-**Main Flow:**
-1. Script fetches the given URL and strips it to plain text (`stripHtml`, script/style content removed)
-2. Text is chunked (`chunkText`) and each chunk is sent to `LlmCareersPageExtractor`, which asks the configured LLM to extract listed job postings as JSON
-3. Extracted items are mapped to `RawJob`, with a deterministic sha256-derived `sourceJobId` from `(url, title)` standing in for the stable ID a real ATS API would provide
-4. The same `tagLocations` → `hasAllowedLocation` → `ingestJobs` pipeline `scrape.ts` uses processes the results (location filtering, cross-source dedup, upsert)
-5. One `scrape_runs` row is recorded for `source = 'careers_url'`, same shape as every other source's run log
-
-**Postcondition:** Jobs found on the page and matching the active role selection's location targets are ingested; console output and the `scrape_runs` row report found/kept/inserted/updated counts
-
-**Alternate Flow (empty page):** If the page has no extractable text (e.g. entirely JS-rendered) or the LLM finds no postings, the run completes with `found: 0` rather than failing
-
-**Alternate Flow (fetch failure):** A non-2xx response from the target URL fails the run with `status = 'failed'` and a classified `failureCategory`, same as any other source's failure path
-
 **Postcondition:** Operator sees a full Ready/Needs Attention/Not Ready assessment with per-check detail and actionable recommendations
 
 **Alternate Flow:** No live Supabase project configured (e.g. a fresh checkout) → every credential-dependent check reports `warning: Skipped — ...` instead of crashing; the run still completes and produces a report
@@ -383,7 +367,25 @@
 **Note:** Stateless by design — the reminder reflects the current pending-draft count on every run, so it naturally stops repeating once every draft is sent or dismissed (UC-17); there is no separate "already reminded" tracking.
 
 ---
+### UC-19 — Fetch Jobs From a Static Careers URL (merge-workspace Phase 5)
 
+**Actor:** Operator
+**Trigger:** Manual run of `npm run scrape:careers-url -- <careers-page-url>`
+**Precondition:** An active role selection exists (same precondition `scrape.ts` has); the target page is a public, static-HTML careers page (JS-rendered pages are not supported); `OPENROUTER_API_KEY` is configured for `llmClient.ts`'s default provider (decisions.md AD-42), or `GEMINI_API_KEY`/`ANTHROPIC_API_KEY` if `LLM_PROVIDER` is switched away from the default
+**Main Flow:**
+1. Script fetches the given URL and strips it to plain text (`stripHtml`, script/style content removed)
+2. Text is chunked (`chunkText`) and each chunk is sent to `LlmCareersPageExtractor`, which asks the configured LLM to extract listed job postings as JSON
+3. Extracted items are mapped to `RawJob`, with a deterministic sha256-derived `sourceJobId` from `(url, title)` standing in for the stable ID a real ATS API would provide
+4. The same `tagLocations` → `hasAllowedLocation` → `ingestJobs` pipeline `scrape.ts` uses processes the results (location filtering, cross-source dedup, upsert)
+5. One `scrape_runs` row is recorded for `source = 'careers_url'`, same shape as every other source's run log
+
+**Postcondition:** Jobs found on the page and matching the active role selection's location targets are ingested; console output and the `scrape_runs` row report found/kept/inserted/updated counts
+
+**Alternate Flow (empty page):** If the page has no extractable text (e.g. entirely JS-rendered) or the LLM finds no postings, the run completes with `found: 0` rather than failing
+
+**Alternate Flow (fetch failure):** A non-2xx response from the target URL fails the run with `status = 'failed'` and a classified `failureCategory`, same as any other source's failure path
+
+---
 
 ## 3. User Story Summary
 

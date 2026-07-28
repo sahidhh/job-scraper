@@ -1,10 +1,9 @@
 "use client";
 
-import { X } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import { useState, useTransition } from "react";
 import { updateResumeSkillsAction } from "@/features/resume/actions";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 interface SkillsEditorProps {
@@ -15,6 +14,7 @@ interface SkillsEditorProps {
 export function SkillsEditor({ resumeId, skills }: SkillsEditorProps) {
   const [items, setItems] = useState(skills);
   const [newSkill, setNewSkill] = useState("");
+  const [adding, setAdding] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -32,8 +32,10 @@ export function SkillsEditor({ resumeId, skills }: SkillsEditorProps) {
 
   function handleAdd() {
     const trimmed = newSkill.trim();
-    if (trimmed.length === 0) return;
     setNewSkill("");
+    setAdding(false);
+    if (trimmed.length === 0) return;
+    if (items.some((item) => item.toLowerCase() === trimmed.toLowerCase())) return;
     save([...items, trimmed]);
   }
 
@@ -58,23 +60,37 @@ export function SkillsEditor({ resumeId, skills }: SkillsEditorProps) {
             </button>
           </Badge>
         ))}
-      </div>
-      <div className="flex gap-2">
-        <Input
-          value={newSkill}
-          onChange={(event) => setNewSkill(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              event.preventDefault();
-              handleAdd();
-            }
-          }}
-          placeholder="Add a skill"
-          disabled={isPending}
-        />
-        <Button type="button" onClick={handleAdd} disabled={isPending || newSkill.trim().length === 0}>
-          Add
-        </Button>
+        {/* Trailing dashed chip, matching the Roles screen's "+ Add role"
+            affordance (design handoff) -- the add control sits in the chip row
+            rather than as a separate input beneath it. */}
+        {adding ? (
+          <Input
+            autoFocus
+            value={newSkill}
+            disabled={isPending}
+            placeholder="Skill name"
+            className="h-7 w-40 text-xs"
+            onChange={(event) => setNewSkill(event.target.value)}
+            onBlur={handleAdd}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                handleAdd();
+              }
+              if (event.key === "Escape") {
+                setNewSkill("");
+                setAdding(false);
+              }
+            }}
+          />
+        ) : (
+          <Badge asChild variant="outline" className="border-dashed text-muted-foreground">
+            <button type="button" disabled={isPending} onClick={() => setAdding(true)}>
+              <Plus className="size-3" />
+              Add skill
+            </button>
+          </Badge>
+        )}
       </div>
       {error && <p className="text-sm text-destructive">{error}</p>}
     </div>

@@ -414,3 +414,101 @@ composition root. Checks reuse existing reports rather than re-deriving them —
 `getScoringQueueReport()` — mirroring AD-24's "surface, don't merge" precedent. Exposed as
 `npm run verify:production` / `npm run diagnostics`; see `docs/operations/production-verification.md`
 for the full check catalog and `docs/decisions.md` AD-27 for the design rationale.
+
+---
+
+## 12. Presentation Layer (composition, navigation, state)
+
+Layers 1–11 stop at the server action. This section covers what happens above it. It exists because
+the presentation layer is the one place with no enforced rule file — there is no `check:` script for
+"did you put state in the right place" — so the conventions have to be written down.
+
+### 12.1 Composition rule
+
+**Server component by default; a client component is a leaf.**
+
+```
+page.tsx (server)          fetch via repository → pass plain props down
+  └─ Section (server)      layout, banners, empty states
+       └─ Widget (client)  "use client" only if it needs state, an event, or a transition
+```
+
+A component earns `"use client"` by needing browser state — nothing else. `FilterBar`, `SkillsEditor`,
+`JobsTable`, `JobStatusSelect`, `BottomNav`, and `RouteTabs` are client components; every data-shaped
+component around them is a server component receiving props. This is why no data-fetching library is
+needed, and why React Query is banned (tech-stack.md §2): the fetch already happened on the server.
+
+Data crosses the boundary as **plain serialisable props**, never as a repository instance or a class.
+A client component that needs data it wasn't given calls a server action, not a repository.
+
+### 12.2 The three navigation surfaces
+
+| Surface | Component | Scope | Rendered |
+|---|---|---|---|
+| Primary nav | `AppShell` `<aside>` | The six feature areas | Desktop only (`hidden md:flex`) |
+| Primary nav (mobile) | `BottomNav` | Same six areas | Mobile only (`md:hidden`) |
+| Section nav | `RouteTabs` | Sub-routes within Analytics and Settings | Both |
+
+The six primary items and their order are declared **once**, in
+`src/components/layout/navItems.ts`: Dashboard, Roles, Resume, Insights, Analytics, Settings.
+Any surface that renders primary navigation must read that array — a nav surface with its own
+hardcoded list is a bug, because it drifts silently (see limitations.md §10.4 for the instance of this
+that currently exists).
+
+`RouteTabs` is deliberately **route-based, not a `Tabs` primitive**: each tab is a real route with its
+own server fetch and its own `loading.tsx`, so opening a tab streams only that tab's data. This is the
+architectural reason Analytics and Settings are split into sub-routes while Dashboard and Insights are
+not — those two have a single data-bearing section each (`docs/frontend.md` §1).
+
+### 12.3 State management
+
+There is no state library and there will not be one (tech-stack.md §2). State lives in exactly four
+places, in this order of preference:
+
+1. **The URL** — all dashboard filters. `?q`, `?location`, `?source`, `?status`, `?minScore`,
+   `?maxYears`, `?remote`, `?ineligible`, `?lowmatch`, `?archived`, `?limit`. This is the default for
+   anything a user would expect to survive a refresh, a back button, or a shared link. `FilterBar`
+   never holds filter values in `useState`; it reads `useSearchParams()` and navigates.
+2. **The server** — everything persisted. Mutations go through a server action, which is a composition
+   root: it instantiates the repository and calls the same use-case a cron script would
+   (`docs/architecture.md` §5 rule 4), then `revalidatePath()`.
+3. **`useTransition` + `router.refresh()`** — the pending state of a mutation. The pattern is
+   uniform: wrap the action call in `startTransition`, disable the control while `isPending`, refresh
+   on resolve so the server re-runs the filtered query. `DashboardNavigationProvider` exists only to
+   share one such pending flag between `FilterBar` and `JobsTable`, so the table can dim
+   (`aria-busy`) while a filter navigation is in flight.
+4. **`useState`** — ephemeral, non-persisted UI only: an open dialog, an expanded row, a mobile
+   filter sheet, a bulk-selection set. Nothing here should survive a refresh, and nothing here is
+   derived from server data.
+
+**Optimistic updates are not used.** Status changes call the action and refresh; the round-trip is
+short and the honest failure mode (the value simply doesn't change) is better than a value that
+appears to change and silently reverts.
+
+### 12.4 Loading, empty, and error conventions
+
+| State | Convention |
+|---|---|
+| Route-level loading | `loading.tsx` per route segment, `animate-pulse` blocks mirroring the real layout's shape |
+| In-page loading | `<Suspense>` around the data-bearing section (`JobsSection` on Dashboard, the skills section on Insights) |
+| Filter-change loading | Not a spinner over the page — the existing list stays visible, dims to `opacity-60`, sets `aria-busy`, and an `aria-live="polite"` "Updating…" indicator appears beside the filters |
+| Empty | Written per screen, in the component that owns the query, and must say *why* it is empty and what to do — "No jobs match the current filters" is a different message from "No jobs scraped yet" and both exist |
+| Error | Route error boundaries (`app/error.tsx`, `app/global-error.tsx`); server actions return `{ ok: false, error }` rather than throwing across the boundary |
+
+The filter-change convention is the load-bearing one: because filters are URL state, every filter
+change is a navigation, and replacing the list with a skeleton on each keystroke-adjacent change would
+make the screen flash. Preserve-and-dim is the rule for any future URL-driven list.
+
+### 12.5 Accessibility baseline
+
+Not a formal WCAG commitment — a single-user internal tool — but these are the conventions in place and
+worth keeping:
+
+- Interactive controls are real elements (`<button>`, `<select>`, `<input>`, `<label>`), which is most
+  of why the Radix primitives were chosen over custom widgets.
+- The active `RouteTabs` tab carries `aria-current="page"`; the dimmed job table carries `aria-busy`;
+  the "Updating…" indicator is `aria-live="polite"`.
+- Every icon-only control needs an accessible name. The mobile header's resume shortcut and the
+  external-link and mail affordances in `JobRow` are the places to check first when adding one.
+- Colour is never the only signal: the score badge carries its number, the status pill carries its
+  label, and eligibility carries a reason badge.

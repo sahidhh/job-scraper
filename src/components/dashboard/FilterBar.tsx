@@ -9,7 +9,6 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import type { JobStatus } from "@/features/jobs/domain/types";
-import { cn } from "@/lib/utils";
 import { JOB_SOURCES, LOCATION_TAGS } from "@/shared/domain/enums";
 import { useDashboardNavigation } from "./DashboardNavigationProvider";
 
@@ -327,18 +326,19 @@ export function FilterBar({
         )}
       </div>
 
-      {/* Desktop: horizontal row, grouped in a bordered card w/ dividers */}
-      <div className="hidden flex-wrap items-center gap-2.5 rounded-xl border border-border bg-muted/20 p-2.5 md:flex">
+      {/* Desktop: one bordered toolbar with divider-separated groups --
+          search | selects | numeric ranges | toggles | clear (design handoff). */}
+      <div className="hidden flex-wrap items-center gap-2 rounded-lg border border-border bg-muted/20 px-3 py-2.5 md:flex">
         <Input
           key={`search-${searchParams.get("q") ?? ""}`}
           type="text"
           placeholder="Search title or company"
           defaultValue={searchParams.get("q") ?? ""}
           onBlur={(e) => updateSearch(e.target.value)}
-          className="w-52 bg-background"
+          className="w-52"
         />
 
-        <div className="h-6 w-px shrink-0 bg-border" />
+        <ToolbarDivider />
 
         <Select
           value={searchParams.get("location") ?? "all"}
@@ -385,7 +385,7 @@ export function FilterBar({
           </SelectContent>
         </Select>
 
-        <div className="h-6 w-px shrink-0 bg-border" />
+        <ToolbarDivider />
 
         <div className="relative flex items-center">
           <Input
@@ -399,7 +399,7 @@ export function FilterBar({
             onBlur={(e) => updateMinScore(e.target.value)}
             disabled={!hasAiScores}
             title={hasAiScores ? undefined : "No AI scores yet — run a scoring pass first"}
-            className="w-28 bg-background pr-7"
+            className="w-28 pr-7"
           />
           <span className="pointer-events-none absolute right-3 text-sm text-muted-foreground">%</span>
         </div>
@@ -414,12 +414,12 @@ export function FilterBar({
             placeholder={effectiveMaxYears === null ? "Max yrs" : `Max yrs (${effectiveMaxYears})`}
             defaultValue={searchParams.get("maxYears") ?? ""}
             onBlur={(e) => updateParam("maxYears", e.target.value)}
-            className="w-28 bg-background pr-10"
+            className="w-28 pr-10"
           />
           <span className="pointer-events-none absolute right-3 text-sm text-muted-foreground">yrs</span>
         </div>
 
-        <div className="h-6 w-px shrink-0 bg-border" />
+        <ToolbarDivider />
 
         <label className="flex cursor-pointer items-center gap-1.5 text-sm text-muted-foreground">
           <input
@@ -474,13 +474,7 @@ export function FilterBar({
           </Button>
         )}
         {isPending && (
-          <span
-            className={cn(
-              "flex items-center gap-1.5 text-sm text-muted-foreground",
-              activeCount === 0 && "ml-auto",
-            )}
-            aria-live="polite"
-          >
+          <span className="flex items-center gap-1.5 text-sm text-muted-foreground" aria-live="polite">
             <Loader2 className="size-4 animate-spin" />
             Updating…
           </span>
@@ -497,4 +491,10 @@ function FilterField({ label, children }: { label: string; children: React.React
       {children}
     </div>
   );
+}
+
+// Separates the toolbar's control groups so the row reads as grouped rather
+// than as one undifferentiated wrap of inputs (design handoff).
+function ToolbarDivider() {
+  return <span aria-hidden className="h-6 w-px shrink-0 bg-border" />;
 }

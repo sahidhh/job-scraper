@@ -85,6 +85,7 @@ Every code change that touches any of the items below **must** update the corres
 | Auth, RLS, storage, or service-role boundary change | `design/security.md` |
 | New limitation or known issue | `design/limitations.md` |
 | Workflow or UX change visible to the user | `design/user-guide.md` |
+| UI / design-system change (design token, component convention, navigation surface, loading/empty/error pattern) | `design/tech-stack.md` §8, `design/architecture.md` §12 |
 | Change to project scope or phase roadmap | `design/scope.md` |
 
 Additionally:
