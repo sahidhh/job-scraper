@@ -154,12 +154,12 @@ export function JobRow({
             )}
           </div>
         </TableCell>
-        <TableCell className="whitespace-normal">
-            <div className="flex flex-wrap items-center gap-1">
+        <TableCell className="min-w-40">
+            <div className="flex items-center gap-1">
               <Button
                 variant="ghost"
                 size="sm"
-                className="size-8 p-0"
+                className="size-8 p-0 text-primary hover:text-primary"
                 onClick={() => rejectStatus && onAction(rejectStatus)}
                 title="Reject"
               >
@@ -168,7 +168,7 @@ export function JobRow({
               <Button
                 variant="ghost"
                 size="sm"
-                className="size-8 p-0"
+                className="size-8 p-0 text-primary hover:text-primary"
                 onClick={() => archiveStatus && onAction(archiveStatus)}
                 title="Archive"
               >

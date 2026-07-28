@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { setJobStatusAction } from "@/features/jobs/actions";
 import type { JobStatus } from "@/features/jobs/domain/types";
@@ -25,6 +25,13 @@ export function JobStatusSelect({
   const router = useRouter();
   const [optimisticStatusId, setOptimisticStatusId] = useState(initialStatusId);
   const [isPending, startTransition] = useTransition();
+
+  // JobRow doesn't remount on router.refresh(), so without this, a status
+  // change made elsewhere (Reject/Archive buttons) never reaches this
+  // dropdown's local state and it keeps showing the stale value.
+  useEffect(() => {
+    setOptimisticStatusId(initialStatusId);
+  }, [initialStatusId]);
 
   function onChange(value: string) {
     const previousStatusId = optimisticStatusId;
