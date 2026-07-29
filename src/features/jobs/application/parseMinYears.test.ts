@@ -77,15 +77,20 @@ describe("parseMinYears", () => {
     expect(parseMinYears("21-25 years experience")).toBeNull();
   });
 
-  // --- multiple matches -> smallest ---
-  it("returns smallest when multiple valid matches exist", () => {
+  // --- multiple matches -> largest (the overall bar, not a sub-skill aside) ---
+  it("returns largest when multiple valid matches exist", () => {
     expect(
       parseMinYears("2+ years frontend; 5+ years overall engineering experience"),
-    ).toBe(2);
+    ).toBe(5);
   });
 
-  it("returns smallest from a mix of range and direct", () => {
-    expect(parseMinYears("3-5 years backend, 1+ years scripting")).toBe(1);
+  it("returns largest from a mix of range and direct", () => {
+    // Range capture is its lower bound (3), still beats the smaller direct match (1).
+    expect(parseMinYears("3-5 years backend, 1+ years scripting")).toBe(3);
+  });
+
+  it("does not let a smaller sub-skill number understate an overall requirement", () => {
+    expect(parseMinYears("8+ yrs experience overall, 2+ yrs in Kubernetes")).toBe(8);
   });
 
   // --- boundary ---

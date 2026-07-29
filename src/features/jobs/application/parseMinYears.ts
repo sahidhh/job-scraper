@@ -1,7 +1,15 @@
 /**
- * Best-effort extraction of the MINIMUM required years of experience from a
- * job's free text (P2, soft filter). Returns the smallest plausible value
+ * Best-effort extraction of the minimum required years of experience from a
+ * job's free text (P2, soft filter). Returns the largest plausible value
  * tied to a years-word, or null when nothing usable is found.
+ *
+ * A posting that states multiple years-numbers is typically stating an
+ * overall bar plus a narrower sub-requirement ("8+ yrs experience... 2+ yrs
+ * in Kubernetes") -- the overall bar is the true gate, and it is always the
+ * larger number. Taking the smallest would let a job requiring 8 years slip
+ * under a 2-year cap just because it also namedrops a smaller sub-skill
+ * number. A "3-5 years" range is a single match (group 1 = "3", the range's
+ * own lower bound) and is unaffected by this largest-of-matches rule.
  *
  * Soft by design: null means "unknown" and must never exclude a job. Only a
  * number directly tied to a years-word counts, so unrelated numbers ("React
@@ -65,17 +73,17 @@ export function parseMinYears(text: string): number | null {
   // number is the minimum). Unit variants: year(s) / yr(s).
   const regex = /(?<!\d)(\d{1,2})\s*(?:\+|-\s*\d{1,2})?\s*(?:years|year|yrs|yr)\b/gi;
 
-  let min: number | null = null;
+  let best: number | null = null;
   for (let match = regex.exec(text); match !== null; match = regex.exec(text)) {
     const value = Number(match[1]);
-    if (Number.isInteger(value) && value >= 0 && value <= 20 && (min === null || value < min)) {
-      min = value;
+    if (Number.isInteger(value) && value >= 0 && value <= 20 && (best === null || value > best)) {
+      best = value;
     }
   }
 
   // Numeric match is more precise — return it immediately if found.
-  if (min !== null) {
-    return min;
+  if (best !== null) {
+    return best;
   }
 
   // Seniority-label fallback: check the title segment first (split on the
