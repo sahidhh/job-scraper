@@ -135,7 +135,11 @@ export class SupabaseMatchedJobsRepository implements MatchedJobsRepository {
     const assignedCount = rows.length;
     const newCount = totalCount - assignedCount;
     if (newCount > 0) {
-      map.set("New", { label: "New", color: "#E5E7EB", count: newCount });
+      // A token, not a hex literal: every other bar's colour is user data from
+      // job_statuses.color, but this bucket is synthetic and ours, so it is the
+      // one that can follow the theme. Recharts passes `fill` straight to SVG,
+      // where var() resolves normally.
+      map.set("New", { label: "New", color: "var(--muted)", count: newCount });
     }
 
     return Array.from(map.values()).sort((a, b) => b.count - a.count);

@@ -314,3 +314,32 @@ as well as Enter to commit, and a form gives you the second but not the first. W
 would mean carrying both mechanisms for one field. It also sits inside the roles preview card, which
 is rendered below `RoleSelectorForm`'s own `<form>` — forms cannot nest, which is why only the
 role-input row is wrapped rather than the whole screen.
+
+### 10.10 Dark Mode Has Three Residuals Tokens Cannot Reach (`docs/decisions.md` AD-63)
+
+Light/dark is live and the token set is symmetric, but three things sit outside it and are accepted
+rather than fixed.
+
+**Status dot colours are user data.** `job_statuses.color` is a hex string the user picks in
+`StatusConfigSection` and stores in the database; it reaches the DOM as an inline `style`, so no CSS
+variable can ever reach it. The seeded defaults are Tailwind-100-family pastels chosen against a white
+page. This is deliberately not fixed: the rendering is an 8px `rounded-full` dot, a pale pastel is
+*more* visible on a dark page than on a light one, and a per-theme colour column would be a data-model
+change for a decorative dot. The one value that was ours — the synthetic "New" bucket in
+`SupabaseMatchedJobsRepository` — now uses `var(--muted)` and does follow the theme.
+
+**Dark-mode borders do not meet SC 1.4.11.** `--border` was raised from 10% to 16% white, which is
+where card outlines and dense-table row separators resolve; 3:1 against `--card` would need roughly
+36%, which reads as a harsh outline on every surface at once. Dark mode therefore separates surfaces
+by lightness (`--card` 0.205 vs `--background` 0.145) and treats the border as reinforcement.
+`--input` went to 22% because a field boundary is a real control boundary and the one border a user
+has to find.
+
+**Nothing verifies dark mode *looks* right.** `globals.contrast.test.ts` checks token pairings and
+`theme.test.ts` checks the mechanism, but Tailwind v4 resolves `@theme inline` at build time and
+there is no compiled stylesheet in the test environment — jsdom will not resolve `var(--card)`, and a
+test that hardcoded the values would assert its own copy of the table while the app drifted. The
+perceptual failures (a wash that vanishes, a border that dissolves) all pass a class-name assertion,
+and FOUC is unobservable in an environment that never paints. The residual check is the manual pass
+in `docs/plans/dark-mode-plan.md` Phase 4: all routes in both themes, **hovering at least one point
+on every chart**, since Recharts tooltips only exist on hover.

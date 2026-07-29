@@ -4,6 +4,11 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
+  /* Tells the browser which way to paint the surfaces it owns and CSS cannot
+     reach: scrollbars, <select> popups, date pickers, autofill fills, the
+     canvas behind the page. Without it a dark page keeps light scrollbars and
+     reads as half-converted. */
+  color-scheme: light;
   --radius: 0.625rem;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
@@ -45,7 +50,12 @@
   --ring: oklch(0.5 0.1 264);
 }
 
+/* Live since AD-63 -- ThemeToggle writes `.dark` onto <html>. Every token below
+   is the counterpart of one in `:root`, so an accent change (AD-54) has to be
+   made twice and measured twice; getting it wrong is now visible rather than
+   dormant. */
 .dark {
+  color-scheme: dark;
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
@@ -74,11 +84,9 @@
      `--warning` the pattern rather than the exception -- all four status tokens
      now take dark text on a light chip (AD-62). Measured, in order below:
      6.84:1, 8.50:1, 10.64:1, 8.29:1.
-     `--destructive` is the one gap: `Badge`/`Button` render it as
-     `dark:bg-destructive/60` with a literal `text-white`, ignoring
-     `--destructive-foreground` entirely, so no token change can fix it. It needs
-     the variant reworked -- tracked in docs/plans/dark-mode-plan.md, and moot
-     until something actually sets `.dark`. */
+     `--destructive-foreground` was dead until AD-63: `Badge`/`Button` shipped
+     upstream shadcn's `dark:bg-destructive/60` with a literal `text-white` and
+     ignored the token. Both variants now use the token in both themes. */
   --destructive: oklch(0.704 0.191 22.216);
   --destructive-foreground: oklch(0.145 0 0);
   --success: oklch(0.72 0.17 145);
@@ -87,8 +95,19 @@
   --warning-foreground: oklch(0.145 0 0);
   --info: oklch(0.72 0.15 230);
   --info-foreground: oklch(0.145 0 0);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
+  /* Raised from shadcn's 10%/15%. At 10% a border composites to ~1.13:1
+     against `--card` -- structurally invisible, and borders carry the sidebar,
+     the mobile header, every Card and the dashboard table's row separators.
+     Reaching SC 1.4.11's 3:1 against `--card` would take ~36% white, which
+     reads as a harsh outline on every surface at once; 16% is the point where
+     the separators resolve without the page turning into a wireframe. The
+     shortfall is deliberate and recorded in limitations.md -- in dark mode
+     structure comes from surface lightness (`--card` vs `--background`) with
+     the border as reinforcement, not the other way round.
+     `--input` goes further because a field boundary *is* a UI component
+     boundary, and it is the one border a user has to find. */
+  --border: oklch(1 0 0 / 16%);
+  --input: oklch(1 0 0 / 22%);
   --ring: oklch(0.74 0.13 264);
 }
 

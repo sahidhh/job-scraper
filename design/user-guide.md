@@ -21,6 +21,19 @@
 
 After the first scrape+score+notify run, your dashboard will show scored jobs and you may receive Telegram alerts.
 
+### 1.3 Light and Dark Mode
+
+The app follows your operating system's appearance setting on first load — no setup needed. To
+override it, use the sun/moon button: in the **sidebar footer above Logout** on desktop, in the
+**top-right of the header** on mobile.
+
+Once you click it, your choice is remembered on that browser and the OS setting is ignored from then
+on. It is stored per-browser, not in your account, so a different device starts by following that
+device's OS again. To go back to following the OS, clear the site's stored data for this app.
+
+There is no third "System" option in the button and no theme setting elsewhere in the app — the OS
+*is* the default.
+
 ---
 
 ## 2. Resume

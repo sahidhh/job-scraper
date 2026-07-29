@@ -302,10 +302,32 @@ Do not mix in a second icon set or inline raw SVG paths — `components.json` pi
 
 ### Theming
 
-**One fixed theme.** There is no runtime theme switcher, no density toggle, and no accent picker
-(decisions.md AD-54). Dark mode exists as a `.dark` class variant with a full parallel token set, but
-nothing currently toggles it. What shipping it would take is written up in
-`docs/plans/dark-mode-plan.md`.
+**Light and dark, and nothing else.** There is no density toggle and no accent picker
+(decisions.md AD-54, still in force on both). Light/dark is the one axis that is switchable
+(AD-63), because the OS already carries the preference and the parallel token set already existed.
+
+How it works, end to end:
+
+- `src/lib/theme.ts` holds `applyStoredTheme(root, stored, prefersDark)` and `THEME_SCRIPT`, the
+  serialized form of it. **The function is `String()`-ed into a blocking inline `<script>` in
+  `<head>`** (`layout.tsx`), so the class is on `<html>` before first paint — without that the page
+  paints white and repaints dark after hydration. It must therefore stay entirely self-contained:
+  no imports, no closure over module scope.
+- Resolution order: an explicit `localStorage["theme"]` of `"light"`/`"dark"` wins; **absence means
+  follow the OS**. That absence is the third state, which is why the control itself is two-state.
+- `ThemeToggle` (sidebar footer, mobile header) holds **no React state** — it toggles the class and
+  writes storage. Its icons are CSS-driven (`dark:hidden` / `hidden dark:block`), both present in
+  the server HTML, so nothing needs to read the theme in JS and there is no `mounted` flicker.
+- `<html>` carries `suppressHydrationWarning`. The standing rule that creates: **never branch
+  server-rendered output on theme — branch in CSS.**
+- `color-scheme: light` / `dark` is set on `:root` / `.dark`. It is what themes the surfaces CSS
+  cannot reach: scrollbars, `<select>` popups, date pickers, autofill.
+
+The trap, because it fails silently and looks like something else: the script must use
+`classList.add`, never `className =`. `<html>` also carries `next/font`'s generated class, the only
+thing defining `--font-ibm-plex-sans`. `src/lib/theme.test.ts` has a named test for exactly this.
+
+`docs/plans/dark-mode-plan.md` is the full working plan, including the residual manual visual pass.
 
 **Contrast is a constraint on the token, not a review step.** Every solid-chip pairing —
 `bg-<token>` with `text-<token>-foreground` — must clear WCAG AA (4.5:1) for normal text, and the
@@ -357,6 +379,14 @@ palette colour is invisible to the contrast gate in `globals.contrast.test.ts` a
 `.dark`. Map the domain union onto a `Badge` variant with an exhaustive
 `Record<TheUnion, ComponentProps<typeof Badge>["variant"]>`, so adding a status is a type error
 rather than an unstyled pill; `ScrapeRunHealthTable` and `SourceHealthTable` are the reference.
+
+**Recharts renders outside CSS classes, so it needs the tokens passed in by hand.**
+`AnalyticsCharts.tsx` has three shared constants for this — `AXIS_STYLE`, `TOOLTIP_STYLE` and
+`stroke="var(--border)"` on every `CartesianGrid`. A bare `<Tooltip />` is Recharts' default: an
+opaque **white** panel with dark text, which is a white slab on a dark page. Tooltips only exist on
+hover, so a route-by-route visual pass will not catch a missed one — pass `contentStyle` every time.
+Series fill colours remain literal hex; they are saturated mid-tones that read on both grounds, and
+they are the documented exception to the no-literal-colours rule above.
 
 ### Component tests (jsdom, per-file opt-in)
 

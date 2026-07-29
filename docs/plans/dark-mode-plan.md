@@ -1,8 +1,26 @@
 # WP-E — Dark Mode Plan
 
-> **📋 Planning document. Nothing here is implemented.** This file describes what
-> shipping dark mode would cost, what it would contradict, and whether it is worth
-> doing. It ends with a position, not a menu.
+> **✅ Implemented, 2026-07-29 — `docs/decisions.md` AD-63.** Phases 0–3 shipped as
+> described below, with three deviations recorded at the end of this note. Phase 4's
+> **manual visual pass is the one outstanding item** and cannot be automated (§5.2).
+> The rest of this document is kept as written, because the reasoning is why the
+> implementation looks the way it does.
+>
+> **Deviations from the plan as drafted:**
+> 1. The superseding AD is **AD-63**, not AD-60 — 60 and 61 were taken by unrelated
+>    audit work before this landed.
+> 2. **Phase 2 shipped early, on its own, before the toggle existed** (AD-62). The
+>    plan's §8 argued it was worth doing regardless, and the live light-mode AA
+>    failure made it urgent. §7 risk 1's warning was about shipping *Phase 1* alone,
+>    which did not happen.
+> 3. **Dark `--border` does not reach SC 1.4.11's 3:1** against `--card`, as §4.3
+>    hoped. It went 10% → 16%; 3:1 needs ~36% white, which reads as a harsh outline
+>    everywhere. Accepted and recorded in `design/limitations.md` §10.10 rather than
+>    silently missed.
+>
+> §4.1's framing of `--warning` as having a near-white foreground in light mode was
+> also wrong — it was near-black in both, and correct all along; the plan already
+> notes this inline.
 
 **Goal:** Decide whether to activate the dark token set that already exists in
 `src/app/globals.css`, and if so, specify the mechanism, the audit obligations,

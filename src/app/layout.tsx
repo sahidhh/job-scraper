@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Sans } from "next/font/google";
+import { THEME_SCRIPT } from "@/lib/theme";
 import "./globals.css";
 
 // IBM Plex Sans, self-hosted by `next/font` (no external request at runtime,
@@ -34,7 +35,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     // The generated class only *defines* --font-ibm-plex-sans; globals.css
     // maps it onto Tailwind v4's --font-sans theme token, so `font-sans`
     // (and the preflight default) resolve to it everywhere.
-    <html lang="en" className={ibmPlexSans.variable}>
+    //
+    // suppressHydrationWarning because THEME_SCRIPT adds `dark` to this element
+    // before React hydrates, so server and client markup differ here by design.
+    // React's suppression is one level deep -- <html>'s own attributes and
+    // nothing below -- which is exactly the intended blast radius. The standing
+    // rule it creates: never branch server-rendered output on theme, branch in
+    // CSS (decisions.md AD-63).
+    <html lang="en" className={ibmPlexSans.variable} suppressHydrationWarning>
+      <head>
+        {/* Blocking and inline on purpose: it has to run before first paint or
+            the page flashes white on the way to dark. */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
       <body className="font-sans antialiased">{children}</body>
     </html>
   );

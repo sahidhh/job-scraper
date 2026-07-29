@@ -459,6 +459,12 @@ technical-design.md §11).
 | Primary nav (mobile) | `BottomNav` | Same six areas | Mobile only (`md:hidden`) |
 | Section nav | `RouteTabs` | Sub-routes within Analytics and Settings | Both |
 
+`AppShell` also carries the **chrome controls**, which are deliberately not navigation: `ThemeToggle`
+and the logout form share a `mt-auto` group in the sidebar footer, and `ThemeToggle` appears again in
+the mobile header opposite the wordmark. They are kept out of `BottomNav` because that surface is a
+`<nav>` landmark whose every child is a destination with an `aria-current` state, and out of
+`/settings` because AD-63 shipped the theme toggle specifically without a settings surface.
+
 The six primary items and their order are declared **once**, in
 `src/components/layout/navItems.ts`: Dashboard, Roles, Resume, Insights, Analytics, Settings.
 Any surface that renders primary navigation must read that array — a nav surface with its own
@@ -577,6 +583,11 @@ worth keeping:
   pill mean "this would have notified you" — the single thing the dashboard is scanned for. Light
   mode darkens the chip; dark mode darkens the text. See decisions.md AD-62 and tech-stack.md §8 for
   the rule and the `--primary` exception.
+- **Non-text contrast (SC 1.4.11, 3:1) is met for controls, not for decorative structure.** Field
+  borders and focus rings clear it in both themes; dark-mode card borders and table row separators do
+  not — reaching 3:1 against `--card` would take a ~36% white border on every surface, so dark mode
+  separates surfaces by lightness with the border reinforcing it (decisions.md AD-63,
+  limitations.md §10).
 - Radix warns when a dialog-role surface has no description. `SheetContent` sets
   `aria-describedby={undefined}` **before** the props spread — a deliberate opt-out, since our sheets
   are short titled surfaces where the title is the description, and declaring it before the spread

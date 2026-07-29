@@ -3,6 +3,7 @@ import { logoutAction } from "@/features/auth/actions";
 import { Button } from "@/components/ui/button";
 import { BottomNav } from "./BottomNav";
 import { SidebarNav } from "./SidebarNav";
+import { ThemeToggle } from "./ThemeToggle";
 import { Wordmark } from "./Wordmark";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -14,19 +15,26 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <Wordmark />
         </span>
         <SidebarNav />
-        <form action={logoutAction} className="mt-auto">
-          <Button type="submit" variant="ghost" className="w-full justify-start gap-2 text-muted-foreground">
-            <LogOut className="size-4" />
-            Logout
-          </Button>
-        </form>
+        {/* Chrome-level, non-navigational controls. Deliberately not in
+            BottomNav (not a destination, no aria-current) and not on
+            /settings (that is the settings surface AD-54 argued against). */}
+        <div className="mt-auto">
+          <ThemeToggle label />
+          <form action={logoutAction}>
+            <Button type="submit" variant="ghost" className="w-full justify-start gap-2 text-muted-foreground">
+              <LogOut className="size-4" />
+              Logout
+            </Button>
+          </form>
+        </div>
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Mobile header. No nav shortcut here -- every destination including
             Resume is in BottomNav now, which reads the same NAV_ITEMS list. */}
-        <header className="flex items-center border-b px-4 py-3 md:hidden">
+        <header className="flex items-center justify-between border-b px-4 py-3 md:hidden">
           <Wordmark size="mobile" />
+          <ThemeToggle />
         </header>
 
         {/* pb-20 clears the 64px bottom nav on mobile */}

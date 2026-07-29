@@ -72,7 +72,10 @@ function contrastRatio(foreground: Oklch, background: Oklch): number {
 
 describe("design token contrast", () => {
   // Every solid chip Badge renders: bg-<token> with text-<token>-foreground.
-  const solidChips = ["success", "warning", "info"] as const;
+  // `destructive` joined the list in AD-63, when Badge/Button stopped
+  // hardcoding `text-white` over a `dark:bg-destructive/60` fade and started
+  // using the token like every other variant.
+  const solidChips = ["success", "warning", "info", "destructive"] as const;
 
   describe.each(["root", "dark"] as const)("%s theme", (block) => {
     it.each(solidChips)("%s chip text clears AA", (token) => {
@@ -84,16 +87,6 @@ describe("design token contrast", () => {
       const ratio = contrastRatio(readToken(block, "primary-foreground"), readToken(block, "primary"));
       expect(ratio).toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
     });
-  });
-
-  // Badge/Button render destructive with a literal `text-white`, not
-  // --destructive-foreground, so white is what has to be checked. Only the light
-  // theme is asserted: the dark variant is `dark:bg-destructive/60`, an alpha
-  // composite this token-level check cannot model. See
-  // docs/plans/dark-mode-plan.md.
-  it("destructive chip carries white text at AA in the light theme", () => {
-    const white: Oklch = { l: 1, c: 0, h: 0 };
-    expect(contrastRatio(white, readToken("root", "destructive"))).toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
   });
 
   // text-primary over the bg-primary/10 wash -- stat chips, the sidebar active

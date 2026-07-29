@@ -41,6 +41,17 @@ function truncate(v: string, max = 9): string {
 
 const CHART_HEIGHT = 240;
 const AXIS_STYLE = { fontSize: 11, fill: "var(--muted-foreground)" };
+// Recharts' default tooltip is an opaque white panel with dark text and no
+// theme awareness -- a white slab on a dark page, at every chart. Route it
+// through the popover tokens like every other floating surface. Tooltips only
+// exist on hover, so a route-by-route visual pass does not catch this.
+const TOOLTIP_STYLE = {
+  fontSize: 12,
+  borderRadius: 8,
+  backgroundColor: "var(--popover)",
+  color: "var(--popover-foreground)",
+  border: "1px solid var(--border)",
+};
 
 export function JobsOverTimeChart({ data }: { data: JobsOverTimePoint[] }) {
   if (data.length === 0) {
@@ -60,7 +71,7 @@ export function JobsOverTimeChart({ data }: { data: JobsOverTimePoint[] }) {
         />
         <YAxis tick={AXIS_STYLE} tickLine={false} axisLine={false} width={28} />
         <Tooltip
-          contentStyle={{ fontSize: 12, borderRadius: 8 }}
+          contentStyle={TOOLTIP_STYLE}
           labelFormatter={(v) => shortDate(String(v))}
         />
         <Line type="monotone" dataKey="count" stroke="#6366f1" strokeWidth={2} dot={false} />
@@ -87,7 +98,7 @@ export function JobsBySourceChart({ data }: { data: JobsBySourceEntry[] }) {
           height={44}
         />
         <YAxis tick={AXIS_STYLE} tickLine={false} axisLine={false} width={28} />
-        <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} />
+        <Tooltip contentStyle={TOOLTIP_STYLE} />
         <Bar dataKey="count" fill="#6366f1" radius={[3, 3, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
@@ -110,7 +121,7 @@ export function ScoreHistogramChart({ data }: { data: ScoreHistogramBucket[] }) 
           interval={1}
         />
         <YAxis tick={AXIS_STYLE} tickLine={false} axisLine={false} width={28} />
-        <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} />
+        <Tooltip contentStyle={TOOLTIP_STYLE} />
         <Bar dataKey="count" fill="#10b981" radius={[3, 3, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
@@ -127,7 +138,7 @@ export function StatusBreakdownChart({ data }: { data: StatusBreakdownEntry[] })
         <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
         <XAxis dataKey="label" tick={AXIS_STYLE} tickLine={false} axisLine={false} />
         <YAxis tick={AXIS_STYLE} tickLine={false} axisLine={false} width={28} />
-        <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} />
+        <Tooltip contentStyle={TOOLTIP_STYLE} />
         <Bar dataKey="count" radius={[3, 3, 0, 0]}>
           {data.map((entry, index) => (
             <Cell key={index} fill={entry.color} />
@@ -152,7 +163,7 @@ export function JobsByExperienceChart({ data }: { data: JobsByExperiencePoint[] 
         <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
         <XAxis dataKey="label" tick={AXIS_STYLE} tickLine={false} axisLine={false} />
         <YAxis tick={AXIS_STYLE} tickLine={false} axisLine={false} width={28} />
-        <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} />
+        <Tooltip contentStyle={TOOLTIP_STYLE} />
         <Line type="monotone" dataKey="count" stroke="#10b981" strokeWidth={2} dot={false} />
       </LineChart>
     </ResponsiveContainer>
@@ -169,7 +180,7 @@ export function JobsByLocationChart({ data }: { data: JobsByLocationPoint[] }) {
         <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
         <XAxis dataKey="location" tick={AXIS_STYLE} tickLine={false} axisLine={false} />
         <YAxis tick={AXIS_STYLE} tickLine={false} axisLine={false} width={28} />
-        <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} />
+        <Tooltip contentStyle={TOOLTIP_STYLE} />
         <Bar dataKey="count" fill="#f59e0b" radius={[3, 3, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
@@ -194,7 +205,7 @@ export function ScoredBySourceChart({ data }: { data: JobsBySourceEntry[] }) {
           height={44}
         />
         <YAxis tick={AXIS_STYLE} tickLine={false} axisLine={false} width={28} allowDecimals={false} />
-        <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} />
+        <Tooltip contentStyle={TOOLTIP_STYLE} />
         <Bar dataKey="count" fill="#8b5cf6" radius={[3, 3, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
@@ -219,10 +230,10 @@ export function JobsByCompanyChart({ data }: { data: JobsByCompanyEntry[] }) {
   return (
     <ResponsiveContainer width="100%" height={220}>
       <BarChart data={data} layout="vertical">
-        <CartesianGrid strokeDasharray="3 3" />
-        <XAxis type="number" allowDecimals={false} />
-        <YAxis type="category" dataKey="company" width={110} />
-        <Tooltip />
+        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+        <XAxis type="number" allowDecimals={false} tick={AXIS_STYLE} />
+        <YAxis type="category" dataKey="company" width={110} tick={AXIS_STYLE} />
+        <Tooltip contentStyle={TOOLTIP_STYLE} />
         <Bar dataKey="count" fill="#ec4899" />
       </BarChart>
     </ResponsiveContainer>
