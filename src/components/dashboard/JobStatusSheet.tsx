@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { setJobStatusAction } from "@/features/jobs/actions";
 import type { JobStatus } from "@/features/jobs/domain/types";
@@ -16,6 +16,9 @@ function StatusDot({ color }: { color: string }) {
   );
 }
 
+// Mobile counterpart of JobStatusSelect. Same contract: the sheet is
+// controlled so picking a status closes it, the trigger shows the new value
+// immediately, and a failed action puts the old value back.
 export function JobStatusSheet({
   jobId,
   statusId,
@@ -26,19 +29,33 @@ export function JobStatusSheet({
   statuses: JobStatus[];
 }) {
   const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [optimisticStatusId, setOptimisticStatusId] = useState(statusId);
   const [isPending, startTransition] = useTransition();
 
-  const current = statuses.find((s) => s.id === statusId);
+  // JobCard doesn't remount on router.refresh(), so a status changed elsewhere
+  // would otherwise never reach this trigger's local state.
+  useEffect(() => {
+    setOptimisticStatusId(statusId);
+  }, [statusId]);
+
+  const current = statuses.find((s) => s.id === optimisticStatusId);
 
   function select(id: string) {
+    const previousStatusId = optimisticStatusId;
+    setOptimisticStatusId(id);
+    setOpen(false);
     startTransition(async () => {
-      await setJobStatusAction([jobId], id);
+      const result = await setJobStatusAction([jobId], id);
+      if (!result.ok) {
+        setOptimisticStatusId(previousStatusId);
+      }
       router.refresh();
     });
   }
 
   return (
-    <Sheet>
+    <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
         <button
           type="button"
@@ -69,7 +86,7 @@ export function JobStatusSheet({
             >
               <StatusDot color={status.color} />
               {status.label}
-              {status.id === statusId && (
+              {status.id === optimisticStatusId && (
                 <span className="ml-auto text-xs text-muted-foreground">Current</span>
               )}
             </button>

@@ -70,7 +70,7 @@ After the first scrape+score+notify run, your dashboard will show scored jobs an
 
 ### Set a Role
 1. Type your primary target role (e.g., "Backend Engineer", "Data Scientist")
-2. Click "Expand Role"
+2. Press **Enter**, or click "Expand" — either one starts the expansion
 3. The platform looks up related roles (e.g., "Software Engineer", "API Developer", "Node.js Developer")
 4. If your role is already in the cache: result is instant
 5. If not: an AI call expands the role (takes 5–15 seconds) and caches the result
@@ -103,6 +103,29 @@ your AI relevance score plus any ranking bonuses you've configured (see "Ranking
 - **Actions** — open job URL in new tab, or draft an application (mail icon — see "Draft an Application" below)
 
 Click a row's title to expand it and read the AI's reasoning for the score.
+
+### Keyboard shortcuts (desktop table)
+Press **Tab** until the job table takes focus — it's a single stop, so you land on one row rather than
+tabbing through all fifty. The focused row is marked with a coloured rail down its left edge and a
+tinted background. The same shortcuts are printed above the table, so you never have to remember them.
+
+| Key | Does |
+|---|---|
+| `↑` `↓` | Move between rows |
+| `R` | Reject the focused job |
+| `A` | Archive the focused job |
+| `D` | Expand or collapse the focused row's details (AI reasoning, company history) |
+
+The shortcuts only ever act on the **one focused row** — never on the whole list. They deliberately do
+nothing while you're typing in the search box or any other field, while a status dropdown or dialog is
+open, or when you hold Ctrl/Cmd/Alt, so `Ctrl+R` still reloads the page and typing the word "remote"
+into search doesn't archive anything.
+
+`R` and `A` do exactly what the reject and archive buttons on the row do, so an accidental one is
+undone the same way — set the status back from the row's dropdown.
+
+> Shortcuts are desktop-only. On mobile there's no focused row to act on; use the card's buttons and
+> status sheet instead.
 
 ### Reading the score badge
 | Badge | Means |
@@ -145,6 +168,10 @@ with an ellipsis (hover for the full value) instead of forcing a horizontal scro
 
 > Replaced the old **Sponsoring** filter, which required a posting to literally say "visa sponsorship". Almost none do, so it matched a handful of jobs while also hiding every India job — which needs no sponsorship at all.
 
+In the typed fields — **Search**, **Min AI score** and **Max experience** — press **Enter** to apply
+what you've typed without leaving the field. Clicking or tabbing away still applies it too, and doing
+both only reloads the list once.
+
 Applying a filter re-runs the query on the server. While it's in flight the job
 list dims and an "Updating…" indicator appears next to the filters, so a filter
 change reads as "loading" rather than a frozen page. The list you were looking at
@@ -184,6 +211,13 @@ without double-counting. Leave everything blank (or click "Clear all") to rank b
 1. Click the status badge on any job row
 2. Select the new status from the dropdown
 3. Change is saved instantly
+
+The badge shows the new status the moment you pick it, before the save finishes. If the save fails,
+the old status comes back — so what the badge says is always what's actually stored. On mobile the
+same control is a bottom sheet, and it closes as soon as you pick.
+
+Keyboard: `R` and `A` set Rejected and Archived on the focused row without opening the dropdown at
+all — see "Keyboard shortcuts" above.
 
 ### Bulk Status Change
 1. Select multiple jobs using the checkboxes

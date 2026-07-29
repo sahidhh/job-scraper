@@ -51,10 +51,41 @@
 5. "Load more" grows the current page by another `DEFAULT_JOBS_LIMIT` (50) by rewriting `?limit` in the
    URL and re-running the query — not a numbered pager, and not infinite scroll
    (`design/api-reference.md` §7.3)
+6. Pressing **Enter** in the search, min-score or max-years field applies that filter immediately;
+   leaving the field still applies it, and doing both applies it once (`design/architecture.md` §12.3)
 
 **Postcondition:** User sees a filtered, score-ranked job list with scores, ranking-bonus reasons, and
 statuses. The URL fully describes the visible list, so reload, back/forward, and link-sharing all
 reproduce it exactly
+
+---
+
+### UC-02a — Triage Jobs From the Keyboard (UI/UX audit, decisions.md AD-60)
+
+**Actor:** User  
+**Trigger:** User Tabs into the desktop job table, or clicks a row  
+**Precondition:** Authenticated; `/dashboard` shows at least one job; desktop viewport (the mobile card list has no focused row and no shortcuts — `design/limitations.md` §10.8)  
+**Main Flow:**
+1. Tab moves into the table body and lands on one row — the table is a single tab stop, not one per
+   row. The focused row is marked with a leading rail and a tinted background
+2. `↑` / `↓` move the focus cursor between rows without leaving the table
+3. On the focused row: **`R`** sets it to Rejected, **`A`** sets it to Archived, **`D`** expands or
+   collapses the row's detail panel (the AI reasoning and company history)
+4. `R` and `A` call `setJobStatusAction([jobId], statusId)` for **that row only** and refresh the
+   route, exactly as the row's reject/archive buttons do
+5. A `↑ ↓ move between rows · R reject · A archive · D details` legend sits above the table, rendered
+   from the same shortcut table the handler reads, and is announced with the table via
+   `aria-describedby`
+
+**Alternate Flow:** The keystroke carries Ctrl/Cmd/Alt, or focus is in a text field, an open status
+dropdown, or a dialog → the key is left alone and behaves normally (`Ctrl+R` reloads; typing "reject"
+into the search box types it)
+
+**Postcondition:** The focused job's status or expansion changed; no other row was touched
+
+> **`D` changed meaning.** In the previous, undocumented implementation `d` opened the application
+> draft dialog. It now toggles details. Drafting stays behind the mail icon — it is a paid LLM call
+> whose whole design is human review (AD-34), so it does not sit behind a bare letter key.
 
 ---
 
@@ -64,12 +95,18 @@ reproduce it exactly
 **Trigger:** User selects a status from the job row dropdown  
 **Precondition:** Authenticated; at least one job_status row exists  
 **Main Flow:**
-1. User clicks status selector on a job row
-2. `setJobStatusAction(jobId, statusId)` called
-3. Upserts job_state row
-4. Dashboard refreshes (revalidatePath)
+1. User clicks status selector on a job row (desktop dropdown, or the mobile card's bottom sheet)
+2. The control shows the new status immediately and the sheet, if used, closes on select
+3. `setJobStatusAction(jobId, statusId)` called
+4. Upserts job_state row
+5. Dashboard refreshes (revalidatePath)
 
 **Alternate Flow:** Bulk status — user selects multiple rows → bulk action sets same status for all
+
+**Alternate Flow:** Keyboard — `R`/`A` on the focused row sets Rejected/Archived (UC-02a)
+
+**Alternate Flow:** The action returns `ok: false` → the control puts the previous status back, so
+the displayed value never diverges from the stored one (`design/architecture.md` §12.3)
 
 ---
 
@@ -124,7 +161,8 @@ reproduce it exactly
 **Actor:** User  
 **Trigger:** User navigates to `/roles` and enters a role  
 **Main Flow:**
-1. User types primary_role (e.g., "Backend Engineer")
+1. User types primary_role (e.g., "Backend Engineer") and presses **Enter**, or clicks **Expand** —
+   both do the same thing; an empty or whitespace-only role does neither
 2. `expandRoleAction(primaryRole)` called
 3. Check role_expansion_map cache (seeded + AI-generated entries)
 4. **Cache hit:** return expanded_roles
@@ -351,6 +389,8 @@ reproduce it exactly
 
 **Alternate Flow (already sent):** Redrafting an application whose `status` is already `sent` is rejected — a sent application is a permanent record of what was actually sent
 
+**Alternate Flow (double-click while saving):** "Open in mail client" is inert for the duration of the in-flight transition — the click is swallowed, the link leaves the tab order, and `aria-disabled` says so — so a second click cannot re-fire `markApplicationSentAction` (`design/architecture.md` §12.5)
+
 **Postcondition:** No message is ever sent by the app itself — every send is the user's own action in their own mail client (scope.md's "Auto-apply / auto-send" exclusion)
 
 ---
@@ -407,3 +447,4 @@ reproduce it exactly
 | US-14 | get an AI-drafted, reviewable application for a job, then send it from my own mail client | I apply faster without the platform sending anything on my behalf |
 | US-15 | get reminded in Telegram when I have draft applications sitting unreviewed | I don't forget to follow up on jobs I meant to apply to |
 | US-16 | point the platform at one company's careers page and have it pull in the roles listed there | I can cover a company that isn't on any supported ATS/aggregator without a full new source integration |
+| US-17 | triage the job list from the keyboard — arrow between rows, reject, archive, expand details — with the shortcuts visible on screen | I clear a scrape run's worth of jobs without reaching for the mouse, and I can tell the shortcuts exist without being told |

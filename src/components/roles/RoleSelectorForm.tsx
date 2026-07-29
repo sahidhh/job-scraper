@@ -30,7 +30,11 @@ export function RoleSelectorForm({ activeSelection }: { activeSelection: RoleSel
     (activeSelection?.primaryRole.toLowerCase() === trimmedRole.toLowerCase() &&
       JSON.stringify(activeSelection?.expandedRoles) === JSON.stringify(selectedRoles));
 
+  // Guarded rather than relying on the submit button's `disabled` alone: the
+  // form can also be submitted implicitly (Enter in the role input), and an
+  // empty or whitespace-only role must not reach the server action.
   function handleExpand() {
+    if (isPending || trimmedRole.length === 0) return;
     setError(null);
     setConfirmed(false);
     startTransition(async () => {
@@ -83,7 +87,17 @@ export function RoleSelectorForm({ activeSelection }: { activeSelection: RoleSel
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-2">
+      {/* A real form so Enter in the role input expands, the same as clicking
+          the button -- native implicit submission rather than a keydown hack.
+          Only this row is wrapped; the preview card below has its own inputs
+          and forms cannot nest. */}
+      <form
+        className="flex gap-2"
+        onSubmit={(event) => {
+          event.preventDefault();
+          handleExpand();
+        }}
+      >
         <Input
           value={primaryRole}
           onChange={(event) => {
@@ -92,10 +106,10 @@ export function RoleSelectorForm({ activeSelection }: { activeSelection: RoleSel
           }}
           placeholder="e.g. Full Stack Developer"
         />
-        <Button onClick={handleExpand} disabled={isPending || trimmedRole.length === 0}>
+        <Button type="submit" disabled={isPending || trimmedRole.length === 0}>
           {isPending ? "Expanding..." : "Expand"}
         </Button>
-      </div>
+      </form>
       {error && <p className="text-sm text-destructive">{error}</p>}
       {preview && (
         <ExpandedRolesCard

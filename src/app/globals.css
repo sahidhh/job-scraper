@@ -66,6 +66,10 @@
 }
 
 @theme inline {
+  /* --font-ibm-plex-sans is defined by next/font's generated class on <html>
+     (see layout.tsx). Mapping it onto Tailwind v4's --font-sans token makes it
+     the default for preflight and for every `font-sans` utility. */
+  --font-sans: var(--font-ibm-plex-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);

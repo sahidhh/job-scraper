@@ -441,6 +441,16 @@ needed, and why React Query is banned (tech-stack.md §2): the fetch already hap
 Data crosses the boundary as **plain serialisable props**, never as a repository instance or a class.
 A client component that needs data it wasn't given calls a server action, not a repository.
 
+**Logic that two components share lives in a plain module beside them, not in whichever one wrote it
+first.** Several surfaces exist as a desktop/mobile pair rendering the same concept — `JobRow` and
+`JobCard`, `JobStatusSelect` and `JobStatusSheet` — and a rule copied into both drifts the moment one
+is edited. `src/components/dashboard/jobScore.ts` is the reference case: it holds `formatScore`, the
+0.75/0.40 score bands and the `Pending · N%` label fixed by decisions.md AD-56, and both `ScoreBadge`
+and `ScorePill` import them rather than each carrying a copy. `jobHotkeys.ts` is the same shape for
+the shortcut table (§12.6). These modules carry no `"use client"` and no JSX — they are pure
+functions and constants, which is what makes them testable in the node environment (§12.6,
+technical-design.md §11).
+
 ### 12.2 The three navigation surfaces
 
 | Surface | Component | Scope | Rendered |
@@ -469,6 +479,17 @@ places, in this order of preference:
    `?maxYears`, `?remote`, `?ineligible`, `?lowmatch`, `?archived`, `?limit`. This is the default for
    anything a user would expect to survive a refresh, a back button, or a shared link. `FilterBar`
    never holds filter values in `useState`; it reads `useSearchParams()` and navigates.
+
+   A free-text field that writes URL state **commits on Enter and on blur, and navigates once for
+   both.** Enter comes from a real `<form onSubmit>` wrapping the field with a `hidden` submit
+   button, not a hand-rolled `onKeyDown` — that way implicit submission is the platform's, including
+   the "Go"/"Search" key on mobile soft keyboards. Because Enter leaves focus in the field, the blur
+   that follows would fire a second identical `router.push`; a `lastCommitted` ref holds the last
+   value sent and short-circuits the duplicate. `FilterBar`'s `FilterInput` implements this once for
+   search, min-score and max-years across both the desktop toolbar and the mobile sheet, and
+   `RoleSelectorForm` uses the same shape so Enter in the role input triggers Expand. Reach for
+   `onKeyDown` only when a key a form does not give you is required — `ExpandedRolesCard`'s
+   `AddRoleChip` keeps one because it also needs Escape to cancel (limitations.md §10.9).
 2. **The server** — everything persisted. Mutations go through a server action, which is a composition
    root: it instantiates the repository and calls the same use-case a cron script would
    (`docs/architecture.md` §5 rule 4), then `revalidatePath()`.
@@ -481,15 +502,25 @@ places, in this order of preference:
    filter sheet, a bulk-selection set. Nothing here should survive a refresh, and nothing here is
    derived from server data.
 
-**Optimistic updates are not used.** Status changes call the action and refresh; the round-trip is
-short and the honest failure mode (the value simply doesn't change) is better than a value that
-appears to change and silently reverts.
+**Optimistic updates are used in exactly one place: the per-job status control.** `JobStatusSelect`
+(desktop) and `JobStatusSheet` (mobile) both hold the chosen status in local state, show it
+immediately, and **put the previous value back when the action returns `ok: false`** — optimistic
+without rollback is the thing that is banned, because a value that appears to change and silently
+reverts is worse than one that never moved. Both also re-sync from their `statusId` prop in an
+effect: `JobRow`/`JobCard` do not remount on `router.refresh()`, so a status changed elsewhere (the
+`r`/`a` shortcuts, the reject/archive buttons, a bulk update) would otherwise never reach the
+control and it would keep showing a stale value. Everything else — bulk status, filters, drafts —
+calls the action and refreshes, with no optimistic layer.
+
+A control that opens a surface to make its choice is **controlled, and closes on select.**
+`JobStatusSheet`'s `<Sheet>` takes `open`/`onOpenChange` for exactly this reason; left uncontrolled,
+picking a status left the sheet sitting open over the result.
 
 ### 12.4 Loading, empty, and error conventions
 
 | State | Convention |
 |---|---|
-| Route-level loading | `loading.tsx` per route segment, `animate-pulse` blocks mirroring the real layout's shape |
+| Route-level loading | `loading.tsx` per route segment, `animate-pulse` blocks mirroring the real layout's shape. **All six protected routes have one** — Dashboard, Roles, Resume and Insights were added in the UI/UX audit pass; Analytics and Settings already had theirs. A new route segment ships with its skeleton |
 | In-page loading | `<Suspense>` around the data-bearing section (`JobsSection` on Dashboard, the skills section on Insights) |
 | Filter-change loading | Not a spinner over the page — the existing list stays visible, dims to `opacity-60`, sets `aria-busy`, and an `aria-live="polite"` "Updating…" indicator appears beside the filters |
 | Empty | Written per screen, in the component that owns the query, and must say *why* it is empty and what to do — "No jobs match the current filters" is a different message from "No jobs scraped yet" and both exist |
@@ -498,6 +529,17 @@ appears to change and silently reverts.
 The filter-change convention is the load-bearing one: because filters are URL state, every filter
 change is a navigation, and replacing the list with a skeleton on each keystroke-adjacent change would
 make the screen flash. Preserve-and-dim is the rule for any future URL-driven list.
+
+Routes without a nested `layout.tsx` — Dashboard, Roles, Resume, Insights — keep the page heading
+*inside* the Suspense boundary, so their `loading.tsx` has to draw the heading too or the title pops
+in on hydration and shoves the page down. Analytics and Settings do not, because their headings live
+in a shared segment layout.
+
+**Empty and error are separate states and must render separately.** `CompanyHistoryPanel` is the
+worked example of getting this wrong: a failed `getCompanyHistoryAction` used to fall through to "No
+prior applications found." — the one message that reads as a confident answer. A client component
+that calls an action holds `data` and `error` independently, renders the action's `error` string when
+it is set, and tells the user how to retry.
 
 ### 12.5 Accessibility baseline
 
@@ -508,7 +550,67 @@ worth keeping:
   of why the Radix primitives were chosen over custom widgets.
 - The active `RouteTabs` tab carries `aria-current="page"`; the dimmed job table carries `aria-busy`;
   the "Updating…" indicator is `aria-live="polite"`.
-- Every icon-only control needs an accessible name. The mobile header's resume shortcut and the
-  external-link and mail affordances in `JobRow` are the places to check first when adding one.
+- Every icon-only control needs an accessible name, via `aria-label` — not `title`, which assistive
+  tech treats as a hint rather than a name and which never reaches a touch user at all. `JobRow`'s
+  reject and archive buttons carry an `aria-label` naming both the action and the job ("Reject
+  &lt;title&gt;") and keep `title` only for the hover tooltip. The external-link and mail affordances in `JobRow`/`JobCard` are the other
+  places to check when adding one.
+- A control that shows and hides a region carries `aria-expanded`. Both the desktop row's title
+  button and the mobile card's tap area do. This is also what makes `table.tsx`'s
+  `has-aria-expanded:bg-muted/50` rule live — before the row had the attribute, that CSS matched
+  nothing.
+- **Never nest an interactive element inside another one.** A `<button>` containing an
+  `<input type="checkbox">` is invalid HTML, and screen readers fold the checkbox into the button's
+  accessible name. `JobCard`'s select checkbox is a `<label>`-wrapped sibling of the expand button,
+  not a descendant of it; both keep a 44px tap target.
+- `disabled` does nothing on an anchor. A link that must be inert during a transition needs
+  `pointer-events-none` (visual/pointer), `tabIndex={-1}` (keyboard), `aria-disabled` (assistive
+  tech) **and** a `preventDefault` guard in its click handler. `ApplicationDraftDialog`'s "Open in
+  mail client" is the reference — it stays an `<a href="mailto:…">` because scope.md forbids the app
+  sending mail itself, so the inert state has to be assembled by hand.
 - Colour is never the only signal: the score badge carries its number, the status pill carries its
   label, and eligibility carries a reason badge.
+- Radix warns when a dialog-role surface has no description. `SheetContent` sets
+  `aria-describedby={undefined}` **before** the props spread — a deliberate opt-out, since our sheets
+  are short titled surfaces where the title is the description, and declaring it before the spread
+  means a caller that does render `<SheetDescription>` still wins.
+
+### 12.6 Keyboard interaction (job table)
+
+The dashboard table is the only surface with keyboard shortcuts, and the model is worth stating
+because it is the shape any future shortcut should copy (decisions.md AD-60).
+
+**One listener, one subject.** `JobsTable` registers exactly one `window` `keydown` listener for the
+whole table, no matter how many rows render. The listener is registered once with an empty dependency
+array and dispatches through a ref that is re-pointed at the current handler on every render — so
+changing rows, statuses or the focused index never tears the subscription down and re-adds it. The
+predecessor, `useDashboardHotkeys`, was called from `JobRow` and therefore registered one listener
+*per row* while ignoring its `jobId` argument entirely: a single `r` rejected every job on the page.
+
+**Roving focus.** Exactly one row is in the tab order (`tabIndex={0}`, the rest `-1`), so Tab enters
+the table once rather than walking every row. `ArrowUp`/`ArrowDown` move the cursor and call
+`.focus()` on the target row. The cursor is painted from `:focus-within` — a leading inset rail plus
+an `accent/50` wash across the cells — not the 3px ring buttons use, because a ring reads as "this is
+editable" and a row is a reading position, not a control. The wash sits on the `<td>`s because a
+`<tr>` background renders underneath them.
+
+**The decision is pure; the DOM part is an adapter.** `resolveJobHotkey()` in
+`src/components/dashboard/jobHotkeys.ts` takes a plain `JobHotkeyEvent` (`key`, the three modifier
+flags, `fromTextEntry`) and returns an action or `null`. It has no DOM types, so the whole
+bail-out matrix is unit-tested in the node environment. Only `isTextEntryTarget()` touches the DOM.
+
+Three guards, all mandatory:
+
+| Guard | Why |
+|---|---|
+| Any of `metaKey`/`ctrlKey`/`altKey` → bail | Those combinations belong to the browser and the OS. `Ctrl+R` must reload, not reject |
+| Target inside `input, textarea, select, [contenteditable], [role="combobox"], [role="listbox"], [role="menu"], [role="dialog"]` → bail | Not just literal text entry: Radix's select, menu and dialog run their own typeahead or trap the keyboard, and must keep every letter key they are given |
+| Focus not inside the table `<tbody>` → bail | A shortcut needs a subject. Arrow keys also stop stealing page scrolling this way |
+
+**The shortcut table is the legend.** `JOB_HOTKEYS` in the same module is read by both the handler
+and the `<kbd>` legend rendered above the table, so the two cannot drift; the table is tied to the
+legend with `aria-describedby`. An undiscoverable shortcut is not a feature — that was the other half
+of what was wrong before.
+
+The legend and the shortcuts are **desktop only**. The mobile card list has no focused-row concept to
+act on, so it gets neither (limitations.md §10.8).

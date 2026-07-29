@@ -8,7 +8,7 @@ Technical and product design documentation for the Job Intelligence Platform.
 | [architecture.md](architecture.md) | Clean architecture layers, runtime topology, component diagrams, and presentation-layer conventions |
 | [erd.md](erd.md) | Full database schema — tables, enums, indexes, constraints, and RPC functions |
 | [tech-stack.md](tech-stack.md) | Technology choices, environment variables, npm scripts, and the design-token / theming reference |
-| [use-cases.md](use-cases.md) | Actor catalogue, 22 use cases (UC-01–UC-19 plus sub-cases), and user story summary |
+| [use-cases.md](use-cases.md) | Actor catalogue, 23 use cases (UC-01–UC-19 plus sub-cases), and user story summary |
 | [scope.md](scope.md) | In-scope / out-of-scope features and the P0–P4 phase roadmap |
 | [limitations.md](limitations.md) | Known limitations, constraints, and technical debt |
 | [user-guide.md](user-guide.md) | End-user walkthrough for all platform features |

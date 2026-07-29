@@ -3,14 +3,12 @@
 import { ChevronDown, ChevronRight, ExternalLink } from "lucide-react";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { JobStatus, JobWithScore } from "@/features/jobs/domain/types";
 import { ApplicationDraftDialog } from "./ApplicationDraftDialog";
 import { JobStatusSheet } from "./JobStatusSheet";
-
-function formatScore(score: number | null): string {
-  return score === null ? "—" : `${Math.round(score * 100)}%`;
-}
+import { formatScore, pendingScoreLabel, scoreBadgeVariant } from "./jobScore";
 
 function ScorePill({ aiScore, keywordScore }: { aiScore: number | null; keywordScore: number | null }) {
   // Unscored reads as one self-describing pill carrying the keyword score that
@@ -19,12 +17,11 @@ function ScorePill({ aiScore, keywordScore }: { aiScore: number | null; keywordS
   if (aiScore === null) {
     return (
       <Badge variant="outline" className="text-xs font-normal text-muted-foreground">
-        {keywordScore === null ? "Pending" : `Pending · ${formatScore(keywordScore)}`}
+        {pendingScoreLabel(keywordScore)}
       </Badge>
     );
   }
-  const variant = aiScore >= 0.75 ? "success" : aiScore >= 0.4 ? "warning" : "outline";
-  return <Badge variant={variant}>{formatScore(aiScore)}</Badge>;
+  return <Badge variant={scoreBadgeVariant(aiScore)}>{formatScore(aiScore)}</Badge>;
 }
 
 export function JobCard({
@@ -47,58 +44,54 @@ export function JobCard({
         selected ? "border-primary/40 bg-primary/5" : "border-border",
       )}
     >
-      {/* Tappable main area */}
-      <button
-        type="button"
-        className="w-full p-4 text-left"
-        onClick={() => setExpanded((v) => !v)}
-        aria-expanded={expanded}
-      >
-        <div className="flex items-start gap-3">
-          {/* Checkbox */}
+      {/* The checkbox is a sibling of the expand button, never a descendant of
+          it: a control nested inside a button is invalid HTML and screen
+          readers fold it into the button's accessible name. */}
+      <div className="flex items-start gap-1 p-4">
+        <label className="-my-1.5 -ml-2.5 flex size-11 shrink-0 cursor-pointer items-center justify-center">
           <input
             type="checkbox"
             checked={selected}
-            onChange={(e) => {
-              e.stopPropagation();
-              onToggleSelect(job.id);
-            }}
-            onClick={(e) => e.stopPropagation()}
+            onChange={() => onToggleSelect(job.id)}
             aria-label={`Select ${job.title}`}
-            className="mt-1 size-4 shrink-0 accent-primary"
+            className="size-4 accent-primary"
           />
+        </label>
 
-          {/* Title + meta */}
-          <div className="min-w-0 flex-1 space-y-1">
-            <div className="flex items-start justify-between gap-2">
-              <p className="line-clamp-2 font-semibold leading-snug">{job.title}</p>
-              <div className="flex shrink-0 items-center gap-1.5">
-                <ScorePill aiScore={job.aiScore} keywordScore={job.keywordScore} />
-                {expanded
-                  ? <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
-                  : <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
-                }
-              </div>
+        <button
+          type="button"
+          className="min-w-0 flex-1 space-y-1 text-left"
+          onClick={() => setExpanded((v) => !v)}
+          aria-expanded={expanded}
+        >
+          <div className="flex items-start justify-between gap-2">
+            <p className="line-clamp-2 font-semibold leading-snug">{job.title}</p>
+            <div className="flex shrink-0 items-center gap-1.5">
+              <ScorePill aiScore={job.aiScore} keywordScore={job.keywordScore} />
+              {expanded
+                ? <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
+                : <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+              }
             </div>
+          </div>
 
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">{job.companyName}</span>
-              {job.minYears !== null && (
-                <span className="text-xs text-muted-foreground">{job.minYears}+ yrs</span>
-              )}
-            </div>
-
-            {(job.locationTags.length > 0 || job.source) && (
-              <div className="flex flex-wrap gap-1 pt-0.5">
-                {job.locationTags.map((tag) => (
-                  <Badge key={tag} variant="outline" className="text-[11px]">{tag}</Badge>
-                ))}
-                <Badge variant="secondary" className="text-[11px]">{job.source}</Badge>
-              </div>
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-muted-foreground">{job.companyName}</span>
+            {job.minYears !== null && (
+              <span className="text-xs text-muted-foreground">{job.minYears}+ yrs</span>
             )}
           </div>
-        </div>
-      </button>
+
+          {(job.locationTags.length > 0 || job.source) && (
+            <div className="flex flex-wrap gap-1 pt-0.5">
+              {job.locationTags.map((tag) => (
+                <Badge key={tag} variant="outline" className="text-[11px]">{tag}</Badge>
+              ))}
+              <Badge variant="secondary" className="text-[11px]">{job.source}</Badge>
+            </div>
+          )}
+        </button>
+      </div>
 
       {/* Expanded AI reasoning */}
       {expanded && (
@@ -122,16 +115,16 @@ export function JobCard({
             href={job.url}
             target="_blank"
             rel="noreferrer"
-            onClick={(e) => e.stopPropagation()}
-            className="inline-flex size-11 items-center justify-center rounded-md text-primary transition-opacity hover:opacity-70"
+            className={cn(
+              buttonVariants({ variant: "ghost", size: "icon" }),
+              // 44px minimum tap target on mobile; this card only renders there.
+              "size-11 text-primary hover:text-primary",
+            )}
             aria-label={`View ${job.title}`}
           >
             <ExternalLink className="size-4" />
-            <span className="sr-only">View job</span>
           </a>
-          <div onClick={(e) => e.stopPropagation()}>
-            <ApplicationDraftDialog jobId={job.id} jobTitle={job.title} />
-          </div>
+          <ApplicationDraftDialog jobId={job.id} jobTitle={job.title} />
         </div>
       </div>
     </article>

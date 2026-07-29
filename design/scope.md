@@ -181,6 +181,33 @@ different product.
 | Resume "Reprocess" button | Would promise re-parsing that AD-30's parse-once cache never does; the honest version ("re-extract skills") is a new server action needing its own change | AD-59, limitations.md §10.7 |
 | Mobile chart subsetting within the Breakdown tab | Real perceived-performance idea, but unmeasured at current data volume | limitations.md §10.5 |
 
+### P1.17 — UI/UX Audit Remediation (2026-07-29)
+
+Follows P1.16. Where that pass applied a *look* to the six existing screens, this one fixes how they
+*behave* — the interaction defects the design pass surfaced but did not touch. Again no new screens,
+no new routes, no data-model change, and no new server action.
+
+| Feature | Description |
+|---|---|
+| Dashboard keyboard shortcuts | Roving row focus with `↑`/`↓`, `R` reject, `A` archive, `D` details, scoped to the one focused row, guarded against modifiers and text entry, and printed on screen as a `<kbd>` legend. Replaces a per-row `window` listener that fired every shortcut on every job (decisions.md AD-60, use-cases.md UC-02a) |
+| Enter applies a filter | Search, min-score and max-years commit on Enter as well as on blur — via a real `<form onSubmit>`, in both the desktop toolbar and the mobile sheet — and navigate once for both. Same for the Roles screen's primary-role input, where Enter triggers Expand |
+| Mobile status sheet parity | `JobStatusSheet` becomes controlled: it closes on select, shows the new status immediately, and rolls back on failure — the contract `JobStatusSelect` already had on desktop |
+| Route loading skeletons | `/dashboard`, `/roles`, `/resume`, `/insights` gain `loading.tsx`; all six protected routes now have one (architecture.md §12.4) |
+| Product typography | IBM Plex Sans, self-hosted via `next/font` and mapped onto Tailwind's `--font-sans` token — replaces "whatever sans the OS supplies" under a design system specified at `text-xs` (tech-stack.md §8) |
+| Error vs empty on company history | A failed lookup renders the error and a retry hint instead of "No prior applications found." |
+| Accessibility fixes | `aria-expanded` on the desktop row expander, `aria-label` on the reject/archive icon buttons, `JobCard`'s checkbox un-nested from its `<button>`, and the draft dialog's mailto link made genuinely inert while pending (architecture.md §12.5) |
+| De-duplicated presentation logic | `formatScore` and the AD-56 score bands move to one `jobScore.ts` consumed by both the desktop badge and the mobile pill; icon buttons use the existing `size="icon-sm"` / `buttonVariants` instead of hand-rolled classes |
+| Component test layer | First DOM-level tests: jsdom + Testing Library, opted into per file so the ~1000 node tests keep their speed (decisions.md AD-61, tech-stack.md §8) |
+
+**Deferred, not built:**
+
+| Deferred item | Why | Tracked in |
+|---|---|---|
+| Keyboard shortcuts on the mobile card list | No focused-row concept to scope a keystroke to, and no keyboard to press it with | AD-60, limitations.md §10.8 |
+| Full ARIA grid semantics on the job table (`role="grid"`, `Home`/`End`, cell navigation) | Changes how every row is announced, for navigation keys nobody has asked for | limitations.md §10.8 |
+| `<form>`-based commit for `AddRoleChip` | Needs Escape-to-cancel, which a form doesn't provide; keeping both mechanisms for one field is worse than the exception | limitations.md §10.9 |
+| Dark mode | The `.dark` token set exists and nothing toggles it — a deliberate one-fixed-theme choice, not an oversight | AD-54, tech-stack.md §8 |
+
 ### P2 — Medium Priority
 
 | Feature | Description |
@@ -243,6 +270,12 @@ P1.13 — Application Drafting (merge-workspace Phase 4, shipped)
 
 P1.14 — Additional Job Sources (merge-workspace Phase 5, shipped)
  └── JSearch + Adzuna connectors (cron-driven), static careers-URL fetcher (manual-trigger only)
+
+P1.16 — Design System Pass (design handoff, shipped)
+ └── Indigo accent token, documented token set, stat chips, filter toolbar, sidebar active state, single nav source
+
+P1.17 — UI/UX Audit Remediation (shipped)
+ └── Row-scoped keyboard shortcuts, Enter-to-apply filters, controlled mobile status sheet, four route skeletons, IBM Plex Sans, a11y fixes, first component-test layer
 
 P2 — Preferences
  └── Desired experience, App settings

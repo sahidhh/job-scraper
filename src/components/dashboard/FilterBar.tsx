@@ -2,7 +2,7 @@
 
 import { Loader2, SlidersHorizontal, X } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -125,12 +125,12 @@ export function FilterBar({
   const controls = (
     <div className="flex flex-col gap-4">
       <FilterField label="Search">
-        <Input
+        <FilterInput
           key={`search-${searchParams.get("q") ?? ""}`}
           type="text"
           placeholder="Title or company"
           defaultValue={searchParams.get("q") ?? ""}
-          onBlur={(e) => updateSearch(e.target.value)}
+          onCommit={updateSearch}
         />
       </FilterField>
 
@@ -186,38 +186,36 @@ export function FilterBar({
       </FilterField>
 
       <FilterField label="Min AI score">
-        <div className="relative flex items-center">
-          <Input
-            key={`score-${minScoreDisplay}`}
-            type="number"
-            min={0}
-            max={100}
-            step={5}
-            placeholder={hasAiScores ? "e.g. 75" : "No AI scores yet"}
-            defaultValue={minScoreDisplay}
-            onBlur={(e) => updateMinScore(e.target.value)}
-            disabled={!hasAiScores}
-            className="pr-7"
-          />
-          <span className="pointer-events-none absolute right-3 text-sm text-muted-foreground">%</span>
-        </div>
+        <FilterInput
+          key={`score-${minScoreDisplay}`}
+          type="number"
+          min={0}
+          max={100}
+          step={5}
+          placeholder={hasAiScores ? "e.g. 75" : "No AI scores yet"}
+          defaultValue={minScoreDisplay}
+          onCommit={updateMinScore}
+          disabled={!hasAiScores}
+          className="pr-7"
+          formClassName="relative flex items-center"
+          suffix={<span className="pointer-events-none absolute right-3 text-sm text-muted-foreground">%</span>}
+        />
       </FilterField>
 
       <FilterField label="Max experience">
-        <div className="relative flex items-center">
-          <Input
-            key={`years-${searchParams.get("maxYears") ?? ""}`}
-            type="number"
-            min={0}
-            max={50}
-            step={1}
-            placeholder={effectiveMaxYears === null ? "No limit" : `Default ${effectiveMaxYears}`}
-            defaultValue={searchParams.get("maxYears") ?? ""}
-            onBlur={(e) => updateParam("maxYears", e.target.value)}
-            className="pr-10"
-          />
-          <span className="pointer-events-none absolute right-3 text-sm text-muted-foreground">yrs</span>
-        </div>
+        <FilterInput
+          key={`years-${searchParams.get("maxYears") ?? ""}`}
+          type="number"
+          min={0}
+          max={50}
+          step={1}
+          placeholder={effectiveMaxYears === null ? "No limit" : `Default ${effectiveMaxYears}`}
+          defaultValue={searchParams.get("maxYears") ?? ""}
+          onCommit={(value) => updateParam("maxYears", value)}
+          className="pr-10"
+          formClassName="relative flex items-center"
+          suffix={<span className="pointer-events-none absolute right-3 text-sm text-muted-foreground">yrs</span>}
+        />
       </FilterField>
 
       <label className="flex cursor-pointer items-center gap-2 text-sm">
@@ -329,13 +327,13 @@ export function FilterBar({
       {/* Desktop: one bordered toolbar with divider-separated groups --
           search | selects | numeric ranges | toggles | clear (design handoff). */}
       <div className="hidden flex-wrap items-center gap-2 rounded-lg border border-border bg-muted/20 px-3 py-2.5 md:flex">
-        <Input
+        <FilterInput
           key={`search-${searchParams.get("q") ?? ""}`}
           type="text"
           placeholder="Search title or company"
           defaultValue={searchParams.get("q") ?? ""}
-          onBlur={(e) => updateSearch(e.target.value)}
-          className="w-52"
+          onCommit={updateSearch}
+          formClassName="w-52"
         />
 
         <ToolbarDivider />
@@ -387,37 +385,35 @@ export function FilterBar({
 
         <ToolbarDivider />
 
-        <div className="relative flex items-center">
-          <Input
-            key={`score-${minScoreDisplay}`}
-            type="number"
-            min={0}
-            max={100}
-            step={5}
-            placeholder="Min score"
-            defaultValue={minScoreDisplay}
-            onBlur={(e) => updateMinScore(e.target.value)}
-            disabled={!hasAiScores}
-            title={hasAiScores ? undefined : "No AI scores yet — run a scoring pass first"}
-            className="w-28 pr-7"
-          />
-          <span className="pointer-events-none absolute right-3 text-sm text-muted-foreground">%</span>
-        </div>
+        <FilterInput
+          key={`score-${minScoreDisplay}`}
+          type="number"
+          min={0}
+          max={100}
+          step={5}
+          placeholder="Min score"
+          defaultValue={minScoreDisplay}
+          onCommit={updateMinScore}
+          disabled={!hasAiScores}
+          title={hasAiScores ? undefined : "No AI scores yet — run a scoring pass first"}
+          className="w-28 pr-7"
+          formClassName="relative flex items-center"
+          suffix={<span className="pointer-events-none absolute right-3 text-sm text-muted-foreground">%</span>}
+        />
 
-        <div className="relative flex items-center">
-          <Input
-            key={`years-${searchParams.get("maxYears") ?? ""}`}
-            type="number"
-            min={0}
-            max={50}
-            step={1}
-            placeholder={effectiveMaxYears === null ? "Max yrs" : `Max yrs (${effectiveMaxYears})`}
-            defaultValue={searchParams.get("maxYears") ?? ""}
-            onBlur={(e) => updateParam("maxYears", e.target.value)}
-            className="w-28 pr-10"
-          />
-          <span className="pointer-events-none absolute right-3 text-sm text-muted-foreground">yrs</span>
-        </div>
+        <FilterInput
+          key={`years-${searchParams.get("maxYears") ?? ""}`}
+          type="number"
+          min={0}
+          max={50}
+          step={1}
+          placeholder={effectiveMaxYears === null ? "Max yrs" : `Max yrs (${effectiveMaxYears})`}
+          defaultValue={searchParams.get("maxYears") ?? ""}
+          onCommit={(value) => updateParam("maxYears", value)}
+          className="w-28 pr-10"
+          formClassName="relative flex items-center"
+          suffix={<span className="pointer-events-none absolute right-3 text-sm text-muted-foreground">yrs</span>}
+        />
 
         <ToolbarDivider />
 
@@ -481,6 +477,59 @@ export function FilterBar({
         )}
       </div>
     </>
+  );
+}
+
+/**
+ * A free-text filter field that commits on Enter *and* on blur.
+ *
+ * Enter is handled by a real `<form onSubmit>` rather than a hand-rolled
+ * keydown handler, so implicit submission comes from the platform (including
+ * the "Go"/"Search" key on mobile soft keyboards). The `hidden` submit button
+ * is what makes implicit submission unambiguous: without a submit button the
+ * spec only submits when the form has exactly one field that blocks implicit
+ * submission, which is fragile to reason about per field type.
+ *
+ * `lastCommitted` de-dupes the two commit paths. Pressing Enter leaves focus
+ * in the field, so the blur that follows would otherwise fire a second,
+ * identical `router.push` -- a visible double render.
+ */
+function FilterInput({
+  onCommit,
+  formClassName,
+  suffix,
+  ...inputProps
+}: Omit<React.ComponentProps<typeof Input>, "onBlur" | "ref"> & {
+  onCommit: (value: string) => void;
+  /** Classes for the wrapping form, which stands in for the old wrapper div. */
+  formClassName?: string;
+  /** Unit adornment ("%", "yrs") positioned against the wrapper. */
+  suffix?: React.ReactNode;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const lastCommitted = useRef(String(inputProps.defaultValue ?? ""));
+
+  function commit(value: string) {
+    if (value === lastCommitted.current) return;
+    lastCommitted.current = value;
+    onCommit(value);
+  }
+
+  return (
+    <form
+      className={formClassName}
+      onSubmit={(event) => {
+        event.preventDefault();
+        commit(inputRef.current?.value ?? "");
+      }}
+    >
+      <Input {...inputProps} ref={inputRef} onBlur={(event) => commit(event.target.value)} />
+      {suffix}
+      {/* `hidden` keeps it out of the layout, the tab order and the a11y tree. */}
+      <button type="submit" hidden tabIndex={-1}>
+        Apply filter
+      </button>
+    </form>
   );
 }
 

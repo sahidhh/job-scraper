@@ -138,10 +138,21 @@ These are explicitly banned by the project rules (CLAUDE.md):
     "@types/node": "latest",
     "@types/react": "latest",
     "@types/react-dom": "latest",
-    "jszip": "^3.10"
+    "jszip": "^3.10",
+    "jsdom": "^30.0",
+    "@testing-library/react": "^16.3",
+    "@testing-library/user-event": "^14.6",
+    "@testing-library/jest-dom": "^7.0"
   }
 }
 ```
+
+**Note on the four testing-library/jsdom packages:** dev-only, added in the UI/UX audit pass to give
+the presentation layer its first automated coverage (`docs/decisions.md` AD-61). They are used by
+**component tests only**, which opt into a DOM per file — the vitest default environment stays `node`
+so the ~1000 domain/application tests keep their speed. See §8 "Component tests" below and
+`design/technical-design.md` §11. No runtime dependency was added: fonts come from `next/font`, which
+ships with Next.
 
 **Note on jszip:** dev-only, used to build an in-memory `.docx` fixture (a real OPC zip) in `parseDocx.test.ts` so DOCX/table extraction is tested against actual mammoth parsing rather than a mocked `mammoth` module. It's already a transitive dependency of `mammoth` itself; listed explicitly as a devDependency rather than relied on implicitly.
 
@@ -252,9 +263,28 @@ card padding `p-4`, vertical rhythm between page sections `space-y-5`, chip/icon
 
 ### Typography
 
-System stack only (`ui-sans-serif, system-ui, -apple-system, sans-serif`) — **no webfont is loaded, and
-none should be added** without re-checking the cold-start budget (limitations.md §6.4). Page title
-`text-2xl font-semibold`; section labels `text-xs font-semibold uppercase tracking-wide
+**IBM Plex Sans**, self-hosted by `next/font/google` in `src/app/layout.tsx` — latin subset, the
+variable cut, `display: "swap"`. It is the **only** webfont, and a second one should not be added
+without re-checking the cold-start budget (limitations.md §6.4).
+
+Why a webfont at all, having previously shipped the system stack: this UI is a dense data surface —
+the job table, the stat chips and the insight percentages all sit at `text-xs`/`text-[11px]`, where
+the OS default renders differently on every machine and the layout stops holding. Plex is a
+neo-grotesque drawn for technical reading (open apertures, distinguishable `l`/`I`/`1` and `0`/`O`)
+with even-width lining figures, which is what makes the `tabular-nums` convention below actually do
+its job. Why it is cheap: the variable cut is one file covering 400/500/600/700 rather than four
+downloads, `next/font` self-hosts it (no runtime request to Google, no extra dependency — `next/font`
+ships with Next), and `swap` paints immediately in a metric-adjusted fallback so a slow font never
+blocks first paint.
+
+Wiring, which is Tailwind-v4-specific: the generated class on `<html>` only *defines*
+`--font-ibm-plex-sans`. `globals.css` maps it onto the theme's `--font-sans` token inside
+`@theme inline` —
+`--font-sans: var(--font-ibm-plex-sans), ui-sans-serif, system-ui, -apple-system, sans-serif` — so
+every `font-sans` utility and the preflight default resolve to it. Adding a second family means a
+second `next/font` call, a second variable, and a matching token; never a `@font-face` or a `<link>`.
+
+Page title `text-2xl font-semibold`; section labels `text-xs font-semibold uppercase tracking-wide
 text-muted-foreground`; body and table text `text-sm`; metadata and badges `text-xs`; stat numbers
 `text-lg font-bold tabular-nums` (`tabular-nums` is required on every changing number so filter
 changes don't jitter the layout).
@@ -285,3 +315,42 @@ so, since each is currently served by a plainer construct — are `checkbox` (ra
 architecture.md §12), `skeleton` (per-route `loading.tsx` with `animate-pulse` divs), and `switch`
 (no toggle-switch surface exists; see decisions.md AD-57). Add a primitive when a second call site
 appears, not before.
+
+The `skeleton` line is the one worth re-checking periodically, because it now has six call sites, not
+two: every protected route (Dashboard, Roles, Resume, Insights, Analytics, Settings) has a
+`loading.tsx`. The reason it still isn't a primitive is that these are not one repeated block — each
+skeleton is a bespoke tracing of that page's real layout (stat chips, a table frame with row lines, a
+two-column insights grid), and the only thing they share is the three-utility idiom
+`animate-pulse rounded bg-muted` / `bg-muted/50` inside `border-border rounded-xl` frames. A
+`<Skeleton>` wrapper around three utilities would add an import without removing a decision. Revisit
+if a genuinely repeated shape appears.
+
+**Reuse the variant before writing the classes.** `size="icon-sm"` on `Button` exists; `size="sm"
+className="size-8 p-0"` is the same thing spelled worse and drifts when the variant is retuned. For a
+non-`<button>` element that should look like one — the `<a>` on a job card, an anchor that must carry
+a real `mailto:`/`target="_blank"` — use `cn(buttonVariants({ variant, size }), …)` rather than
+re-deriving `inline-flex items-center justify-center rounded-md` by hand.
+
+### Component tests (jsdom, per-file opt-in)
+
+Client components are tested against a real DOM with `@testing-library/react`. The convention, and
+the reason for each part of it (`docs/decisions.md` AD-61):
+
+- **Vitest's default `environment` stays `node`.** A component test opts in with a docblock on line 1:
+  ```tsx
+  // @vitest-environment jsdom
+  import "@testing-library/jest-dom/vitest";
+  ```
+  Do not flip the global environment — that would make ~1000 DOM-free domain and application tests
+  pay jsdom startup to serve a handful of component files, on a gate (`npm run verify`) run before
+  every change.
+- **`vitest.config.ts` carries two lines that are forced, not stylistic.** `globals: true`, because
+  `@testing-library/react` only registers its automatic between-test unmount when a global `afterEach`
+  exists — without it, renders leak across tests within a file. And `esbuild: { jsx: "automatic" }`,
+  because `tsconfig.json` sets `jsx: "preserve"` for Next's compiler, which leaves esbuild on the
+  classic transform and fails JSX in tests with "React is not defined".
+- **Co-locate:** `src/components/dashboard/Foo.test.tsx` beside `Foo.tsx`; shared fixtures in a plain
+  builder module beside them (`testJobFixture.ts`).
+- **Extract rather than render.** Anything decidable without a DOM belongs in a pure module and is
+  tested in the node environment — `jobHotkeys.ts` and `jobScore.ts` are both tested that way. A jsdom
+  test is for *wiring*: does this event reach that action, once, with the right argument.

@@ -162,6 +162,8 @@ Cron jobs are managed by GitHub Actions. Teams or individuals without access to 
 ### 6.4 Cold Start Latency
 Vercel serverless functions experience cold starts, which can add 1–3 seconds to the first request after a period of inactivity.
 
+The app now loads one webfont, IBM Plex Sans, which adds a font file to that first paint. It is kept deliberately cheap — self-hosted by `next/font` (no third-party connection to open), latin subset only, and the variable cut so one file covers every weight the design system uses — and `display: "swap"` means text paints immediately in a metric-adjusted fallback rather than waiting on it. A **second** family would double that cost and should not be added without re-measuring (`design/tech-stack.md` §8).
+
 ### 6.5 Service Role Key Exposure Risk
 If `SUPABASE_SERVICE_ROLE_KEY` is ever accidentally added to Vercel env vars (instead of GitHub Actions secrets only), it could be exposed in Next.js server bundles. The CI boundary check (`check:service-role-boundary`) mitigates this for app/ code, but Vercel env var configuration must be managed carefully.
 
@@ -222,13 +224,18 @@ jobs; deferred rather than built. Read-only source health *is* surfaced, on `/an
 token utilities directly rather than the primitive, because it replaces the root layout and must stay
 dependency-free — it is the boundary that catches a root-layout crash.
 
-### 10.3 Score Badge Thresholds Are Duplicated Constants, Not Derived From Env
+### 10.3 Score Badge Thresholds Are Constants, Not Derived From Env
 
-`ScoreBadge` hardcodes `0.75` and `0.40`. The first is meant to track `NOTIFY_THRESHOLD`, which is an
-env var read server-side by `notify.ts` and never passed to the dashboard. If someone changes
-`NOTIFY_THRESHOLD`, the green badge silently stops meaning "this would have notified me" and nothing
-fails. A code comment points at `docs/scoring.md`; that is the whole enforcement mechanism
-(`docs/decisions.md` AD-56).
+`AI_SCORE_STRONG = 0.75` and `AI_SCORE_MODERATE = 0.4` are declared in
+`src/components/dashboard/jobScore.ts`. The **duplication half of this is resolved** — the desktop
+`ScoreBadge` and the mobile `ScorePill` used to carry their own copy of both the thresholds and
+`formatScore`, and now import one module (architecture.md §12.1).
+
+What remains is the env drift: `0.75` is meant to track `NOTIFY_THRESHOLD`, an env var read
+server-side by `notify.ts` and never passed to the dashboard. If someone changes `NOTIFY_THRESHOLD`,
+the green badge silently stops meaning "this would have notified me" and nothing fails. A code
+comment points at `docs/scoring.md`; that is the whole enforcement mechanism (`docs/decisions.md`
+AD-56).
 
 ### 10.4 Two Primary Nav Surfaces, Two Independent Lists — Resolved
 
@@ -257,9 +264,14 @@ current data volume.
 ### 10.6 No Accessibility Audit
 
 The conventions in architecture.md §12.5 are followed by habit, not verified. There is no axe/Lighthouse
-pass in CI, no keyboard-only walkthrough, and no contrast check of the accent tints (`/10`, `/12`) used
-behind small text. Reasonable for a single-user internal tool; stated so it isn't mistaken for a
-compliance claim.
+pass in CI, and no contrast check of the accent tints (`/10`, `/12`) used behind small text. Reasonable
+for a single-user internal tool; stated so it isn't mistaken for a compliance claim.
+
+The UI/UX audit pass closed the defects it found by inspection — a checkbox nested inside a
+`<button>` on `JobCard`, icon buttons named only by `title`, a missing `aria-expanded` on the desktop
+row, an anchor that stayed clickable under `disabled` — and the dashboard table now has component
+tests covering its keyboard path. That is a walkthrough of *one* surface, not an audit of the app:
+Resume, Roles, Settings and Analytics have had no equivalent pass.
 
 ### 10.7 Resume Screen: Dropzone Resolved, "Reprocess" Deliberately Absent
 
@@ -274,3 +286,31 @@ parse-once cache deliberately never does (`docs/decisions.md` AD-59). The metada
 is built, but reads "PDF resume · parsed 3h ago" rather than a filename: storage paths are
 content-hash-based, so the original filename is not retained anywhere and inventing one would be
 worse than omitting it.
+
+### 10.8 Keyboard Shortcuts Are Desktop-Only, and the Table Is Not a Full ARIA Grid (`docs/decisions.md` AD-60)
+
+The `↑`/`↓`/`R`/`A`/`D` shortcuts and their `<kbd>` legend render only in the desktop table. The
+mobile breakpoint renders `JobCard`s, which have **no focused-row concept** for a shortcut to act on,
+so there is nothing to scope a keystroke to — and a phone has no keyboard to press it with. Giving
+mobile equivalent reach would mean inventing a selection cursor for a list that is designed to be
+tapped. Deliberately not built.
+
+Within the desktop table, the roving-focus implementation is the useful subset of the ARIA grid
+pattern, not the whole of it: `↑`/`↓` move, but `Home`/`End`, `PageUp`/`PageDown` and left/right cell
+navigation do not, and the table carries no `role="grid"`/`role="row"`/`aria-rowindex` markup — it is
+a plain `<table>` whose rows happen to be focusable. Adding grid semantics would change how a screen
+reader announces every row for the benefit of navigation keys nobody has asked for. Revisit if the
+table ever gains cell-level interaction.
+
+The legend is hidden when the filtered list is empty (there is nothing to act on), so a user whose
+first visit lands on an empty dashboard won't learn the shortcuts exist until a job appears.
+
+### 10.9 One Field Still Commits by Hand-Rolled `onKeyDown`
+
+`design/architecture.md` §12.3's rule is that a field writing URL or server state commits through a
+real `<form onSubmit>`, so Enter comes from the platform. `ExpandedRolesCard`'s `AddRoleChip` is the
+documented exception: it keeps an `onKeyDown` handler because it needs **Escape to clear and close**
+as well as Enter to commit, and a form gives you the second but not the first. Wrapping it in a form
+would mean carrying both mechanisms for one field. It also sits inside the roles preview card, which
+is rendered below `RoleSelectorForm`'s own `<form>` — forms cannot nest, which is why only the
+role-input row is wrapped rather than the whole screen.
