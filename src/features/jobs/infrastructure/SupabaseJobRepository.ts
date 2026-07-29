@@ -1,5 +1,6 @@
 import type { JobRepository } from "@/features/jobs/domain/JobRepository";
 import type {
+  CompanyHistoryPage,
   CreateStatusInput,
   Job,
   JobFilters,
@@ -682,14 +683,18 @@ export class SupabaseJobRepository implements JobRepository {
     return (data ?? []).length;
   }
 
-  async findCompanyHistory(companyName: string): Promise<JobWithScore[]> {
+  async findCompanyHistory(companyName: string, offset: number, limit: number): Promise<CompanyHistoryPage> {
     const { data, error } = await this.client
       .from("jobs")
       .select(DASHBOARD_SELECT)
       .eq("company_name", companyName)
       .order("posted_at", { ascending: false })
+      // Over-fetch by one row past `limit` to detect hasMore without a
+      // separate count query.
+      .range(offset, offset + limit)
       .returns<DashboardJobRow[]>();
     if (error) throw toAppError(error);
-    return (data ?? []).map(toDashboardJob);
+    const rows = data ?? [];
+    return { jobs: rows.slice(0, limit).map(toDashboardJob), hasMore: rows.length > limit };
   }
 }

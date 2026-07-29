@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createStatus, deleteStatus, updateStatus } from "@/features/jobs/application/statusCrud";
 import { setJobStatus } from "@/features/jobs/application/setJobStatus";
 import { SupabaseJobRepository } from "@/features/jobs/infrastructure/SupabaseJobRepository";
-import type { CreateStatusInput, JobStatus, JobWithScore, UpdateStatusInput } from "@/features/jobs/domain/types";
+import type { CompanyHistoryPage, CreateStatusInput, JobStatus, UpdateStatusInput } from "@/features/jobs/domain/types";
 import type { ActionResult } from "@/shared/actionResult";
 import { createSupabaseServerClient } from "@/shared/infrastructure/supabase/server";
 
@@ -73,12 +73,17 @@ export async function deleteStatusAction(id: string): Promise<ActionResult> {
   }
 }
 
-export async function getCompanyHistoryAction(companyName: string): Promise<ActionResult<JobWithScore[]>> {
+export const COMPANY_HISTORY_PAGE_SIZE = 10;
+
+export async function getCompanyHistoryAction(
+  companyName: string,
+  offset = 0,
+): Promise<ActionResult<CompanyHistoryPage>> {
   try {
     const client = await createSupabaseServerClient();
     const jobRepository = new SupabaseJobRepository(client);
-    const jobs = await jobRepository.findCompanyHistory(companyName);
-    return { ok: true, data: jobs };
+    const page = await jobRepository.findCompanyHistory(companyName, offset, COMPANY_HISTORY_PAGE_SIZE);
+    return { ok: true, data: page };
   } catch (error) {
     return { ok: false, error: errorMessage(error) };
   }

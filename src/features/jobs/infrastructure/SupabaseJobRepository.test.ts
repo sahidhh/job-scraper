@@ -844,4 +844,31 @@ describe("SupabaseJobRepository", () => {
       expect(count).toBe(0);
     });
   });
+
+  describe("findCompanyHistory", () => {
+    it("ranges over offset..offset+limit and reports hasMore when the extra row comes back", async () => {
+      const rows = [{ ...jobRow, id: "job-1", job_scores: [], job_state: [] }, { ...jobRow, id: "job-2", job_scores: [], job_state: [] }];
+      const { client, builder } = mockSupabaseClient({ data: rows, error: null });
+      const repo = new SupabaseJobRepository(client);
+
+      const result = await repo.findCompanyHistory("Acme", 0, 1);
+
+      expect(builder.eq).toHaveBeenCalledWith("company_name", "Acme");
+      expect(builder.order).toHaveBeenCalledWith("posted_at", { ascending: false });
+      expect(builder.range).toHaveBeenCalledWith(0, 1);
+      expect(result.hasMore).toBe(true);
+      expect(result.jobs).toHaveLength(1);
+      expect(result.jobs[0]?.id).toBe("job-1");
+    });
+
+    it("reports hasMore false when fewer rows than limit+1 come back", async () => {
+      const rows = [{ ...jobRow, id: "job-1", job_scores: [], job_state: [] }];
+      const { client } = mockSupabaseClient({ data: rows, error: null });
+      const repo = new SupabaseJobRepository(client);
+
+      const result = await repo.findCompanyHistory("Acme", 0, 10);
+
+      expect(result).toEqual({ jobs: [expect.objectContaining({ id: "job-1" })], hasMore: false });
+    });
+  });
 });
