@@ -73,7 +73,7 @@ export async function deleteStatusAction(id: string): Promise<ActionResult> {
   }
 }
 
-export const COMPANY_HISTORY_PAGE_SIZE = 10;
+const COMPANY_HISTORY_PAGE_SIZE = 10;
 
 export async function getCompanyHistoryAction(
   companyName: string,
