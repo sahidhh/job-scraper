@@ -260,6 +260,13 @@ export interface JobsPage {
   stats: JobStats;
 }
 
+// Result of findCompanyHistory: a limited page of the company's other jobs
+// plus whether more rows exist beyond `limit`.
+export interface CompanyHistoryPage {
+  jobs: JobWithScore[];
+  hasMore: boolean;
+}
+
 // Scoring breakdown of a filtered job set. Computed from the rows the
 // dashboard actually matched (computeJobStats), so the numbers always
 // describe the list on screen -- the previous implementation counted every

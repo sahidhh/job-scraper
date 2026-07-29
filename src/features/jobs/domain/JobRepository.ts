@@ -1,4 +1,4 @@
-import type { CreateStatusInput, Job, JobFilters, JobsPage, JobStatus, JobWithScore, NormalizedJob, UpdateStatusInput, UpsertResult } from "./types";
+import type { CompanyHistoryPage, CreateStatusInput, Job, JobFilters, JobsPage, JobStatus, NormalizedJob, UpdateStatusInput, UpsertResult } from "./types";
 
 export interface JobRepository {
   /**
@@ -102,7 +102,8 @@ export interface JobRepository {
    */
   markExpiredJobs(thresholdDays: number): Promise<number>;
   /**
-   * Find other jobs by the same company name.
+   * Find other jobs by the same company name, newest first, paged via
+   * `offset`/`limit`. `hasMore` indicates rows exist beyond this page.
    */
-  findCompanyHistory(companyName: string): Promise<JobWithScore[]>;
+  findCompanyHistory(companyName: string, offset: number, limit: number): Promise<CompanyHistoryPage>;
 }

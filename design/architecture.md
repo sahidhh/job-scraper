@@ -547,6 +547,15 @@ prior applications found." — the one message that reads as a confident answer.
 that calls an action holds `data` and `error` independently, renders the action's `error` string when
 it is set, and tells the user how to retry.
 
+`CompanyHistoryPanel` also paginates rather than fetching the full company history on every row
+expand: `getCompanyHistoryAction(companyName, offset)` returns a `CompanyHistoryPage`
+(`{ jobs, hasMore }`) capped at `COMPANY_HISTORY_PAGE_SIZE` (10) via
+`SupabaseJobRepository.findCompanyHistory`'s `.range(offset, offset + limit)` — it over-fetches one
+row past `limit` to derive `hasMore` without a separate count query. A "Load more" button appends the
+next page client-side. The panel's "no prior applications" heuristic (a first page of length ≤ 1
+means only the row's own job matched) checks `!hasMore` too, not just page length — a short first
+page with more rows behind it must not be mistaken for "nothing else exists."
+
 ### 12.5 Accessibility baseline
 
 Not a formal WCAG commitment — a single-user internal tool — but these are the conventions in place and

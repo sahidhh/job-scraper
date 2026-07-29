@@ -13,7 +13,7 @@ vi.mock("next/navigation", () => ({
 const setJobStatusAction = vi.fn(async () => ({ ok: true as const, data: undefined }));
 vi.mock("@/features/jobs/actions", () => ({
   setJobStatusAction: (...args: unknown[]) => setJobStatusAction(...(args as [])),
-  getCompanyHistoryAction: vi.fn(async () => ({ ok: true as const, data: [] })),
+  getCompanyHistoryAction: vi.fn(async () => ({ ok: true as const, data: { jobs: [], hasMore: false } })),
 }));
 
 vi.mock("@/features/applications/actions", () => ({
