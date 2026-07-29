@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { setJobStatusAction } from "@/features/jobs/actions";
 import type { JobStatus } from "@/features/jobs/domain/types";
@@ -15,7 +15,7 @@ function StatusDot({ color }: { color: string }) {
 // re-runs (Archived rows drop out, etc.).
 export function JobStatusSelect({
   jobId,
-  statusId,
+  statusId: initialStatusId,
   statuses,
 }: {
   jobId: string;
@@ -23,17 +23,30 @@ export function JobStatusSelect({
   statuses: JobStatus[];
 }) {
   const router = useRouter();
+  const [optimisticStatusId, setOptimisticStatusId] = useState(initialStatusId);
   const [isPending, startTransition] = useTransition();
 
+  // JobRow doesn't remount on router.refresh(), so without this, a status
+  // change made elsewhere (Reject/Archive buttons) never reaches this
+  // dropdown's local state and it keeps showing the stale value.
+  useEffect(() => {
+    setOptimisticStatusId(initialStatusId);
+  }, [initialStatusId]);
+
   function onChange(value: string) {
+    const previousStatusId = optimisticStatusId;
+    setOptimisticStatusId(value);
     startTransition(async () => {
-      await setJobStatusAction([jobId], value);
+      const result = await setJobStatusAction([jobId], value);
+      if (!result.ok) {
+        setOptimisticStatusId(previousStatusId);
+      }
       router.refresh();
     });
   }
 
   return (
-    <Select value={statusId ?? undefined} onValueChange={onChange} disabled={isPending}>
+    <Select value={optimisticStatusId ?? undefined} onValueChange={onChange} disabled={isPending}>
       <SelectTrigger className="h-8 w-full min-w-0">
         <SelectValue placeholder="Set status" />
       </SelectTrigger>

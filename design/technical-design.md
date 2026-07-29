@@ -221,9 +221,21 @@ sequenceDiagram
 
 All runtime behaviour is controlled via environment variables. See [tech-stack.md](tech-stack.md) for the full list and defaults.
 
-## 10. Testing Approach
+## 11. Testing Approach
 
 - **Unit tests** with vitest covering all application-layer use-cases and infrastructure adapters.
-- **Mocked dependencies** — no live network or database calls in tests.
+- **Component tests** with jsdom + `@testing-library/react`, covering the wiring in client components
+  — does this event reach that action, once, with the right argument (`docs/decisions.md` AD-61).
+  Added in the UI/UX audit pass; before it the presentation layer had no automated coverage at all,
+  which is how a hotkey hook that ignored its only argument shipped. The vitest environment stays
+  `node` by default and each component test opts into jsdom with a `// @vitest-environment jsdom`
+  docblock; see `design/tech-stack.md` §8.
+- **Pure-function extraction over rendering.** Presentation logic that can be decided without a DOM
+  is pulled into a plain module and tested in the node environment (`jobHotkeys.ts`'s
+  `resolveJobHotkey`, `jobScore.ts`'s score bands). Rendering is reserved for what only a DOM can
+  answer.
+- **Mocked dependencies** — no live network or database calls in tests. Server actions are `vi.fn()`
+  mocks in component tests; there is no MSW and no test database.
 - **CI gate** — type-check, unit tests, and service-role boundary check must pass before merge.
 - No end-to-end or integration tests (single-user app; manual verification against dev Supabase).
+  Server components and server actions are never rendered or executed in tests.

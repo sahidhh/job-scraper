@@ -162,6 +162,8 @@ Cron jobs are managed by GitHub Actions. Teams or individuals without access to 
 ### 6.4 Cold Start Latency
 Vercel serverless functions experience cold starts, which can add 1–3 seconds to the first request after a period of inactivity.
 
+The app now loads one webfont, IBM Plex Sans, which adds a font file to that first paint. It is kept deliberately cheap — self-hosted by `next/font` (no third-party connection to open), latin subset only, and the variable cut so one file covers every weight the design system uses — and `display: "swap"` means text paints immediately in a metric-adjusted fallback rather than waiting on it. A **second** family would double that cost and should not be added without re-measuring (`design/tech-stack.md` §8).
+
 ### 6.5 Service Role Key Exposure Risk
 If `SUPABASE_SERVICE_ROLE_KEY` is ever accidentally added to Vercel env vars (instead of GitHub Actions secrets only), it could be exposed in Next.js server bundles. The CI boundary check (`check:service-role-boundary`) mitigates this for app/ code, but Vercel env var configuration must be managed carefully.
 
@@ -200,3 +202,144 @@ The Telegram reminder for draft applications (`notifyPendingDrafts`) is stateles
 | Source-level health summary (`getSourceHealthReport`, Phase 1 Task 5/7) doesn't drive runtime behavior | Now surfaced on `/analytics` (Phase 4 Task 13), but still informational only — `scrape.ts`'s scraper-selection logic (`listActiveHealthy`) still only reads `companies.health_status`, not this summary | P2 |
 | Two independent, unreconciled source-health signals | `companies.health_status` (probe-driven, board-token sources only, drives auto-disable via `listActiveHealthy`) and the `scrape_runs`-derived summary (covers all sources, informational only) can disagree — e.g. a source can show `recommendation: "Healthy."` from recent scrape_runs while still `disabled` in `companies` if it hasn't been re-probed yet. `/analytics` now shows both tables side by side rather than merging them, so the disagreement is visible instead of hidden | P3 |
 | Scoring queue report (`getScoringQueueReport`, Phase 1 Task 6) has no alerting | Now surfaced on `/analytics` (Phase 4 Task 13) and still logged by `score.ts` every run; there's still no push alerting or auto-remediation for stuck jobs beyond the indefinite-retry behavior that already existed (AD-14) | P2 |
+
+---
+
+## 10. UI & Design System
+
+### 10.1 Settings → Sources Does Not Manage Sources (`docs/decisions.md` AD-57)
+
+The tab is named "Sources" but manages **companies and their ATS board tokens**. The aggregator
+sources (JSearch, Adzuna, Remotive, Himalayas, RemoteOK, MyCareersFuture) cannot be enabled or
+disabled from the UI at all — a source runs if its env key is configured and doesn't if it isn't, a
+deployment concern rather than a user setting. Per-source toggles would need somewhere to persist
+enablement, a read of it in `scrape.ts`, and a decision about what disabling does to already-scraped
+jobs; deferred rather than built. Read-only source health *is* surfaced, on `/analytics/sources`.
+
+### 10.2 Error Boundaries Are Not Built From Design Tokens — Resolved
+
+`src/app/error.tsx` and `src/app/global-error.tsx` previously used raw Tailwind palette classes
+(`text-gray-500`, `bg-blue-600`) and so did not inherit the accent. Both now use design tokens.
+`error.tsx` uses the `Button` primitive; `global-error.tsx` imports `globals.css` itself and uses
+token utilities directly rather than the primitive, because it replaces the root layout and must stay
+dependency-free — it is the boundary that catches a root-layout crash.
+
+### 10.3 Score Badge Thresholds Are Constants, Not Derived From Env
+
+`AI_SCORE_STRONG = 0.75` and `AI_SCORE_MODERATE = 0.4` are declared in
+`src/components/dashboard/jobScore.ts`. The **duplication half of this is resolved** — the desktop
+`ScoreBadge` and the mobile `ScorePill` used to carry their own copy of both the thresholds and
+`formatScore`, and now import one module (architecture.md §12.1).
+
+What remains is the env drift: `0.75` is meant to track `NOTIFY_THRESHOLD`, an env var read
+server-side by `notify.ts` and never passed to the dashboard. If someone changes `NOTIFY_THRESHOLD`,
+the green badge silently stops meaning "this would have notified me" and nothing fails. A code
+comment points at `docs/scoring.md`; that is the whole enforcement mechanism (`docs/decisions.md`
+AD-56).
+
+### 10.4 Two Primary Nav Surfaces, Two Independent Lists — Resolved
+
+`BottomNav` declared its own `BOTTOM_NAV` array and had drifted from `NAV_ITEMS` (labelled Dashboard
+"Jobs", omitted Resume entirely, leaving `/resume` reachable only via an unlabelled mobile-header
+icon). It now reads `NAV_ITEMS`, so both primary surfaces render the same six destinations from one
+list, and the mobile header's resume shortcut has been removed as redundant. The orphaned
+`MobileNav.tsx` — implemented but imported nowhere — was deleted rather than left as a third surface.
+The desktop sidebar, which previously had no active state at all, now renders one via the new
+`SidebarNav` client component. See architecture.md §12.2.
+
+### 10.5 Analytics' Tab Layout Differs From the Design Handoff (`docs/decisions.md` AD-58)
+
+The handoff's Analytics Overview is a 2×2 chart grid (Jobs over time, By source, Score histogram,
+Status breakdown). This app's Overview is the *operational* screen — pipeline stats, scoring-queue
+depth, token usage — and those four charts live on the Scraping & Scoring and Job Breakdown tabs
+instead. Tab names match; contents were designed against a different IA. Deliberately not
+reconciled, because moving the charts is a product change rather than a visual one.
+
+Separately, and still open: the handoff's mobile guidance — render only the two highest-priority
+charts and leave the rest a tab away — is not implemented on the Breakdown tab, which renders four
+charts at every breakpoint. Route-based tabs already give per-tab lazy loading, so nothing is fetched
+for a tab you don't open; the gap is only *within* a tab. No measurement yet shows this matters at
+current data volume.
+
+### 10.6 No Accessibility Audit
+
+The conventions in architecture.md §12.5 are followed by habit, not verified. There is no axe/Lighthouse
+pass in CI, and no contrast check of the accent tints (`/10`, `/12`) used behind small text. Reasonable
+for a single-user internal tool; stated so it isn't mistaken for a compliance claim.
+
+The UI/UX audit pass closed the defects it found by inspection — a checkbox nested inside a
+`<button>` on `JobCard`, icon buttons named only by `title`, a missing `aria-expanded` on the desktop
+row, an anchor that stayed clickable under `disabled` — and the dashboard table now has component
+tests covering its keyboard path. That is a walkthrough of *one* surface, not an audit of the app:
+Resume, Roles, Settings and Analytics have had no equivalent pass.
+
+### 10.7 Resume Screen: Dropzone Resolved, "Reprocess" Deliberately Absent
+
+`ResumeUploadCard` is now a dashed dropzone with drag-and-drop, a "Browse files" fallback, and a
+selected-file row with a remove affordance. The file input remains in the DOM (visually hidden, not
+removed) so keyboard and assistive-tech users get the real control. Client-side type checking is by
+extension, since a dropped file can carry an empty or wrong MIME type; server-side validation is
+unchanged and remains the real gate.
+
+The handoff's "Reprocess" button is **not** built — it would promise re-parsing that AD-30's
+parse-once cache deliberately never does (`docs/decisions.md` AD-59). The metadata caption beside it
+is built, but reads "PDF resume · parsed 3h ago" rather than a filename: storage paths are
+content-hash-based, so the original filename is not retained anywhere and inventing one would be
+worse than omitting it.
+
+### 10.8 Keyboard Shortcuts Are Desktop-Only, and the Table Is Not a Full ARIA Grid (`docs/decisions.md` AD-60)
+
+The `↑`/`↓`/`R`/`A`/`D` shortcuts and their `<kbd>` legend render only in the desktop table. The
+mobile breakpoint renders `JobCard`s, which have **no focused-row concept** for a shortcut to act on,
+so there is nothing to scope a keystroke to — and a phone has no keyboard to press it with. Giving
+mobile equivalent reach would mean inventing a selection cursor for a list that is designed to be
+tapped. Deliberately not built.
+
+Within the desktop table, the roving-focus implementation is the useful subset of the ARIA grid
+pattern, not the whole of it: `↑`/`↓` move, but `Home`/`End`, `PageUp`/`PageDown` and left/right cell
+navigation do not, and the table carries no `role="grid"`/`role="row"`/`aria-rowindex` markup — it is
+a plain `<table>` whose rows happen to be focusable. Adding grid semantics would change how a screen
+reader announces every row for the benefit of navigation keys nobody has asked for. Revisit if the
+table ever gains cell-level interaction.
+
+The legend is hidden when the filtered list is empty (there is nothing to act on), so a user whose
+first visit lands on an empty dashboard won't learn the shortcuts exist until a job appears.
+
+### 10.9 One Field Still Commits by Hand-Rolled `onKeyDown`
+
+`design/architecture.md` §12.3's rule is that a field writing URL or server state commits through a
+real `<form onSubmit>`, so Enter comes from the platform. `ExpandedRolesCard`'s `AddRoleChip` is the
+documented exception: it keeps an `onKeyDown` handler because it needs **Escape to clear and close**
+as well as Enter to commit, and a form gives you the second but not the first. Wrapping it in a form
+would mean carrying both mechanisms for one field. It also sits inside the roles preview card, which
+is rendered below `RoleSelectorForm`'s own `<form>` — forms cannot nest, which is why only the
+role-input row is wrapped rather than the whole screen.
+
+### 10.10 Dark Mode Has Three Residuals Tokens Cannot Reach (`docs/decisions.md` AD-63)
+
+Light/dark is live and the token set is symmetric, but three things sit outside it and are accepted
+rather than fixed.
+
+**Status dot colours are user data.** `job_statuses.color` is a hex string the user picks in
+`StatusConfigSection` and stores in the database; it reaches the DOM as an inline `style`, so no CSS
+variable can ever reach it. The seeded defaults are Tailwind-100-family pastels chosen against a white
+page. This is deliberately not fixed: the rendering is an 8px `rounded-full` dot, a pale pastel is
+*more* visible on a dark page than on a light one, and a per-theme colour column would be a data-model
+change for a decorative dot. The one value that was ours — the synthetic "New" bucket in
+`SupabaseMatchedJobsRepository` — now uses `var(--muted)` and does follow the theme.
+
+**Dark-mode borders do not meet SC 1.4.11.** `--border` was raised from 10% to 16% white, which is
+where card outlines and dense-table row separators resolve; 3:1 against `--card` would need roughly
+36%, which reads as a harsh outline on every surface at once. Dark mode therefore separates surfaces
+by lightness (`--card` 0.205 vs `--background` 0.145) and treats the border as reinforcement.
+`--input` went to 22% because a field boundary is a real control boundary and the one border a user
+has to find.
+
+**Nothing verifies dark mode *looks* right.** `globals.contrast.test.ts` checks token pairings and
+`theme.test.ts` checks the mechanism, but Tailwind v4 resolves `@theme inline` at build time and
+there is no compiled stylesheet in the test environment — jsdom will not resolve `var(--card)`, and a
+test that hardcoded the values would assert its own copy of the table while the app drifted. The
+perceptual failures (a wash that vanishes, a border that dissolves) all pass a class-name assertion,
+and FOUC is unobservable in an environment that never paints. The residual check is the manual pass
+in `docs/plans/dark-mode-plan.md` Phase 4: all routes in both themes, **hovering at least one point
+on every chart**, since Recharts tooltips only exist on hover.

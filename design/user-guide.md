@@ -21,6 +21,19 @@
 
 After the first scrape+score+notify run, your dashboard will show scored jobs and you may receive Telegram alerts.
 
+### 1.3 Light and Dark Mode
+
+The app follows your operating system's appearance setting on first load — no setup needed. To
+override it, use the sun/moon button: in the **sidebar footer above Logout** on desktop, in the
+**top-right of the header** on mobile.
+
+Once you click it, your choice is remembered on that browser and the OS setting is ignored from then
+on. It is stored per-browser, not in your account, so a different device starts by following that
+device's OS again. To go back to following the OS, clear the site's stored data for this app.
+
+There is no third "System" option in the button and no theme setting elsewhere in the app — the OS
+*is* the default.
+
 ---
 
 ## 2. Resume
@@ -28,7 +41,8 @@ After the first scrape+score+notify run, your dashboard will show scored jobs an
 **Location:** `/resume`
 
 ### Upload a Resume
-1. Choose a PDF or DOCX resume file and click "Upload"
+1. Drag a PDF or DOCX resume onto the dropzone, or click "Browse files" to pick one. The chosen file is
+   listed below the dropzone — click the ✕ beside it to swap for a different one. Then click "Upload"
 2. The platform extracts text (including table content in DOCX resumes) and matches skills against the built-in skills dictionary. Re-uploading a file you've already uploaded before reuses the cached extracted text instead of re-parsing it
 3. The extracted skills list is displayed for review
 
@@ -69,7 +83,7 @@ After the first scrape+score+notify run, your dashboard will show scored jobs an
 
 ### Set a Role
 1. Type your primary target role (e.g., "Backend Engineer", "Data Scientist")
-2. Click "Expand Role"
+2. Press **Enter**, or click "Expand" — either one starts the expansion
 3. The platform looks up related roles (e.g., "Software Engineer", "API Developer", "Node.js Developer")
 4. If your role is already in the cache: result is instant
 5. If not: an AI call expands the role (takes 5–15 seconds) and caches the result
@@ -101,6 +115,57 @@ your AI relevance score plus any ranking bonuses you've configured (see "Ranking
 - **Status** — your workflow status for this job
 - **Actions** — open job URL in new tab, or draft an application (mail icon — see "Draft an Application" below)
 
+Click a row's title to expand it and read the AI's reasoning for the score.
+
+### Keyboard shortcuts (desktop table)
+Press **Tab** until the job table takes focus — it's a single stop, so you land on one row rather than
+tabbing through all fifty. The focused row is marked with a coloured rail down its left edge and a
+tinted background. The same shortcuts are printed above the table, so you never have to remember them.
+
+| Key | Does |
+|---|---|
+| `↑` `↓` | Move between rows |
+| `R` | Reject the focused job |
+| `A` | Archive the focused job |
+| `D` | Expand or collapse the focused row's details (AI reasoning, company history) |
+
+The shortcuts only ever act on the **one focused row** — never on the whole list. They deliberately do
+nothing while you're typing in the search box or any other field, while a status dropdown or dialog is
+open, or when you hold Ctrl/Cmd/Alt, so `Ctrl+R` still reloads the page and typing the word "remote"
+into search doesn't archive anything.
+
+`R` and `A` do exactly what the reject and archive buttons on the row do, so an accidental one is
+undone the same way — set the status back from the row's dropdown.
+
+> Shortcuts are desktop-only. On mobile there's no focused row to act on; use the card's buttons and
+> status sheet instead.
+
+### Reading the score badge
+| Badge | Means |
+|---|---|
+| Green, e.g. `82%` | AI score ≥ 75% — this job cleared the notification threshold, so it's one you'd have been pinged about |
+| Amber, e.g. `58%` | AI score 40–74% — worth a look, not a strong match |
+| Grey outline, e.g. `31%` | AI score below 40% — scored, and scored low |
+| Grey outline, `Pending · 34%` | **Not scored yet.** The number shown is the cheap keyword score, standing in until the AI stage runs |
+
+The green cut-off is `NOTIFY_THRESHOLD` (0.75), the same number the Telegram notifier uses — a green
+badge and "this would have notified me" mean the same thing by design. `Pending` is a different state
+from a low score: pending means no AI verdict exists yet, not that the verdict was bad.
+
+### On mobile
+The dashboard reflows rather than shrinking:
+- The job table becomes a list of **cards** — title and score badge on the top row, company beneath,
+  location and source chips, then a footer strip with the status dropdown.
+- The filter toolbar collapses to a single **Filters** pill showing a count of how many filters are
+  active. Tapping it opens a bottom sheet with the full set of controls, plus **Clear all** and
+  **Done**.
+- Two filters are labelled for the action rather than the field: **Can apply** reads "Hide jobs I
+  can't apply to", **Good match** reads "Hide low keyword matches".
+- Primary navigation moves from the sidebar to a **bottom tab bar**.
+
+On desktop the table is sized to fit the window — long titles, company names, and sources truncate
+with an ellipsis (hover for the full value) instead of forcing a horizontal scrollbar.
+
 ### Filtering
 - **Search:** Filter by keyword in title or company name
 - **Location:** Filter by India / Singapore / UAE / Remote (single-select)
@@ -116,12 +181,15 @@ your AI relevance score plus any ranking bonuses you've configured (see "Ranking
 
 > Replaced the old **Sponsoring** filter, which required a posting to literally say "visa sponsorship". Almost none do, so it matched a handful of jobs while also hiding every India job — which needs no sponsorship at all.
 
+In the typed fields — **Search**, **Min AI score** and **Max experience** — press **Enter** to apply
+what you've typed without leaving the field. Clicking or tabbing away still applies it too, and doing
+both only reloads the list once.
+
 Applying a filter re-runs the query on the server. While it's in flight the job
 list dims and an "Updating…" indicator appears next to the filters, so a filter
-change reads as "loading" rather than a frozen page. On desktop the job table is
-sized to fit the window — long titles, company names, and sources are truncated
-with an ellipsis (hover to see the full value) instead of forcing a horizontal
-scrollbar.
+change reads as "loading" rather than a frozen page. The list you were looking at
+stays on screen while this happens — it dims rather than being replaced by a
+skeleton, so the page never flashes empty between filter changes.
 
 ### The stats row
 Above the filters: `X of Y jobs · N AI-scored · N low match · N queued`. Every number describes the
@@ -157,6 +225,13 @@ without double-counting. Leave everything blank (or click "Clear all") to rank b
 2. Select the new status from the dropdown
 3. Change is saved instantly
 
+The badge shows the new status the moment you pick it, before the save finishes. If the save fails,
+the old status comes back — so what the badge says is always what's actually stored. On mobile the
+same control is a bottom sheet, and it closes as soon as you pick.
+
+Keyboard: `R` and `A` set Rejected and Archived on the focused row without opening the dropdown at
+all — see "Keyboard shortcuts" above.
+
 ### Bulk Status Change
 1. Select multiple jobs using the checkboxes
 2. Click "Change Status" in the bulk action bar
@@ -164,7 +239,10 @@ without double-counting. Leave everything blank (or click "Clear all") to rank b
 4. All selected jobs are updated at once
 
 ### Pagination
-Use the page controls at the bottom to navigate pages.
+The list starts at 50 jobs. **Load more** at the bottom adds another 50 to the same page — it grows
+the list rather than paging to a separate screen, so there is no "page 2" and nothing you've already
+scrolled past disappears. The count is carried in the URL, so a reloaded or shared link shows exactly
+the same list you were looking at.
 
 ### Draft an Application
 Click the mail icon on any job row/card to open the application dialog.
@@ -241,11 +319,19 @@ When on, those postings are discarded during the scrape and never saved at all.
 
 **Location:** `/insights`
 
-### Skill Gaps
-Shows skills appearing frequently in matched job descriptions that are not present in your active resume. These are the highest-leverage skills to learn or add to your resume.
+The page shows two cards, in this order.
 
-### Skill Demand
-Shows the most-requested skills across all matched and scored jobs — regardless of whether you have them.
+### In demand
+**First on the page** (and first when stacked on mobile). The most-requested skills across all matched
+and scored jobs that you already have on your resume — what your current profile is genuinely strong
+at, shown as a labelled percentage bar per skill.
+
+### Skill Gaps ("Level up")
+**Second.** Skills appearing frequently in matched job descriptions that are *not* present in your
+active resume. These are the highest-leverage skills to learn or add.
+
+> The order is deliberate: what you're already strong at leads, the gap analysis follows
+> (`docs/decisions.md` AD-55).
 
 > Insights are meaningful only after you have an active resume, an active role, and at least one scoring run completed.
 

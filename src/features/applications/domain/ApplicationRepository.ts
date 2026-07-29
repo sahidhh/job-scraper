@@ -1,3 +1,4 @@
+import type { ApplicationStatus } from "./types";
 import type { Application, ApplicationKind, NewApplicationDraft, PendingApplicationDraft } from "./types";
 
 export interface ApplicationRepository {
@@ -30,4 +31,7 @@ export interface ApplicationRepository {
 
   /** Marks 'dismissed' -- redraftable later via upsertDraft. */
   markDismissed(id: string): Promise<Application>;
+
+  /** Update the application status. */
+  updateStatus(id: string, status: ApplicationStatus): Promise<Application>;
 }

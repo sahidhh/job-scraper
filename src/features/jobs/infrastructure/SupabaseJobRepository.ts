@@ -29,6 +29,11 @@ const ARCHIVED_STATUS_LABEL = "Archived";
 // findForDashboard doesn't select `description` (P1 #4) -- never rendered
 // by JobRow, and dropping it shrinks the dashboard's RSC payload.
 interface DashboardJobRow extends Omit<JobRow, "description"> {
+  canonical_company_name: string;
+  fingerprint: string;
+  contact_email: string | null;
+  contact_email_category: string | null;
+  contact_email_confidence: string | null;
   job_scores: {
     keyword_score: number;
     ai_score: number | null;
@@ -36,16 +41,15 @@ interface DashboardJobRow extends Omit<JobRow, "description"> {
     overall_score: number | null;
     overall_score_reasons: string[] | null;
     retry_count: number | null;
+    role_selection_id: string;
   }[];
-  // job_state.job_id is a PK referencing jobs, so PostgREST returns at most
-  // one embedded row; treated as an array for parity with job_scores.
   job_state: { status_id: string | null; job_statuses: { id: string; label: string; color: string } | null }[];
 }
 
 // Columns selected in findForDashboard; mirrors DashboardJobRow but without
 // the embedded foreign-table columns (those are added by PostgREST).
 const DASHBOARD_SELECT =
-  "id, source, source_job_id, company_id, company_name, title, location_raw, location_tags, url, min_years, posted_at, first_seen_at, last_seen_at, updated_at, is_active, inactive_reason, ineligible_reason, job_scores!left(keyword_score, ai_score, ai_reasoning, overall_score, overall_score_reasons, retry_count, role_selection_id), job_state!left(status_id, job_statuses(id, label, color))";
+  "id, source, source_job_id, company_id, company_name, canonical_company_name, title, location_raw, location_tags, url, min_years, posted_at, first_seen_at, last_seen_at, updated_at, is_active, inactive_reason, ineligible_reason, fingerprint, contact_email, contact_email_category, contact_email_confidence, job_scores!left(keyword_score, ai_score, ai_reasoning, overall_score, overall_score_reasons, retry_count, role_selection_id), job_state!left(status_id, job_statuses(id, label, color))";
 
 const UPSERT_BATCH_SIZE = 500;
 
@@ -676,5 +680,16 @@ export class SupabaseJobRepository implements JobRepository {
       .select("id");
     if (error) throw toAppError(error);
     return (data ?? []).length;
+  }
+
+  async findCompanyHistory(companyName: string): Promise<JobWithScore[]> {
+    const { data, error } = await this.client
+      .from("jobs")
+      .select(DASHBOARD_SELECT)
+      .eq("company_name", companyName)
+      .order("posted_at", { ascending: false })
+      .returns<DashboardJobRow[]>();
+    if (error) throw toAppError(error);
+    return (data ?? []).map(toDashboardJob);
   }
 }

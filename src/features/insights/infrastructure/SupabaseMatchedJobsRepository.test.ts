@@ -117,7 +117,7 @@ describe("SupabaseMatchedJobsRepository", () => {
       expect.arrayContaining([
         { label: "Interested", color: "#DBEAFE", count: 2 },
         { label: "Applied", color: "#DCFCE7", count: 1 },
-        { label: "New", color: "#E5E7EB", count: 7 },
+        { label: "New", color: "var(--muted)", count: 7 },
       ]),
     );
     expect(result[0]!.count).toBeGreaterThanOrEqual(result[1]!.count);

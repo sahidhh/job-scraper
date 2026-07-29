@@ -142,6 +142,72 @@ parsing, no AI" extraction standard than `extractSalary`/`extractContactEmail`. 
 | Version history | `/resume`'s "Version history" card lists every resume version (`ResumeRepository.listVersions()`), newest first, with upload date and origin ("Uploaded" if it has a `content_hash`, "AI-applied" if it was produced by P1.12's apply-suggestions flow) |
 | Restore | `restoreResumeVersionAction` makes an old version active again by re-running `set_active_resume` seeded with that version's exact content -- never mutates or deletes the old row, so history stays intact and restoring is itself just another new version |
 
+### P1.16 — Design System Pass (design handoff integration, 2026-07-27)
+
+Applies the `Dashboard Optimization` handoff to the six screens that already exist. No new screens, no
+new routes, no data-model change — the handoff describes how the shipped product should look, not a
+different product.
+
+| Feature | Description |
+|---|---|
+| Accent token | `--primary` becomes `oklch(0.5 0.1 264)` indigo, replacing shadcn's near-black neutral. One variable; every `bg-primary`/`text-primary`/`accent-primary` call site inherits it (decisions.md AD-54) |
+| Documented token set | Colour, radius, spacing, and type scale written down in `design/tech-stack.md` §8 — previously undocumented anywhere |
+| Insights card order | "In demand" leads, "Level up" follows (decisions.md AD-55) |
+| Score badge legend | Pending state collapses to a single `Pending · N%` pill; bands documented in `design/user-guide.md` §4 (decisions.md AD-56) |
+| Presentation-layer conventions | Composition, navigation surfaces, state ownership, and loading/empty/error rules written down in `design/architecture.md` §12 |
+| Dashboard stat chips | The stats row becomes bordered value-over-label chips; the AI-scored chip is accent-tinted as the row's key metric |
+| Dashboard filter toolbar | One bordered container with divider-separated groups (search / selects / numeric ranges / toggles / clear) instead of a loose wrap |
+| Sidebar active state | The desktop sidebar previously highlighted nothing; `SidebarNav` renders one active item, accent-tinted at 600 weight |
+| Single nav source | `BottomNav` reads `NAV_ITEMS` instead of its own drifted copy; orphaned `MobileNav.tsx` deleted (limitations.md §10.4) |
+| Logo + wordmark | `Wordmark` component — near-black rounded square with a bold white "J", product name beside it |
+| Resume dropzone | Drag-and-drop with a "Browse files" fallback and a selected-file row (limitations.md §10.7) |
+| Role chips | Selected related-role chips carry the accent tint at 600 weight; unselected stay plain outlined grey |
+| Tokenised error boundaries | `error.tsx` / `global-error.tsx` rebuilt on design tokens so they inherit the accent (limitations.md §10.2) |
+| Dashed "+ Add" chips | Roles gains a trailing "+ Add role" chip (custom roles join the list already selected); Resume's skills editor gains a matching "+ Add skill" chip, replacing the separate input row |
+| Insights percentages | Skill rows lead with a percentage rather than `count / total`; the raw counts stay on hover |
+| Resume card caption | "Extracted skills" card gains a `{type} · parsed {n}h ago` caption (AD-59) |
+| Distinct nav landmarks | The two primary `<nav>` elements no longer share one `aria-label` — both sit in the DOM at all times, and duplicate landmark names are ambiguous to a screen reader |
+
+**Deferred, not built** (each recorded with a reason rather than left as an implied to-do):
+
+| Deferred item | Why | Tracked in |
+|---|---|---|
+| Per-source enable/disable toggles on `/settings` | Needs a persistence layer, a `scrape.ts` read, and a decision about already-scraped jobs — a data-model change, not a visual one | AD-57, limitations.md §10.1 |
+| Runtime theming (accent hue / corner style / density props) | Three settings for a single user who has already picked the defaults | AD-54, tech-stack.md §8 |
+| Mobile chart subsetting on `/analytics` Overview | Real perceived-performance win, but no measurement yet showing it matters at current data volume | limitations.md §10.5 |
+| Score-badge bands derived from `NOTIFY_THRESHOLD` rather than duplicated constants | Needs the env value threaded to the dashboard; the constants carry a pointer comment meanwhile | AD-56, limitations.md §10.3 |
+| Formal accessibility audit (axe/Lighthouse in CI) | Conventions are followed by habit; no automated verification | limitations.md §10.6 |
+| Analytics Overview as a 2×2 chart grid | The handoff's Analytics assumes a different tab IA; all four charts already exist on other tabs, and moving them is a product change, not a visual one | AD-58, limitations.md §10.5 |
+| Resume "Reprocess" button | Would promise re-parsing that AD-30's parse-once cache never does; the honest version ("re-extract skills") is a new server action needing its own change | AD-59, limitations.md §10.7 |
+| Mobile chart subsetting within the Breakdown tab | Real perceived-performance idea, but unmeasured at current data volume | limitations.md §10.5 |
+
+### P1.17 — UI/UX Audit Remediation (2026-07-29)
+
+Follows P1.16. Where that pass applied a *look* to the six existing screens, this one fixes how they
+*behave* — the interaction defects the design pass surfaced but did not touch. Again no new screens,
+no new routes, no data-model change, and no new server action.
+
+| Feature | Description |
+|---|---|
+| Dashboard keyboard shortcuts | Roving row focus with `↑`/`↓`, `R` reject, `A` archive, `D` details, scoped to the one focused row, guarded against modifiers and text entry, and printed on screen as a `<kbd>` legend. Replaces a per-row `window` listener that fired every shortcut on every job (decisions.md AD-60, use-cases.md UC-02a) |
+| Enter applies a filter | Search, min-score and max-years commit on Enter as well as on blur — via a real `<form onSubmit>`, in both the desktop toolbar and the mobile sheet — and navigate once for both. Same for the Roles screen's primary-role input, where Enter triggers Expand |
+| Mobile status sheet parity | `JobStatusSheet` becomes controlled: it closes on select, shows the new status immediately, and rolls back on failure — the contract `JobStatusSelect` already had on desktop |
+| Route loading skeletons | `/dashboard`, `/roles`, `/resume`, `/insights` gain `loading.tsx`; all six protected routes now have one (architecture.md §12.4) |
+| Product typography | IBM Plex Sans, self-hosted via `next/font` and mapped onto Tailwind's `--font-sans` token — replaces "whatever sans the OS supplies" under a design system specified at `text-xs` (tech-stack.md §8) |
+| Error vs empty on company history | A failed lookup renders the error and a retry hint instead of "No prior applications found." |
+| Accessibility fixes | `aria-expanded` on the desktop row expander, `aria-label` on the reject/archive icon buttons, `JobCard`'s checkbox un-nested from its `<button>`, and the draft dialog's mailto link made genuinely inert while pending (architecture.md §12.5) |
+| De-duplicated presentation logic | `formatScore` and the AD-56 score bands move to one `jobScore.ts` consumed by both the desktop badge and the mobile pill; icon buttons use the existing `size="icon-sm"` / `buttonVariants` instead of hand-rolled classes |
+| Component test layer | First DOM-level tests: jsdom + Testing Library, opted into per file so the ~1000 node tests keep their speed (decisions.md AD-61, tech-stack.md §8) |
+
+**Deferred, not built:**
+
+| Deferred item | Why | Tracked in |
+|---|---|---|
+| Keyboard shortcuts on the mobile card list | No focused-row concept to scope a keystroke to, and no keyboard to press it with | AD-60, limitations.md §10.8 |
+| Full ARIA grid semantics on the job table (`role="grid"`, `Home`/`End`, cell navigation) | Changes how every row is announced, for navigation keys nobody has asked for | limitations.md §10.8 |
+| `<form>`-based commit for `AddRoleChip` | Needs Escape-to-cancel, which a form doesn't provide; keeping both mechanisms for one field is worse than the exception | limitations.md §10.9 |
+| Dark mode | The `.dark` token set exists and nothing toggles it — a deliberate one-fixed-theme choice, not an oversight | AD-54, tech-stack.md §8 |
+
 ### P2 — Medium Priority
 
 | Feature | Description |
@@ -204,6 +270,12 @@ P1.13 — Application Drafting (merge-workspace Phase 4, shipped)
 
 P1.14 — Additional Job Sources (merge-workspace Phase 5, shipped)
  └── JSearch + Adzuna connectors (cron-driven), static careers-URL fetcher (manual-trigger only)
+
+P1.16 — Design System Pass (design handoff, shipped)
+ └── Indigo accent token, documented token set, stat chips, filter toolbar, sidebar active state, single nav source
+
+P1.17 — UI/UX Audit Remediation (shipped)
+ └── Row-scoped keyboard shortcuts, Enter-to-apply filters, controlled mobile status sheet, four route skeletons, IBM Plex Sans, a11y fixes, first component-test layer
 
 P2 — Preferences
  └── Desired experience, App settings

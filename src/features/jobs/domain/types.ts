@@ -59,6 +59,8 @@ export interface Job {
   // keep hard-excluded jobs out of the scoring queue permanently) and by the
   // dashboard's default-on "hide jobs I can't apply to" filter.
   ineligibleReason: IneligibleReason | null;
+  // Conflict resolution metadata (Phase 4 Task 1): tracks if the user
+  // manually edited the job's status or metadata, and when.
 }
 
 // Input to JobRepository.upsertMany() -- a TaggedRawJob ready to persist.

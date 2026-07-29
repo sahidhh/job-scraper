@@ -12,8 +12,12 @@ const badgeVariants = cva(
         default: "bg-primary text-primary-foreground [a&]:hover:bg-primary/90",
         secondary:
           "bg-secondary text-secondary-foreground [a&]:hover:bg-secondary/90",
+        // Diverges from upstream shadcn, which hardcodes `text-white` and
+        // fades the chip to `dark:bg-destructive/60`. That pairing ignores
+        // --destructive-foreground and lands near 2.8:1 in dark mode. The token
+        // is measured against the chip in both themes (globals.contrast.test.ts).
         destructive:
-          "bg-destructive text-white focus-visible:ring-destructive/20 dark:bg-destructive/60 dark:focus-visible:ring-destructive/40 [a&]:hover:bg-destructive/90",
+          "bg-destructive text-destructive-foreground focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 [a&]:hover:bg-destructive/90",
         success: "bg-success text-success-foreground [a&]:hover:bg-success/90",
         warning: "bg-warning text-warning-foreground [a&]:hover:bg-warning/90",
         info: "bg-info text-info-foreground [a&]:hover:bg-info/90",

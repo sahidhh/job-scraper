@@ -102,7 +102,7 @@ These are explicitly banned by the project rules (CLAUDE.md):
 |---|---|---|
 | Next.js server (RSC + actions) | Vercel (serverless) | 20+ |
 | Cron scripts (tsx) | GitHub Actions (ubuntu-latest) | 20+ |
-| Tests (vitest) | CI / local | 20+ |
+| Tests (vitest) | CI / local | 22+ (jsdom 30's bundled undici requires `node:worker_threads`' `markAsUncloneable`, added in Node 21 — absent on 20, see AD-64) |
 
 ## 5. Key Dependencies (package.json)
 
@@ -138,10 +138,21 @@ These are explicitly banned by the project rules (CLAUDE.md):
     "@types/node": "latest",
     "@types/react": "latest",
     "@types/react-dom": "latest",
-    "jszip": "^3.10"
+    "jszip": "^3.10",
+    "jsdom": "^30.0",
+    "@testing-library/react": "^16.3",
+    "@testing-library/user-event": "^14.6",
+    "@testing-library/jest-dom": "^7.0"
   }
 }
 ```
+
+**Note on the four testing-library/jsdom packages:** dev-only, added in the UI/UX audit pass to give
+the presentation layer its first automated coverage (`docs/decisions.md` AD-61). They are used by
+**component tests only**, which opt into a DOM per file — the vitest default environment stays `node`
+so the ~1000 domain/application tests keep their speed. See §8 "Component tests" below and
+`design/technical-design.md` §11. No runtime dependency was added: fonts come from `next/font`, which
+ships with Next.
 
 **Note on jszip:** dev-only, used to build an in-memory `.docx` fixture (a real OPC zip) in `parseDocx.test.ts` so DOCX/table extraction is tested against actual mammoth parsing rather than a mocked `mammoth` module. It's already a transitive dependency of `mammoth` itself; listed explicitly as a devDependency rather than relied on implicitly.
 
@@ -213,3 +224,190 @@ why the workflow now alerts on failure. If you see that alert, rotate the token 
 `supabase.com/dashboard/account/tokens`, update the repo secret, and re-run the workflow.
 
 The cron `schedule:` entry in `scrape.yml` is **active** (`0 */6 * * *`, every 6 hours), not commented out — whether this 6h cadence was a deliberate, approved choice is an open question tracked in `TECHNICAL_DEBT.md` #1, not a doc-accuracy issue.
+
+---
+
+## 8. Design System & Tokens
+
+The UI has exactly one source of visual truth: the CSS custom properties in `src/app/globals.css`.
+Tailwind v4 has no `tailwind.config.*` in this repo — the theme is declared in CSS via `@theme inline`,
+which maps each `--color-*` utility token onto the corresponding variable. Adding a colour means adding
+a variable there, not a hex value in a component.
+
+### Colour
+
+All colours are **oklch**, in both `:root` and `.dark`. No hex, no hsl, anywhere in the stylesheet.
+
+| Token | Value (light) | Used for |
+|---|---|---|
+| `--primary` | `oklch(0.5 0.1 264)` | The accent. Primary buttons, active sidebar item, active tab underline, active role chips, the AI-scored stat chip, progress bars, focus rings (decisions.md AD-54) |
+| `--primary-foreground` | `oklch(0.985 0 0)` | Text/icons on accent fills |
+| `--foreground` | `oklch(0.145 0 0)` | Body text |
+| `--muted-foreground` | `oklch(0.556 0 0)` | Captions, section labels, inactive nav |
+| `--border` | `oklch(0.922 0 0)` | Card, table, and toolbar borders |
+| `--success` | — | Score badge ≥ 0.75 (`Badge variant="success"`) |
+| `--warning` | — | Score badge ≥ 0.40 (`Badge variant="warning"`) |
+| `--info` | — | Insights "In demand" rows (`SkillRow variant="info"`) |
+
+The accent is used at low opacity for tints (`/10`, `/12`, `/25`, `/30`) for chip fills and tinted
+borders — always as `bg-primary/10`-style utilities, never as a separate hardcoded variable.
+
+### Radius and spacing
+
+`--radius: 0.625rem` (10px) is the base; `--radius-sm/md/lg/xl` derive from it with `calc()`.
+Cards, frames, and the filter toolbar use `--radius-lg` (10px); buttons, inputs, and small badges use
+`--radius-md`; chips and status pills use `rounded-full`.
+
+Spacing is plain Tailwind scale, applied consistently rather than tokenised: page padding `p-6`,
+card padding `p-4`, vertical rhythm between page sections `space-y-5`, chip/icon gaps `gap-1.5`–`gap-2`.
+
+### Typography
+
+**IBM Plex Sans**, self-hosted by `next/font/google` in `src/app/layout.tsx` — latin subset, the
+variable cut, `display: "swap"`. It is the **only** webfont, and a second one should not be added
+without re-checking the cold-start budget (limitations.md §6.4).
+
+Why a webfont at all, having previously shipped the system stack: this UI is a dense data surface —
+the job table, the stat chips and the insight percentages all sit at `text-xs`/`text-[11px]`, where
+the OS default renders differently on every machine and the layout stops holding. Plex is a
+neo-grotesque drawn for technical reading (open apertures, distinguishable `l`/`I`/`1` and `0`/`O`)
+with even-width lining figures, which is what makes the `tabular-nums` convention below actually do
+its job. Why it is cheap: the variable cut is one file covering 400/500/600/700 rather than four
+downloads, `next/font` self-hosts it (no runtime request to Google, no extra dependency — `next/font`
+ships with Next), and `swap` paints immediately in a metric-adjusted fallback so a slow font never
+blocks first paint.
+
+Wiring, which is Tailwind-v4-specific: the generated class on `<html>` only *defines*
+`--font-ibm-plex-sans`. `globals.css` maps it onto the theme's `--font-sans` token inside
+`@theme inline` —
+`--font-sans: var(--font-ibm-plex-sans), ui-sans-serif, system-ui, -apple-system, sans-serif` — so
+every `font-sans` utility and the preflight default resolve to it. Adding a second family means a
+second `next/font` call, a second variable, and a matching token; never a `@font-face` or a `<link>`.
+
+Page title `text-2xl font-semibold`; section labels `text-xs font-semibold uppercase tracking-wide
+text-muted-foreground`; body and table text `text-sm`; metadata and badges `text-xs`; stat numbers
+`text-lg font-bold tabular-nums` (`tabular-nums` is required on every changing number so filter
+changes don't jitter the layout).
+
+### Product name
+
+**"Job Intelligence"** is the product name, used in the `AppShell` heading and throughout these docs.
+The design handoff's wordmark reads "Job Intel"; that is the prototype's shorthand and is **not**
+adopted. Do not introduce a third variant.
+
+### Icons
+
+Lucide React only, stroke-based, 24×24 viewBox. `size-3.5`/`size-4` in content, `size-4` in nav.
+Do not mix in a second icon set or inline raw SVG paths — `components.json` pins `"iconLibrary": "lucide"`.
+
+### Theming
+
+**Light and dark, and nothing else.** There is no density toggle and no accent picker
+(decisions.md AD-54, still in force on both). Light/dark is the one axis that is switchable
+(AD-63), because the OS already carries the preference and the parallel token set already existed.
+
+How it works, end to end:
+
+- `src/lib/theme.ts` holds `applyStoredTheme(root, stored, prefersDark)` and `THEME_SCRIPT`, the
+  serialized form of it. **The function is `String()`-ed into a blocking inline `<script>` in
+  `<head>`** (`layout.tsx`), so the class is on `<html>` before first paint — without that the page
+  paints white and repaints dark after hydration. It must therefore stay entirely self-contained:
+  no imports, no closure over module scope.
+- Resolution order: an explicit `localStorage["theme"]` of `"light"`/`"dark"` wins; **absence means
+  follow the OS**. That absence is the third state, which is why the control itself is two-state.
+- `ThemeToggle` (sidebar footer, mobile header) holds **no React state** — it toggles the class and
+  writes storage. Its icons are CSS-driven (`dark:hidden` / `hidden dark:block`), both present in
+  the server HTML, so nothing needs to read the theme in JS and there is no `mounted` flicker.
+- `<html>` carries `suppressHydrationWarning`. The standing rule that creates: **never branch
+  server-rendered output on theme — branch in CSS.**
+- `color-scheme: light` / `dark` is set on `:root` / `.dark`. It is what themes the surfaces CSS
+  cannot reach: scrollbars, `<select>` popups, date pickers, autofill.
+
+The trap, because it fails silently and looks like something else: the script must use
+`classList.add`, never `className =`. `<html>` also carries `next/font`'s generated class, the only
+thing defining `--font-ibm-plex-sans`. `src/lib/theme.test.ts` has a named test for exactly this.
+
+`docs/plans/dark-mode-plan.md` is the full working plan, including the residual manual visual pass.
+
+**Contrast is a constraint on the token, not a review step.** Every solid-chip pairing —
+`bg-<token>` with `text-<token>-foreground` — must clear WCAG AA (4.5:1) for normal text, and the
+token's lightness is chosen to satisfy that before it is chosen for looks. The two themes reach it
+from opposite directions: **light mode darkens the chip** so white text is legible, **dark mode
+darkens the text** so the chip can stay light against a near-black page. `--warning` has always
+worked this way and is the pattern the other status tokens now follow (decisions.md AD-62).
+
+`--primary` answers to two pairings and is the one to be careful with: solid `bg-primary`, and
+`text-primary` over the `bg-primary/10` wash used by stat chips, the sidebar active state and
+selected role chips. The wash needs the accent light, so its foreground — not its background —
+absorbs the change.
+
+`src/app/globals.contrast.test.ts` parses `globals.css` and fails the gate on any pairing below AA,
+so an unreadable token cannot ship. It does not model alpha-composited variants beyond the accent
+wash; `Badge`'s `dark:bg-destructive/60` in particular is out of its reach and is tracked in the
+dark-mode plan.
+
+### What is *not* in `components/ui/`
+
+The shadcn primitives actually installed are: `badge`, `button`, `card`, `collapsible`, `dialog`,
+`input`, `label`, `progress`, `select`, `sheet`, `table`, `textarea`. Notably absent — and deliberately
+so, since each is currently served by a plainer construct — are `checkbox` (raw
+`<input type="checkbox" className="accent-primary">`), `tabs` (route-based `RouteTabs`, see
+architecture.md §12), `skeleton` (per-route `loading.tsx` with `animate-pulse` divs), and `switch`
+(no toggle-switch surface exists; see decisions.md AD-57). Add a primitive when a second call site
+appears, not before.
+
+The `skeleton` line is the one worth re-checking periodically, because it now has six call sites, not
+two: every protected route (Dashboard, Roles, Resume, Insights, Analytics, Settings) has a
+`loading.tsx`. The reason it still isn't a primitive is that these are not one repeated block — each
+skeleton is a bespoke tracing of that page's real layout (stat chips, a table frame with row lines, a
+two-column insights grid), and the only thing they share is the three-utility idiom
+`animate-pulse rounded bg-muted` / `bg-muted/50` inside `border-border rounded-xl` frames. A
+`<Skeleton>` wrapper around three utilities would add an import without removing a decision. Revisit
+if a genuinely repeated shape appears.
+
+**Reuse the variant before writing the classes.** `size="icon-sm"` on `Button` exists; `size="sm"
+className="size-8 p-0"` is the same thing spelled worse and drifts when the variant is retuned. For a
+non-`<button>` element that should look like one — the `<a>` on a job card, an anchor that must carry
+a real `mailto:`/`target="_blank"` — use `cn(buttonVariants({ variant, size }), …)` rather than
+re-deriving `inline-flex items-center justify-center rounded-md` by hand.
+
+The same applies to status pills: `Badge`'s base is already
+`rounded-full px-2 py-0.5 text-xs font-medium`, so a hand-rolled `<span>` with those classes is a
+`Badge` with the token system removed. **`src/` contains no literal Tailwind palette colours** —
+no `bg-green-100`, no `text-red-800` — and that is an invariant worth keeping, because a literal
+palette colour is invisible to the contrast gate in `globals.contrast.test.ts` and does not follow
+`.dark`. Map the domain union onto a `Badge` variant with an exhaustive
+`Record<TheUnion, ComponentProps<typeof Badge>["variant"]>`, so adding a status is a type error
+rather than an unstyled pill; `ScrapeRunHealthTable` and `SourceHealthTable` are the reference.
+
+**Recharts renders outside CSS classes, so it needs the tokens passed in by hand.**
+`AnalyticsCharts.tsx` has three shared constants for this — `AXIS_STYLE`, `TOOLTIP_STYLE` and
+`stroke="var(--border)"` on every `CartesianGrid`. A bare `<Tooltip />` is Recharts' default: an
+opaque **white** panel with dark text, which is a white slab on a dark page. Tooltips only exist on
+hover, so a route-by-route visual pass will not catch a missed one — pass `contentStyle` every time.
+Series fill colours remain literal hex; they are saturated mid-tones that read on both grounds, and
+they are the documented exception to the no-literal-colours rule above.
+
+### Component tests (jsdom, per-file opt-in)
+
+Client components are tested against a real DOM with `@testing-library/react`. The convention, and
+the reason for each part of it (`docs/decisions.md` AD-61):
+
+- **Vitest's default `environment` stays `node`.** A component test opts in with a docblock on line 1:
+  ```tsx
+  // @vitest-environment jsdom
+  import "@testing-library/jest-dom/vitest";
+  ```
+  Do not flip the global environment — that would make ~1000 DOM-free domain and application tests
+  pay jsdom startup to serve a handful of component files, on a gate (`npm run verify`) run before
+  every change.
+- **`vitest.config.ts` carries two lines that are forced, not stylistic.** `globals: true`, because
+  `@testing-library/react` only registers its automatic between-test unmount when a global `afterEach`
+  exists — without it, renders leak across tests within a file. And `esbuild: { jsx: "automatic" }`,
+  because `tsconfig.json` sets `jsx: "preserve"` for Next's compiler, which leaves esbuild on the
+  classic transform and fails JSX in tests with "React is not defined".
+- **Co-locate:** `src/components/dashboard/Foo.test.tsx` beside `Foo.tsx`; shared fixtures in a plain
+  builder module beside them (`testJobFixture.ts`).
+- **Extract rather than render.** Anything decidable without a DOM belongs in a pure module and is
+  tested in the node environment — `jobHotkeys.ts` and `jobScore.ts` are both tested that way. A jsdom
+  test is for *wiring*: does this event reach that action, once, with the right argument.

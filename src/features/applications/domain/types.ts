@@ -6,7 +6,7 @@
 export const APPLICATION_KINDS = ["email", "coverletter"] as const;
 export type ApplicationKind = (typeof APPLICATION_KINDS)[number];
 
-export const APPLICATION_STATUSES = ["draft", "sent", "dismissed"] as const;
+export const APPLICATION_STATUSES = ["draft", "sent", "interview", "offer", "rejected", "archived", "dismissed"] as const;
 export type ApplicationStatus = (typeof APPLICATION_STATUSES)[number];
 
 export interface Application {

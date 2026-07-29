@@ -102,6 +102,21 @@ export function ApplicationDraftDialog({ jobId, jobTitle }: { jobId: string; job
     });
   }
 
+  // The mail hand-off is an anchor, not a button, because it must carry a real
+  // mailto: href -- this app never sends mail itself (scope.md "Auto-apply /
+  // auto-send"). `disabled` is a no-op on an anchor, so the inert-while-pending
+  // state has to be built by hand: swallow the click (which also cancels the
+  // mailto navigation), drop it out of the tab order, and say so to assistive
+  // tech. Without this, a second click during the in-flight transition marks
+  // the application sent twice.
+  function openMailClient(event: React.MouseEvent<HTMLAnchorElement>) {
+    if (isPending) {
+      event.preventDefault();
+      return;
+    }
+    markSent();
+  }
+
   function markSent() {
     if (!application) return;
     setError(null);
@@ -223,8 +238,13 @@ export function ApplicationDraftDialog({ jobId, jobTitle }: { jobId: string; job
               <Button variant="outline" onClick={saveChanges} disabled={isPending}>
                 Save changes
               </Button>
-              <Button asChild disabled={isPending}>
-                <a href={mailtoHref} onClick={markSent}>
+              <Button asChild className={isPending ? "pointer-events-none opacity-50" : undefined}>
+                <a
+                  href={mailtoHref}
+                  onClick={openMailClient}
+                  aria-disabled={isPending || undefined}
+                  tabIndex={isPending ? -1 : undefined}
+                >
                   Open in mail client
                 </a>
               </Button>

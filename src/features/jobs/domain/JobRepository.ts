@@ -1,4 +1,4 @@
-import type { CreateStatusInput, Job, JobFilters, JobsPage, JobStatus, NormalizedJob, UpdateStatusInput, UpsertResult } from "./types";
+import type { CreateStatusInput, Job, JobFilters, JobsPage, JobStatus, JobWithScore, NormalizedJob, UpdateStatusInput, UpsertResult } from "./types";
 
 export interface JobRepository {
   /**
@@ -101,4 +101,8 @@ export interface JobRepository {
    * after all sources have been ingested. Returns the count of jobs marked.
    */
   markExpiredJobs(thresholdDays: number): Promise<number>;
+  /**
+   * Find other jobs by the same company name.
+   */
+  findCompanyHistory(companyName: string): Promise<JobWithScore[]>;
 }

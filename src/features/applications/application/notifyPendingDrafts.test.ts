@@ -22,6 +22,7 @@ function makeDeps(drafts: PendingApplicationDraft[]) {
     upsertDraft: vi.fn(),
     updateContent: vi.fn(),
     markSent: vi.fn(),
+    updateStatus: vi.fn(),
     markDismissed: vi.fn(),
   };
   const telegramSender: TelegramSender = {

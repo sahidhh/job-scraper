@@ -4,6 +4,11 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
+  /* Tells the browser which way to paint the surfaces it owns and CSS cannot
+     reach: scrollbars, <select> popups, date pickers, autofill fills, the
+     canvas behind the page. Without it a dark page keeps light scrollbars and
+     reads as half-converted. */
+  color-scheme: light;
   --radius: 0.625rem;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
@@ -11,7 +16,10 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
+  /* Accent -- design handoff / docs/decisions.md AD-54. Replaces shadcn's
+     neutral near-black so the accent reads as "primary action / active / key
+     metric" everywhere it is used. */
+  --primary: oklch(0.5 0.1 264);
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
@@ -19,48 +27,95 @@
   --muted-foreground: oklch(0.556 0 0);
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
+  /* Status tokens carry white text on a solid chip, so their lightness is
+     bounded by WCAG AA (4.5:1), not by taste. The values below are the
+     lightest that still clear it -- measured on the *clipped* sRGB the browser
+     actually paints, since these chromas sit marginally outside the gamut.
+     Previously `--success` and `--info` sat at L 0.6 and rendered at ~3.5:1,
+     failing AA on the score pill the whole dashboard is read through
+     (decisions.md AD-62).
+     `--warning` is the deliberate exception: amber dark enough to carry white
+     text stops reading as amber, so it takes near-black text instead and
+     clears AA by a wide margin at its original lightness. */
+  --destructive: oklch(0.55 0.245 27.325); /* 4.93:1 on white text */
   --destructive-foreground: oklch(0.985 0 0);
-  --success: oklch(0.6 0.15 145);
+  --success: oklch(0.52 0.15 145); /* 4.95:1 */
   --success-foreground: oklch(0.985 0 0);
-  --warning: oklch(0.77 0.17 70);
+  --warning: oklch(0.77 0.17 70); /* 9.26:1 on near-black text */
   --warning-foreground: oklch(0.145 0 0);
-  --info: oklch(0.6 0.15 230);
+  --info: oklch(0.52 0.15 230); /* 4.84:1 */
   --info-foreground: oklch(0.985 0 0);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --ring: oklch(0.5 0.1 264);
 }
 
+/* Live since AD-63 -- ThemeToggle writes `.dark` onto <html>. Every token below
+   is the counterpart of one in `:root`, so an accent change (AD-54) has to be
+   made twice and measured twice; getting it wrong is now visible rather than
+   dormant. */
 .dark {
+  color-scheme: dark;
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
+  /* Lightened for contrast against dark surfaces; same hue/chroma family as
+     the light-mode accent (AD-54). L 0.74 rather than 0.62 because `--primary`
+     has to satisfy two pairings at once: `text-primary` over the `bg-primary/10`
+     wash (stat chips, sidebar active state, selected role chips), which wants it
+     light, and solid `bg-primary`, which its foreground handles. At 0.62 the
+     wash measured 3.73:1; 0.74 brings it to 4.86:1. */
+  --primary: oklch(0.74 0.13 264);
+  /* Near-black, not white: the accent is now light enough that white text on
+     it fails. Same inversion the status tokens take below. */
+  --primary-foreground: oklch(0.145 0 0);
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
   --muted-foreground: oklch(0.708 0 0);
   --accent: oklch(0.269 0 0);
   --accent-foreground: oklch(0.985 0 0);
+  /* Dark mode inverts the rule light mode uses. There, the chip is darkened to
+     carry white text; here the chip must stay light to read against a near-black
+     page, so the *foreground* flips to near-black instead. That makes
+     `--warning` the pattern rather than the exception -- all four status tokens
+     now take dark text on a light chip (AD-62). Measured, in order below:
+     6.84:1, 8.50:1, 10.64:1, 8.29:1.
+     `--destructive-foreground` was dead until AD-63: `Badge`/`Button` shipped
+     upstream shadcn's `dark:bg-destructive/60` with a literal `text-white` and
+     ignored the token. Both variants now use the token in both themes. */
   --destructive: oklch(0.704 0.191 22.216);
-  --destructive-foreground: oklch(0.985 0 0);
+  --destructive-foreground: oklch(0.145 0 0);
   --success: oklch(0.72 0.17 145);
-  --success-foreground: oklch(0.985 0 0);
+  --success-foreground: oklch(0.145 0 0);
   --warning: oklch(0.82 0.17 70);
   --warning-foreground: oklch(0.145 0 0);
   --info: oklch(0.72 0.15 230);
-  --info-foreground: oklch(0.985 0 0);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+  --info-foreground: oklch(0.145 0 0);
+  /* Raised from shadcn's 10%/15%. At 10% a border composites to ~1.13:1
+     against `--card` -- structurally invisible, and borders carry the sidebar,
+     the mobile header, every Card and the dashboard table's row separators.
+     Reaching SC 1.4.11's 3:1 against `--card` would take ~36% white, which
+     reads as a harsh outline on every surface at once; 16% is the point where
+     the separators resolve without the page turning into a wireframe. The
+     shortfall is deliberate and recorded in limitations.md -- in dark mode
+     structure comes from surface lightness (`--card` vs `--background`) with
+     the border as reinforcement, not the other way round.
+     `--input` goes further because a field boundary *is* a UI component
+     boundary, and it is the one border a user has to find. */
+  --border: oklch(1 0 0 / 16%);
+  --input: oklch(1 0 0 / 22%);
+  --ring: oklch(0.74 0.13 264);
 }
 
 @theme inline {
+  /* --font-ibm-plex-sans is defined by next/font's generated class on <html>
+     (see layout.tsx). Mapping it onto Tailwind v4's --font-sans token makes it
+     the default for preflight and for every `font-sans` utility. */
+  --font-sans: var(--font-ibm-plex-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);

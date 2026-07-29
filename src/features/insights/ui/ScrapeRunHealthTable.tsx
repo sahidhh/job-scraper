@@ -1,14 +1,20 @@
+import type { ComponentProps } from "react";
+import { Badge } from "@/components/ui/badge";
 import type { SourceHealthSummary } from "@/features/sources/application/computeSourceHealthSummary";
+import type { ScrapeRunStatus } from "@/shared/domain/enums";
 
 // Distinct from SourceHealthTable (companies.health_status, board-token
 // sources only, probe-driven): this renders the scrape_runs-derived summary
 // (Phase 1 Task 5/7), which covers every source including the feed-based
 // ones (wellfound/remoteok/mycareersfuture). The two signals are
 // intentionally not reconciled -- see design/limitations.md.
-const STATUS_STYLES: Record<string, string> = {
-  success: "bg-green-100 text-green-800",
-  failed: "bg-red-100 text-red-800",
-  partial: "bg-yellow-100 text-yellow-800",
+//
+// Keyed on the union rather than `string`, so adding a run status is a type
+// error here instead of a silently unstyled pill.
+const STATUS_VARIANT: Record<ScrapeRunStatus, ComponentProps<typeof Badge>["variant"]> = {
+  success: "success",
+  partial: "warning",
+  failed: "destructive",
 };
 
 export function ScrapeRunHealthTable({ summaries }: { summaries: SourceHealthSummary[] }) {
@@ -41,21 +47,18 @@ export function ScrapeRunHealthTable({ summaries }: { summaries: SourceHealthSum
               <td className="py-2 pr-4">
                 <div className="flex items-center gap-1.5">
                   {s.lastRunStatus ? (
-                    <span
-                      className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_STYLES[s.lastRunStatus] ?? ""}`}
-                    >
-                      {s.lastRunStatus}
-                    </span>
+                    <Badge variant={STATUS_VARIANT[s.lastRunStatus]}>{s.lastRunStatus}</Badge>
                   ) : (
                     "—"
                   )}
+                  {/* Also `warning`: staleness and a partial run are both
+                      "needs attention", and the token set has one amber. The
+                      two read apart by their label, which is the rule anyway --
+                      colour is never the only signal (architecture.md §12.5). */}
                   {s.isStale && (
-                    <span
-                      className="inline-block rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-800"
-                      title={`No run in ${Math.round(s.hoursSinceLastRun ?? 0)}h`}
-                    >
+                    <Badge variant="warning" title={`No run in ${Math.round(s.hoursSinceLastRun ?? 0)}h`}>
                       stale
-                    </span>
+                    </Badge>
                   )}
                 </div>
               </td>

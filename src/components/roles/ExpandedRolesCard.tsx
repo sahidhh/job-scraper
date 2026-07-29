@@ -1,5 +1,10 @@
+"use client";
+
+import { Plus } from "lucide-react";
+import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import type { RoleMapSource } from "@/shared/domain/enums";
 
@@ -7,6 +12,7 @@ interface ExpandedRolesCardProps {
   relatedRoles: string[];
   selectedRoles: string[];
   onToggleRole: (role: string) => void;
+  onAddRole: (role: string) => void;
   source: RoleMapSource;
   onConfirm: () => void;
   isPending: boolean;
@@ -17,6 +23,7 @@ export function ExpandedRolesCard({
   relatedRoles,
   selectedRoles,
   onToggleRole,
+  onAddRole,
   source,
   onConfirm,
   isPending,
@@ -35,11 +42,17 @@ export function ExpandedRolesCard({
         {relatedRoles.map((role) => {
           const isSelected = selectedRoles.includes(role);
           return (
+            // Selected chips carry the accent tint at 600 weight; unselected
+            // stay plain outlined grey (design handoff).
             <Badge
               key={role}
               asChild
-              variant={isSelected ? "secondary" : "outline"}
-              className={isSelected ? "" : "text-muted-foreground"}
+              variant="outline"
+              className={
+                isSelected
+                  ? "border-primary/30 bg-primary/10 font-semibold text-primary"
+                  : "text-muted-foreground"
+              }
             >
               <button
                 type="button"
@@ -52,6 +65,7 @@ export function ExpandedRolesCard({
             </Badge>
           );
         })}
+        <AddRoleChip onAdd={onAddRole} disabled={isPending} />
       </CardContent>
       <CardFooter>
         <Button onClick={onConfirm} disabled={isPending || isActive || selectedRoles.length === 0}>
@@ -59,5 +73,53 @@ export function ExpandedRolesCard({
         </Button>
       </CardFooter>
     </Card>
+  );
+}
+
+// Trailing dashed chip (design handoff). Collapsed it is a chip like any
+// other; expanded it is a plain input, so the affordance matches the row it
+// sits in instead of introducing a separate form.
+function AddRoleChip({ onAdd, disabled }: { onAdd: (role: string) => void; disabled: boolean }) {
+  const [open, setOpen] = useState(false);
+  const [value, setValue] = useState("");
+
+  function commit() {
+    const trimmed = value.trim();
+    if (trimmed.length > 0) onAdd(trimmed);
+    setValue("");
+    setOpen(false);
+  }
+
+  if (!open) {
+    return (
+      <Badge asChild variant="outline" className="border-dashed text-muted-foreground">
+        <button type="button" disabled={disabled} onClick={() => setOpen(true)}>
+          <Plus className="size-3" />
+          Add role
+        </button>
+      </Badge>
+    );
+  }
+
+  return (
+    <Input
+      autoFocus
+      value={value}
+      disabled={disabled}
+      placeholder="Role title"
+      className="h-7 w-40 text-xs"
+      onChange={(e) => setValue(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          commit();
+        }
+        if (e.key === "Escape") {
+          setValue("");
+          setOpen(false);
+        }
+      }}
+    />
   );
 }
