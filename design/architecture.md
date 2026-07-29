@@ -570,6 +570,13 @@ worth keeping:
   sending mail itself, so the inert state has to be assembled by hand.
 - Colour is never the only signal: the score badge carries its number, the status pill carries its
   label, and eligibility carries a reason badge.
+- **Text contrast is enforced, not reviewed.** Solid-chip token pairings must clear WCAG AA (4.5:1),
+  and `src/app/globals.contrast.test.ts` parses `globals.css` to fail the gate if one drops below it.
+  This is the one place the "not a formal WCAG commitment" caveat above does not apply, because the
+  failure mode is not theoretical: `Badge variant="success"` shipped at 3.55:1, and AD-56 makes that
+  pill mean "this would have notified you" — the single thing the dashboard is scanned for. Light
+  mode darkens the chip; dark mode darkens the text. See decisions.md AD-62 and tech-stack.md §8 for
+  the rule and the `--primary` exception.
 - Radix warns when a dialog-role surface has no description. `SheetContent` sets
   `aria-describedby={undefined}` **before** the props spread — a deliberate opt-out, since our sheets
   are short titled surfaces where the title is the description, and declaring it before the spread

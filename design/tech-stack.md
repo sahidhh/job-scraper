@@ -304,7 +304,25 @@ Do not mix in a second icon set or inline raw SVG paths — `components.json` pi
 
 **One fixed theme.** There is no runtime theme switcher, no density toggle, and no accent picker
 (decisions.md AD-54). Dark mode exists as a `.dark` class variant with a full parallel token set, but
-nothing currently toggles it.
+nothing currently toggles it. What shipping it would take is written up in
+`docs/plans/dark-mode-plan.md`.
+
+**Contrast is a constraint on the token, not a review step.** Every solid-chip pairing —
+`bg-<token>` with `text-<token>-foreground` — must clear WCAG AA (4.5:1) for normal text, and the
+token's lightness is chosen to satisfy that before it is chosen for looks. The two themes reach it
+from opposite directions: **light mode darkens the chip** so white text is legible, **dark mode
+darkens the text** so the chip can stay light against a near-black page. `--warning` has always
+worked this way and is the pattern the other status tokens now follow (decisions.md AD-62).
+
+`--primary` answers to two pairings and is the one to be careful with: solid `bg-primary`, and
+`text-primary` over the `bg-primary/10` wash used by stat chips, the sidebar active state and
+selected role chips. The wash needs the accent light, so its foreground — not its background —
+absorbs the change.
+
+`src/app/globals.contrast.test.ts` parses `globals.css` and fails the gate on any pairing below AA,
+so an unreadable token cannot ship. It does not model alpha-composited variants beyond the accent
+wash; `Badge`'s `dark:bg-destructive/60` in particular is out of its reach and is tracked in the
+dark-mode plan.
 
 ### What is *not* in `components/ui/`
 

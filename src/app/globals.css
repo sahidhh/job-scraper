@@ -22,13 +22,23 @@
   --muted-foreground: oklch(0.556 0 0);
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
+  /* Status tokens carry white text on a solid chip, so their lightness is
+     bounded by WCAG AA (4.5:1), not by taste. The values below are the
+     lightest that still clear it -- measured on the *clipped* sRGB the browser
+     actually paints, since these chromas sit marginally outside the gamut.
+     Previously `--success` and `--info` sat at L 0.6 and rendered at ~3.5:1,
+     failing AA on the score pill the whole dashboard is read through
+     (decisions.md AD-62).
+     `--warning` is the deliberate exception: amber dark enough to carry white
+     text stops reading as amber, so it takes near-black text instead and
+     clears AA by a wide margin at its original lightness. */
+  --destructive: oklch(0.55 0.245 27.325); /* 4.93:1 on white text */
   --destructive-foreground: oklch(0.985 0 0);
-  --success: oklch(0.6 0.15 145);
+  --success: oklch(0.52 0.15 145); /* 4.95:1 */
   --success-foreground: oklch(0.985 0 0);
-  --warning: oklch(0.77 0.17 70);
+  --warning: oklch(0.77 0.17 70); /* 9.26:1 on near-black text */
   --warning-foreground: oklch(0.145 0 0);
-  --info: oklch(0.6 0.15 230);
+  --info: oklch(0.52 0.15 230); /* 4.84:1 */
   --info-foreground: oklch(0.985 0 0);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
@@ -43,26 +53,43 @@
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.985 0 0);
   /* Lightened for contrast against dark surfaces; same hue/chroma family as
-     the light-mode accent (AD-54). */
-  --primary: oklch(0.62 0.13 264);
-  --primary-foreground: oklch(0.985 0 0);
+     the light-mode accent (AD-54). L 0.74 rather than 0.62 because `--primary`
+     has to satisfy two pairings at once: `text-primary` over the `bg-primary/10`
+     wash (stat chips, sidebar active state, selected role chips), which wants it
+     light, and solid `bg-primary`, which its foreground handles. At 0.62 the
+     wash measured 3.73:1; 0.74 brings it to 4.86:1. */
+  --primary: oklch(0.74 0.13 264);
+  /* Near-black, not white: the accent is now light enough that white text on
+     it fails. Same inversion the status tokens take below. */
+  --primary-foreground: oklch(0.145 0 0);
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
   --muted-foreground: oklch(0.708 0 0);
   --accent: oklch(0.269 0 0);
   --accent-foreground: oklch(0.985 0 0);
+  /* Dark mode inverts the rule light mode uses. There, the chip is darkened to
+     carry white text; here the chip must stay light to read against a near-black
+     page, so the *foreground* flips to near-black instead. That makes
+     `--warning` the pattern rather than the exception -- all four status tokens
+     now take dark text on a light chip (AD-62). Measured, in order below:
+     6.84:1, 8.50:1, 10.64:1, 8.29:1.
+     `--destructive` is the one gap: `Badge`/`Button` render it as
+     `dark:bg-destructive/60` with a literal `text-white`, ignoring
+     `--destructive-foreground` entirely, so no token change can fix it. It needs
+     the variant reworked -- tracked in docs/plans/dark-mode-plan.md, and moot
+     until something actually sets `.dark`. */
   --destructive: oklch(0.704 0.191 22.216);
-  --destructive-foreground: oklch(0.985 0 0);
+  --destructive-foreground: oklch(0.145 0 0);
   --success: oklch(0.72 0.17 145);
-  --success-foreground: oklch(0.985 0 0);
+  --success-foreground: oklch(0.145 0 0);
   --warning: oklch(0.82 0.17 70);
   --warning-foreground: oklch(0.145 0 0);
   --info: oklch(0.72 0.15 230);
-  --info-foreground: oklch(0.985 0 0);
+  --info-foreground: oklch(0.145 0 0);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.62 0.13 264);
+  --ring: oklch(0.74 0.13 264);
 }
 
 @theme inline {
