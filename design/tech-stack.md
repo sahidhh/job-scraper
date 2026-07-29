@@ -349,6 +349,15 @@ non-`<button>` element that should look like one — the `<a>` on a job card, an
 a real `mailto:`/`target="_blank"` — use `cn(buttonVariants({ variant, size }), …)` rather than
 re-deriving `inline-flex items-center justify-center rounded-md` by hand.
 
+The same applies to status pills: `Badge`'s base is already
+`rounded-full px-2 py-0.5 text-xs font-medium`, so a hand-rolled `<span>` with those classes is a
+`Badge` with the token system removed. **`src/` contains no literal Tailwind palette colours** —
+no `bg-green-100`, no `text-red-800` — and that is an invariant worth keeping, because a literal
+palette colour is invisible to the contrast gate in `globals.contrast.test.ts` and does not follow
+`.dark`. Map the domain union onto a `Badge` variant with an exhaustive
+`Record<TheUnion, ComponentProps<typeof Badge>["variant"]>`, so adding a status is a type error
+rather than an unstyled pill; `ScrapeRunHealthTable` and `SourceHealthTable` are the reference.
+
 ### Component tests (jsdom, per-file opt-in)
 
 Client components are tested against a real DOM with `@testing-library/react`. The convention, and

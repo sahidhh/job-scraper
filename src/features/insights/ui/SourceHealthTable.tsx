@@ -1,9 +1,13 @@
-import type { Company } from "@/features/companies/domain/types";
+import type { ComponentProps } from "react";
+import { Badge } from "@/components/ui/badge";
+import type { Company, SourceHealthStatus } from "@/features/companies/domain/types";
 
-const STATUS_STYLES: Record<string, string> = {
-  active: "bg-green-100 text-green-800",
-  unhealthy: "bg-yellow-100 text-yellow-800",
-  disabled: "bg-red-100 text-red-800",
+// Keyed on the union rather than `string`, so adding a health status is a type
+// error here instead of a silently unstyled pill.
+const STATUS_VARIANT: Record<SourceHealthStatus, ComponentProps<typeof Badge>["variant"]> = {
+  active: "success",
+  unhealthy: "warning",
+  disabled: "destructive",
 };
 
 function formatRelative(iso: string | null): string {
@@ -49,11 +53,7 @@ export function SourceHealthTable({ companies }: { companies: Company[] }) {
               <td className="py-2 pr-4 font-medium">{c.name}</td>
               <td className="py-2 pr-4 text-muted-foreground">{c.source}</td>
               <td className="py-2 pr-4">
-                <span
-                  className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_STYLES[c.healthStatus] ?? ""}`}
-                >
-                  {c.healthStatus}
-                </span>
+                <Badge variant={STATUS_VARIANT[c.healthStatus]}>{c.healthStatus}</Badge>
               </td>
               <td className="py-2 pr-4 tabular-nums">{c.consecutiveFailures}</td>
               <td className="py-2 pr-4 text-muted-foreground tabular-nums">
