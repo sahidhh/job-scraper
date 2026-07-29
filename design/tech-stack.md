@@ -102,7 +102,7 @@ These are explicitly banned by the project rules (CLAUDE.md):
 |---|---|---|
 | Next.js server (RSC + actions) | Vercel (serverless) | 20+ |
 | Cron scripts (tsx) | GitHub Actions (ubuntu-latest) | 20+ |
-| Tests (vitest) | CI / local | 20+ |
+| Tests (vitest) | CI / local | 22+ (jsdom 30's bundled undici requires `node:worker_threads`' `markAsUncloneable`, added in Node 21 — absent on 20, see AD-64) |
 
 ## 5. Key Dependencies (package.json)
 
