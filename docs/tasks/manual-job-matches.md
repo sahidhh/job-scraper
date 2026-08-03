@@ -1,1 +1,220 @@
-IyBNYW51YWwgKENsYXVkZS1Sb3V0aW5lKSBKb2IgTWF0Y2hlcyDigJQgRGVzaWduIEhhbmRvZmYKCj4gKipTdGF0dXM6IG5vdCBpbXBsZW1lbnRlZC4qKiBUaGlzIGRvY3VtZW50IGlzIGEgcHJlLWltcGxlbWVudGF0aW9uIGRlc2lnbiBwbGFuLAp3cml0dGVuIHRoZSBzYW1lIHdheSBgZG9jcy90YXNrcy9yb2xlLXBhY2tzLm1kYCB3YXMgYmVmb3JlIGl0IHNoaXBwZWQuIEl0IGRvZXMKbm90IG1vZGlmeSBjb2RlLCBjb25maWcsIG9yIHNjaGVtYS4gQWxsIGNoYW5nZXMgc3RpbGwgcmVxdWlyZSB0aGUgc3RhbmRhcmQKZG9tYWluIOKGkiBhcHBsaWNhdGlvbiDihpIgaW5mcmFzdHJ1Y3R1cmUg4oaSIHRlc3RzIOKGkiBVSSBmbG93IHBlciBgQ0xBVURFLm1kYCwgYW5kCnRoZSBgZGVzaWduLyoubWRgIHVwZGF0ZXMgbGlzdGVkIGluIMKnOCBtdXN0IGxhbmQgaW4gdGhlIHNhbWUgY2hhbmdlIGFzIHRoZSBjb2RlLgoKIyMgMS4gUHJvYmxlbQoKSm9iIG1hdGNoZXMgY3VycmVudGx5IGNvbWUgZnJvbSBleGFjdGx5IG9uZSBwaXBlbGluZTogdGhlIEdpdEh1YiBBY3Rpb25zIGNyb24KKGBzY3JhcGUudHNgIOKGkiBgc2NvcmUudHNgIOKGkiBgbm90aWZ5LnRzYCkgd3JpdGluZyBpbnRvIFN1cGFiYXNlIGBqb2JzYCAvCmBqb2Jfc2NvcmVzYCwgc3VyZmFjZWQgb24gYC9kYXNoYm9hcmRgLgoKQSBzZWNvbmQsIGluZGVwZW5kZW50IHNvdXJjZSBvZiBtYXRjaGVzIGV4aXN0czogKipgam9iLW1hdGNoLXRyYWNrZXJgKioKKGBzYWhpZGhoL2pvYi1tYXRjaC10cmFja2VyYCksIGEgc3RhdGljIEdpdEh1YiBQYWdlcyBzaXRlLiBJdHMgYGRhdGEvc3RhdGUuanNvbmAKaXMgaGFuZC1jdXJhdGVkIGR1cmluZyBhZCBob2MgQ2xhdWRlIENvZGUgc2Vzc2lvbnMgKCJ0aGUgQ2xhdWRlIHJvdXRpbmUiKSDigJQKdGhlIHVzZXIgc2VhcmNoZXMvcmVhZHMgbGlzdGluZ3MgaW50ZXJhY3RpdmVseSBhbmQgYSBzZXNzaW9uIHdyaXRlcyBvdXQKc2NvcmVkLCBhbm5vdGF0ZWQgbWF0Y2hlcy4gUGVyIHRoYXQgcmVwbydzIFJFQURNRSwgYWxsIHBlci1qb2Igc3RhdGUgKHN0YXR1cywKIm5vdCBpbnRlcmVzdGVkIiBsaXN0LCAxMC1kYXkgcHVyZ2UpIGxpdmVzIGluIGJyb3dzZXIgYGxvY2FsU3RvcmFnZWAgb25seSDigJQKdGhlcmUgaXMgbm8gYmFja2VuZCwgbm8gc3luYywgYW5kIG5vIHJlbGF0aW9uc2hpcCB0byBqb2Itc2NyYXBlcidzIHNjaGVtYQp0b2RheS4KClRoZSB1c2VyIGNvbnNpZGVycyB0aGUgQ2xhdWRlLXJvdXRpbmUgbWF0Y2hlcyAqKm1vcmUgYWNjdXJhdGUqKiB0aGFuIHRoZQphdXRvbWF0ZWQgcGlwZWxpbmUncyBgYWlfc2NvcmVgLCBhbmQgd2FudHMgYm90aCBzb3VyY2VzIHZpc2libGUgaW4gdGhlCmpvYi1zY3JhcGVyIGRhc2hib2FyZCwgc3dpdGNoYWJsZSB2aWEgb25lIGdsb2JhbCB0b2dnbGUsIHdpdGhvdXQgcnVubmluZyB0d28KZGFzaGJvYXJkcyBhbmQgd2l0aG91dCB0b3VjaGluZyB0aGUgZXhpc3Rpbmcgc2NyYXBlciBkYXRhIChleHBsaWNpdGx5OgoqKnRydW5jYXRpb24gb2YgYGpvYnNgIGlzIG5vdCByZXF1aXJlZCBhbmQgaXMgbm90IHBhcnQgb2YgdGhpcyBwbGFuKiogIOKAlCB0aGUKdHdvIHNvdXJjZXMgY29leGlzdCB2aWEgdGhlIGRlZHVwIGtleSwgc2VlIMKnMykuCgojIyAyLiBFeGlzdGluZyBGbG93ICh0b2RheSkKCmBgYApzY3JhcGUudHMg4oaSIHNjb3JlLnRzIOKGkiBub3RpZnkudHMgICAgIChjcm9uLCBzY3JhcGUueW1sLCBldmVyeSA2aCkKICDihpIgam9icyAoc291cmNlIElOIGdyZWVuaG91c2V8bGV2ZXJ8YXNoYnl8d2VsbGZvdW5kfHJlbW90ZW9rfHJlbW90aXZlfAogICAgICAgICAgaGltYWxheWFzfG15Y2FyZWVyc2Z1dHVyZXxqc2VhcmNofGFkenVuYXxjYXJlZXJzX3VybCkKICDihpIgam9iX3Njb3JlcyAoa2V5d29yZF9zY29yZSwgYWlfc2NvcmUgMC4wLTEuMCwgdGllZCB0byByb2xlX3NlbGVjdGlvbl9pZAogICAgKyByZXN1bWVfdmVyc2lvbiwgcHJvZHVjZWQgYnkgb25lIE9wZW5Sb3V0ZXIgY2FsbCB2aWEgb3BlbnJvdXRlckNsaWVudC50cykKICDihpIgL2Rhc2hib2FyZCByZWFkcyB2aWEgdGhlIGpvYnMram9iX3Njb3JlcyByZXBvc2l0b3J5IHF1ZXJ5CiAgICAoc29ydGVkIGJ5IG92ZXJhbGxfc2NvcmUgREVTQyBOVUxMUyBMQVNUKQoKam9iLW1hdGNoLXRyYWNrZXIgKHNlcGFyYXRlIHJlcG8sIHNlcGFyYXRlIHNpdGUpOgogIGRhdGEvc3RhdGUuanNvbiAocnVuRGF0ZSwgcnVuTGFiZWwsIGpvYnNbXTogaWQvdGl0bGUvY29tcGFueS9sb2NhdGlvbi95b2UvCiAgICBzYWxhcnkvcmVxdWlyZW1lbnRzL3Njb3JlIDAtMTAwL3N0YW5kb3V0L3RhZ3MvbGluay92ZXJpZnkg4oCUIGFsbCBmcmVlIHRleHQKICAgIGV4Y2VwdCBzY29yZS90YWdzKQogIOKGkiBpbmRleC5odG1sIGZldGNoZXMgaXQgY2xpZW50LXNpZGUKICDihpIgc3RhdHVzL2RlbnlsaXN0L3B1cmdlIHRyYWNrZWQgaW4gbG9jYWxTdG9yYWdlIG9ubHksIHBlciBicm93c2VyCiAg4oaSIG5vIHJlbGF0aW9uc2hpcCB0byBqb2Itc2NyYXBlcidzIERCCmBgYAoKIyMgMy4gTmV3IEZsb3cgKHByb3Bvc2VkKQoKYGBgCkNsYXVkZS1yb3V0aW5lIHNlc3Npb24gcHJvZHVjZXMgYSBzdGF0ZS5qc29uLXNoYXBlZCBmaWxlIChhcyBpdCBkb2VzIHRvZGF5CmZvciBqb2ItbWF0Y2gtdHJhY2tlcikKICDihpIgc2NyaXB0cy9pbXBvcnQtbWFudWFsLW1hdGNoZXMudHMgKG5ldywgbWFudWFsL29uZS1vZmYgZW50cnkgcG9pbnQsCiAgICBzYW1lIGNhdGVnb3J5IGFzIHNjcmlwdHMvZGlzY292ZXI6Y2FyZWVyLXBhZ2VzIOKAlCBub3QgY3Jvbi1zY2hlZHVsZWQpCiAgICAgIOKGkiBtYXBzIGVhY2ggZW50cnkgdG8gYSBgam9ic2Agcm93OgogICAgICAgICAgc291cmNlID0gJ2NsYXVkZV9yb3V0aW5lJyAgIChuZXcgam9iX3NvdXJjZSBlbnVtIHZhbHVlKQogICAgICAgICAgc291cmNlX2pvYl9pZCA9IGVudHJ5LmlkICAgIChhbHJlYWR5IHN0YWJsZS91bmlxdWUgcGVyIGpvYi1tYXRjaC10cmFja2VyJ3MKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBvd24gaWQgc2NoZW1lKQogICAgICAgICAgdGl0bGUsIGNvbXBhbnlfbmFtZSwgbG9jYXRpb25fcmF3IOKGkCBkaXJlY3QKICAgICAgICAgIG1hbnVhbF9zY29yZSA9IGVudHJ5LnNjb3JlICAgICAgICAgICAobmV3IG51bGxhYmxlIGNvbHVtbiwgMC0xMDAgaW50KQogICAgICAgICAgbWFudWFsX3N0YW5kb3V0ID0gZW50cnkuc3RhbmRvdXQgICAgICAgKG5ldyBudWxsYWJsZSBjb2x1bW4sIHRleHQpCiAgICAgICAgICBtYW51YWxfdmVyaWZ5ID0gZW50cnkudmVyaWZ5ICAgICAgICAgICAobmV3IG51bGxhYmxlIGNvbHVtbiwgdGV4dCkKICAgICAgICAgIG1hbnVhbF9yZXF1aXJlbWVudHMgPSBlbnRyeS5yZXF1aXJlbWVudHMgKG5ldyBudWxsYWJsZSBjb2x1bW4sIHRleHQpCiAgICAgICAgICBkZXNjcmlwdGlvbiA9IGVudHJ5LnJlcXVpcmVtZW50cyAoZmFsbGJhY2sgc28gZXhpc3RpbmcgZGVzY3JpcHRpb24KICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgY29uc3VtZXJzIGRvbid0IHNlZSBhIGJsYW5rIGZpZWxkKQogICAgICDihpIgdXBzZXJ0IG9uIChzb3VyY2UsIHNvdXJjZV9qb2JfaWQpIOKAlCBpZGVudGljYWwgZGVkdXAgbWVjaGFuaWNzIHRvCiAgICAgICAgZXZlcnkgb3RoZXIgc291cmNlLCBubyBuZXcgY29uZmxpY3QgbG9naWMKCi9kYXNoYm9hcmQgKFVOQ0hBTkdFRCByb3V0ZSwgdW5jaGFuZ2VkIHBhZ2UgY29tcG9uZW50IHRyZWUpOgogIHJlYWRzIGFuIGBvcmlnaW5gIHNlYXJjaCBwYXJhbSwgZGVmYXVsdCAnc2NyYXBlcicKICAgICAgb3JpZ2luPXNjcmFwZXIgICAgICAgIOKGkiBXSEVSRSBzb3VyY2UgPD4gJ2NsYXVkZV9yb3V0aW5lJyAgKHRvZGF5J3MgYmVoYXZpb3IpCiAgICAgIG9yaWdpbj1jbGF1ZGVfcm91dGluZSAg4oaSIFdIRVJFIHNvdXJjZSA9ICdjbGF1ZGVfcm91dGluZScKICBvbmUgbmV3IHNtYWxsIGNsaWVudCBjb21wb25lbnQgKGBPcmlnaW5Ub2dnbGVgKSBpbiB0aGUgZGFzaGJvYXJkIGhlYWRlcgogIHVwZGF0ZXMgdGhlIGBvcmlnaW5gIHNlYXJjaCBwYXJhbTsgbm8gbmV3IHBhZ2UsIG5vIG5ldyByb3V0ZQoKRXZlcnl0aGluZyBlbHNlIChzY3JhcGUvc2NvcmUvbm90aWZ5IGNyb24sIC9hbmFseXRpY3MsIC9yb2xlcywgL3NldHRpbmdzKQpVTkNIQU5HRUQuCmBgYAoKIyMgNC4gRGVzaWduIERlY2lzaW9ucwoKIyMjIDQuMSBSZXVzZSBgam9icy5zb3VyY2VgLCBkb24ndCBjcmVhdGUgYSBzZWNvbmQgdGFibGUKCmBzb3VyY2VgIGlzIGFscmVhZHkgYSBgam9iX3NvdXJjZWAgZW51bSBkaWZmZXJlbnRpYXRpbmcgcGlwZWxpbmVzCihgZ3JlZW5ob3VzZSB8IGxldmVyIHwgLi4uIHwganNlYXJjaCB8IGFkenVuYSB8IGNhcmVlcnNfdXJsYCksIHdpdGgKYFVOSVFVRShzb3VyY2UsIHNvdXJjZV9qb2JfaWQpYCBhcyB0aGUgb25seSBkZWR1cCBrZXkuIEFkZGluZwpgY2xhdWRlX3JvdXRpbmVgIGFzIG9uZSBtb3JlIHZhbHVlIGlzIHRoZSBzYW1lIHNoYXBlIG9mIGNoYW5nZSBhcyB0aGUKYGpzZWFyY2hgL2BhZHp1bmFgL2BjYXJlZXJzX3VybGAgYWRkaXRpb24gaW4KYDIwMjYwNzE1MDAwMDAxX2pzZWFyY2hfYWR6dW5hX2NhcmVlcnNfdXJsX3NvdXJjZXMuc3FsYC4KCioqQWx0ZXJuYXRpdmUgY29uc2lkZXJlZDoqKiBhIHNlcGFyYXRlIGBtYW51YWxfam9ic2AgdGFibGUuIFJlamVjdGVkIOKAlCB0aGUKYEpvYmAgZW50aXR5ICh0aXRsZS9jb21wYW55L2xvY2F0aW9uL2xpbmspIGlzID44MCUgaWRlbnRpY2FsLCBzbyBhIHNlY29uZAp0YWJsZSB3b3VsZCBiZSBhIGR1cGxpY2F0ZWQgRFRPL3R5cGUgdW5kZXIgYENMQVVERS5tZGAncyBydWxlcywgYW5kIGV2ZXJ5CmRhc2hib2FyZCBxdWVyeSwgZmlsdGVyLCBhbmQgc3RhdHVzIChgam9iX3N0YXRlYCkgbWVjaGFuaXNtIHdvdWxkIG5lZWQgYQpzZWNvbmQgaW1wbGVtZW50YXRpb24uCgojIyMgNC4yIE5ldyBudWxsYWJsZSBjb2x1bW5zIG9uIGBqb2JzYCwgbm90IGEgcmV1c2VkIGBqb2Jfc2NvcmVzYCByb3cKCmBqb2Jfc2NvcmVzYCBpcyBzaGFwZWQgYXJvdW5kIHRoZSBhdXRvbWF0ZWQgcGlwZWxpbmUgc3BlY2lmaWNhbGx5OgpgVU5JUVVFKGpvYl9pZCwgcm9sZV9zZWxlY3Rpb25faWQsIHJlc3VtZV92ZXJzaW9uKWAsIGBrZXl3b3JkX3Njb3JlYC9gYWlfc2NvcmVgCmFzIDAuMOKAkzEuMCBmbG9hdHMsIHBsdXMgYG1vZGVsYC9gdG9rZW5zX2lucHV0YC9gdG9rZW5zX291dHB1dGAvCmBlc3RpbWF0ZWRfY29zdF91c2RgL2ByZXRyeV9jb3VudGAgdGhhdCBvbmx5IG1lYW4gc29tZXRoaW5nIGZvciBhIHJlYWwKT3BlblJvdXRlciBjYWxsLiBUaGUgQ2xhdWRlLXJvdXRpbmUncyBgc2NvcmVgIGlzIGEgc2luZ2xlIGFkIGhvYyAwwqAxMDAKanVkZ21lbnQgd2l0aCBubyByb2xlL3Jlc3VtZSBsaW5rYWdlIGFuZCBubyBuYXJyYXRpdmUtZmllbGQgaG9tZSBhbnl3aGVyZSBpbgp0aGUgY3VycmVudCBzY2hlbWEgKGBzdGFuZG91dGAsIGB2ZXJpZnlgIGRvbid0IGV4aXN0IG9uIGFueSB0YWJsZSkuCgoqKkFsdGVybmF0aXZlIGNvbnNpZGVyZWQ6KiogaW5zZXJ0IGEgYGpvYl9zY29yZXNgIHJvdyBwZXIgbWFudWFsIG1hdGNoIHdpdGggYQpwbGFjZWhvbGRlciBgcm9sZV9zZWxlY3Rpb25faWRgL2ByZXN1bWVfdmVyc2lvbmAuIFJlamVjdGVkIOKAlCB3b3VsZCByZXF1aXJlCmZhYnJpY2F0aW5nIEZLcyB0aGF0IGRvbid0IGNvcnJlc3BvbmQgdG8gYW55dGhpbmcgcmVhbCwgYW5kIHdvdWxkIG1peCBhCjDigJMxMDAgc2NhbGUgaW50byBhIGNvbHVtbiB3aG9zZSBvbmx5IG90aGVyIHZhbHVlcyBhcmUgMC4wwqExLjAsIGNvcnJ1cHRpbmcKYG92ZXJhbGxfc2NvcmUgREVTQ2AgYXMgYSBzb3J0IGtleSBpZiB0aGUgdHdvIGFyZSBldmVyIGNvbXBhcmVkLiBOZXcgbnVsbGFibGUKY29sdW1ucyBkaXJlY3RseSBvbiBgam9ic2AgKGBtYW51YWxfc2NvcmVgLCBgbWFudWFsX3N0YW5kb3V0YCwKYG1hbnVhbF92ZXJpZnlgLCBgbWFudWFsX3JlcXVpcmVtZW50c2ApIGFyZSBhZGRpdGl2ZSBhbmQgbmV2ZXIgdG91Y2hlZCBieQp0aGUgYXV0b21hdGVkIHBpcGVsaW5lJ3MgcmVhZC93cml0ZSBwYXRocy4KCiMjIyA0LjMgT25lIGRhc2hib2FyZCArIGEgc2VhcmNoLXBhcmFtIHRvZ2dsZSwgbm90IHR3byBkYXNoYm9hcmQgdGFicwoKKipBbHRlcm5hdGl2ZSBjb25zaWRlcmVkOioqIGEgc2Vjb25kIGAvZGFzaGJvYXJkLW1hbnVhbGAgcm91dGUgb3IgdGFiLgpSZWplY3RlZCDigJQgZHVwbGljYXRlcyB0aGUgcGFnZSwgdGhlIHF1ZXJ5IGNvbXBvc2l0aW9uLCBhbmQgdGhlIGZpbHRlciBVSSBmb3IKd2hhdCBpcyByZWFsbHkgb25lIG1vcmUgZmlsdGVyIHZhbHVlIGFsb25nc2lkZSB0aGUgZXhpc3RpbmcgYGlzX2FjdGl2ZWAgLwpgbG9jYXRpb25fdGFnc2AgLyBgaW5lbGlnaWJsZV9yZWFzb25gIGZpbHRlcnMgdGhlIGRhc2hib2FyZCBhbHJlYWR5IGFwcGxpZXMuCkEgdG9nZ2xlIGlzIGNvbnNpc3RlbnQgd2l0aCBob3cgdGhvc2UgZmlsdGVycyBhbHJlYWR5IHdvcmsuCgojIyMgNC40IGBjbGF1ZGVfcm91dGluZWAgaXMgZXhjbHVkZWQgZnJvbSBzb3VyY2UtaGVhbHRoIC8gY29tcGFueSBpdGVyYXRpb24KClNhbWUgcGF0dGVybiBhcyBgY2FyZWVyc191cmxgIChBRC0zNSk6IGl0J3MgYSB2YWxpZCBgam9iX3NvdXJjZWAgZW51bSB2YWx1ZSwKYnV0IGl0IGhhcyBubyBgY29tcGFuaWVzYCByb3csIG5vIHByb2JlLCBhbmQgaXNuJ3QgYSAiYm9hcmQiIOKAlCBpdCBtdXN0IGJlCmV4Y2x1ZGVkIGZyb20gYEpPQl9TT1VSQ0VTYC1kcml2ZW4gaXRlcmF0aW9uIChzb3VyY2UtaGVhbHRoIGNoZWNrcywKYC9hbmFseXRpY3NgIHBlci1zb3VyY2UgcHJvYmUgdGFibGUpIHRoZSBzYW1lIHdheSBgY2FyZWVyc191cmxgIGFscmVhZHkgaXMsCm9yIHRob3NlIGNoZWNrcyB3aWxsIHRyeSB0byBwcm9iZSBhIGhlYWx0aCBlbmRwb2ludCB0aGF0IGRvZXNuJ3QgZXhpc3QuCgojIyMgNC41IE5vIHRydW5jYXRpb24KClRoZSBkZWR1cCBrZXkgaXMgYChzb3VyY2UsIHNvdXJjZV9qb2JfaWQpYC4gYGNsYXVkZV9yb3V0aW5lYCByb3dzIGNhbiBuZXZlcgpjb2xsaWRlIHdpdGggZXhpc3Rpbmcgc2NyYXBlciByb3dzIHJlZ2FyZGxlc3Mgb2YgaG93IG11Y2ggb3IgaG93IGxpdHRsZQpzY3JhcGVyIGhpc3RvcnkgZXhpc3RzLiBUcnVuY2F0aW5nIGBqb2JzYCB3YXMgcmFpc2VkIGFzIGFuIG9wdGlvbiBidXQgYWRkcwpubyBjYXBhYmlsaXR5IHRoaXMgcGxhbiBuZWVkcyDigJQgbm90ZWQgaGVyZSBzbyBhIGZ1dHVyZSBzZXNzaW9uIGRvZXNuJ3QKbWlzdGFrZSBpdCBmb3IgYSBwcmVyZXF1aXNpdGUuCgojIyA1LiBGaWxlcyBFeHBlY3RlZCB0byBDaGFuZ2UgKG5vdCB5ZXQgY3JlYXRlZCkKCiMjIyBOZXcKCnwgRmlsZSB8IFB1cnBvc2UgfAp8LS0tfC0tLXwKfCBgc3VwYWJhc2UvbWlncmF0aW9ucy88dGltZXN0YW1wPl9tYW51YWxfam9iX21hdGNoZXMuc3FsYCB8IEFkZCBgY2xhdWRlX3JvdXRpbmVgIHRvIGBqb2Jfc291cmNlYCBlbnVtOyBhZGQgYG1hbnVhbF9zY29yZWAsIGBtYW51YWxfc3RhbmRvdXRgLCBgbWFudWFsX3ZlcmlmeWAsIGBtYW51YWxfcmVxdWlyZW1lbnRzYCBudWxsYWJsZSBjb2x1bW5zIHRvIGBqb2JzYCB8CnwgYHNjcmlwdHMvaW1wb3J0LW1hbnVhbC1tYXRjaGVzLnRzYCB8IFJlYWRzIGEgc3RhdGUuanNvbi1zaGFwZWQgZmlsZSwgdXBzZXJ0cyBpbnRvIGBqb2JzYCB3aXRoIGBzb3VyY2U9J2NsYXVkZV9yb3V0aW5lJ2A7IHNlcnZpY2Utcm9sZSBrZXkgdXNhZ2Ugc3RheXMgaW4gYHNjcmlwdHMvYCBwZXIgdGhlIGV4aXN0aW5nIGJvdW5kYXJ5IHJ1bGUgfAp8IGBzcmMvY29tcG9uZW50cy9kYXNoYm9hcmQvT3JpZ2luVG9nZ2xlLnRzeGAgfCBDbGllbnQgY29tcG9uZW50OyByZWFkcy93cml0ZXMgdGhlIGBvcmlnaW5gIHNlYXJjaCBwYXJhbSB8CnwgYHNjcmlwdHMvaW1wb3J0LW1hbnVhbC1tYXRjaGVzLnRlc3QudHNgIHwgVW5pdCB0ZXN0cyBmb3IgdGhlIG1hcHBpbmcvdXBzZXJ0IGxvZ2ljIHwKfCBgZG9jcy90YXNrcy9tYW51YWwtam9iLW1hdGNoZXMubWRgIHwgVGhpcyBkb2N1bWVudCB8CgojIyMgTW9kaWZpZWQKCnwgRmlsZSB8IENoYW5nZSB8CnwtLS18LS0tfAp8IGBzcmMvZmVhdHVyZXMvam9icy9kb21haW4vdHlwZXMudHNgIChvciBlcXVpdmFsZW50KSB8IEFkZCBgbWFudWFsX3Njb3JlYC9gbWFudWFsX3N0YW5kb3V0YC9gbWFudWFsX3ZlcmlmeWAvYG1hbnVhbF9yZXF1aXJlbWVudHNgIHRvIHRoZSBgSm9iYCB0eXBlOyBhZGQgYGNsYXVkZV9yb3V0aW5lYCB0byB0aGUgc291cmNlIHVuaW9uIHwKfCBEYXNoYm9hcmQgcmVwb3NpdG9yeSBxdWVyeSAoYGZpbmRGb3JEYXNoYm9hcmRgIG9yIGVxdWl2YWxlbnQpIHwgQWNjZXB0IGFuIGBvcmlnaW5gIGZpbHRlciBwYXJhbSB8CnwgYHNyYy9hcHAvKHByb3RlY3RlZCkvZGFzaGJvYXJkL3BhZ2UudHN4YCB8IFJlYWQgYG9yaWdpbmAgZnJvbSBgc2VhcmNoUGFyYW1zYCwgcGFzcyB0aHJvdWdoLCByZW5kZXIgYE9yaWdpblRvZ2dsZWAgfAp8IGBzcmMvc2hhcmVkL2RvbWFpbi9lbnVtcy50c2AgKGBKT0JfU09VUkNFU2ApIHwgQ29uZmlybSBgY2xhdWRlX3JvdXRpbmVgIGlzIGV4Y2x1ZGVkLCBtYXRjaGluZyB0aGUgZXhpc3RpbmcgYGNhcmVlcnNfdXJsYCBleGNsdXNpb24gKEFELTM1KSB8CnwgYHN1cGFiYXNlL2RhdGFiYXNlLnR5cGVzLnRzYCB8IEhhbmQtYWRkIHRoZSBuZXcgZW51bSB2YWx1ZSArIGNvbHVtbnMgKG5vIGxpdmUgU3VwYWJhc2UgcHJvamVjdCB0byByZWdlbmVyYXRlIGZyb20sIHBlciBgQUlfSEFORE9GRi5tZGApIHwKfCBgZGVzaWduL2VyZC5tZGAgfCBOZXcgZW51bSB2YWx1ZTsgbmV3IG51bGxhYmxlIGNvbHVtbnMgb24gYEpPQlNgOyBub3RlIG9uIHRoZSBleGNsdXNpb24gZnJvbSBzb3VyY2UtaGVhbHRoIGl0ZXJhdGlvbiB8CnwgYGRlc2lnbi91c2UtY2FzZXMubWRgIHwgTmV3IHVzZSBjYXNlOiBpbXBvcnRpbmcvdmlld2luZyBDbGF1ZGUtcm91dGluZSBtYXRjaGVzIHwKfCBgZGVzaWduL3Njb3BlLm1kYCB8IE5vdGUgdGhlIHNlY29uZCBkYXRhIG9yaWdpbiBhbmQgdGhlIHRvZ2dsZSB8CnwgYGRlc2lnbi9hcGktcmVmZXJlbmNlLm1kYCB8IERvY3VtZW50IHRoZSBuZXcgc2NyaXB0IGVudHJ5IHBvaW50IGlmIGl0J3MgZXhwb3NlZCBhcyBtb3JlIHRoYW4gYSBDTEkgc2NyaXB0IHwKfCBgZG9jcy9kZWNpc2lvbnMubWRgIHwgTmV3IEFEIGVudHJ5IHJlY29yZGluZyA0LjHigJM0LjUgYWJvdmUgKHJhdGlvbmFsZSArIGFsdGVybmF0aXZlcywgbWF0Y2hpbmcgdGhlIGV4aXN0aW5nIEFEIGZvcm1hdCkgfAoKIyMgNi4gVGVzdGluZwoKLSBVbml0OiBgaW1wb3J0LW1hbnVhbC1tYXRjaGVzLnRlc3QudHNgIOKAlCBtYXBzIGEgc2FtcGxlIHN0YXRlLmpzb24gZml4dHVyZSB0bwogIGBqb2JzYCByb3dzIGNvcnJlY3RseSwgZGVkdXBzIG9uIGAoc291cmNlLCBzb3VyY2Vfam9iX2lkKWAsIGxlYXZlcwogIGBtYW51YWxfKmAgZmllbGRzIG51bGwgZm9yIG5vbi1gY2xhdWRlX3JvdXRpbmVgIHJvd3MuCi0gVW5pdDogZGFzaGJvYXJkIHF1ZXJ5IHRlc3Qg4oCUIGBvcmlnaW49c2NyYXBlcmAgZXhjbHVkZXMgYGNsYXVkZV9yb3V0aW5lYAogIHJvd3MgYW5kIHZpY2UgdmVyc2E7IGRlZmF1bHQgKGBvcmlnaW5gIGFic2VudCkgbWF0Y2hlcyB0b2RheSdzIGJlaGF2aW9yCiAgZXhhY3RseSAocmVncmVzc2lvbiBndWFyZCkuCi0gTWFudWFsIHZhbGlkYXRpb24gY2hlY2tsaXN0OgogIDEuIEV4aXN0aW5nIGAvZGFzaGJvYXJkYCBiZWhhdmlvciAobm8gYG9yaWdpbmAgcGFyYW0pIHVuY2hhbmdlZC4KICAyLiBUb2dnbGUgc3dpdGNoZXMgdGhlIHZpc2libGUgc2V0OyBjb3VudHMvcGFnaW5hdGlvbiB1cGRhdGUgYWNjb3JkaW5nbHkuCiAgMy4gYC9hbmFseXRpY3NgIHNvdXJjZS1oZWFsdGggdGFibGUgZG9lc24ndCBhdHRlbXB0IHRvIHByb2JlIGBjbGF1ZGVfcm91dGluZWAuCiAgNC4gUnVubmluZyB0aGUgaW1wb3J0IHNjcmlwdCB0d2ljZSB3aXRoIHRoZSBzYW1lIGlucHV0IGZpbGUgaXMgYSBuby1vcAogICAgIChpZGVtcG90ZW50IHVwc2VydCksIG1hdGNoaW5nIGBmaW5kQnlDb250ZW50SGFzaGAtc3R5bGUgcGFyc2Utb25jZQogICAgIGV4cGVjdGF0aW9ucyBlbHNld2hlcmUgaW4gdGhpcyBjb2RlYmFzZS4KCiMjIDcuIFJpc2tzCgp8IFJpc2sgfCBNaXRpZ2F0aW9uIHwKfC0tLXwtLS18CnwgYG1hbnVhbF9zY29yZWAgKDAtMTAwKSB2aXN1YWxseSBjb25mdXNlZCB3aXRoIGBvdmVyYWxsX3Njb3JlYCAoMC4wLTEuMCkgaWYgYm90aCByZW5kZXIgb24gdGhlIHNhbWUgY2FyZCB8IExhYmVsIGV4cGxpY2l0bHkgaW4gdGhlIFVJICgiTWFudWFsIHNjb3JlIiB2cyAiQUkgc2NvcmUiKTsgbmV2ZXIgc29ydCB0aGUgdHdvIHNjYWxlcyB0b2dldGhlciDigJQgc29ydCBrZXkgaXMgc2NvcGVkIHBlciBgb3JpZ2luYCB8CnwgQSBmdXR1cmUgc2Vzc2lvbiBhZGRzIGBjbGF1ZGVfcm91dGluZWAgdG8gYEpPQl9TT1VSQ0VTYCBieSBoYWJpdCB3aGVuIGFkZGluZyBhIG5ldyBzb3VyY2UgfCBDYWxsIG91dCB0aGUgZXhjbHVzaW9uIGlubGluZSBuZXh0IHRvIGBjYXJlZXJzX3VybGAncyBleGlzdGluZyBBRC0zNSBjb21tZW50IGluIGBlbnVtcy50c2AgfAp8IEltcG9ydCBzY3JpcHQgcnVuIGFnYWluc3QgYSBtYWxmb3JtZWQvcGFydGlhbCBzdGF0ZS5qc29uIHNpbGVudGx5IGRyb3BzIGZpZWxkcyB8IFZhbGlkYXRlIHJlcXVpcmVkIGZpZWxkcyAoYGlkYCwgYHRpdGxlYCwgYGNvbXBhbnlgKSBiZWZvcmUgdXBzZXJ0OyBmYWlsIGxvdWQsIGRvbid0IGluc2VydCBwYXJ0aWFsIHJvd3MgfAoKIyMgOC4gUm9sbGJhY2sgUGxhbgoKMS4gUmVtb3ZlIGBPcmlnaW5Ub2dnbGVgIGFuZCB0aGUgYG9yaWdpbmAgcGFyYW0gaGFuZGxpbmcgZnJvbQogICBgL2Rhc2hib2FyZC9wYWdlLnRzeGAgKHJldmVydCB0byB0b2RheSdzIHNpbmdsZSBxdWVyeSkuCjIuIFJlbW92ZSBgc2NyaXB0cy9pbXBvcnQtbWFudWFsLW1hdGNoZXMudHNgIGFuZCBpdHMgdGVzdC4KMy4gYGNsYXVkZV9yb3V0aW5lYCByb3dzIGNhbiBiZSBkZWxldGVkIGluZGVwZW5kZW50bHkgb2Ygc2NyYXBlciBkYXRhOgogICBgREVMRVRFIEZST00gam9icyBXSEVSRSBzb3VyY2UgPSAnY2xhdWRlX3JvdXRpbmUnYCDigJQgdGhpcyBpcyB0aGUgb25seQogICB0cnVuY2F0aW9uIHRoaXMgcGxhbiBldmVyIG5lZWRzLCBhbmQgaXQncyBzY29wZWQgdG8gdGhlIG5ldyBzb3VyY2UgdmFsdWUKICAgb25seSwgbm90IHRoZSB0YWJsZS4KNC4gVGhlIGVudW0gdmFsdWUgYW5kIHRoZSBmb3VyIG51bGxhYmxlIGNvbHVtbnMgY2FuIHJlbWFpbiB1bnVzZWQg4oCUIFBvc3RncmVTUQogICBlbnVtIHZhbHVlcyBhcmVuJ3QgZHJvcHBhYmxlIHdpdGhvdXQgYSB0eXBlIHJld3JpdGUsIGJ1dCBhbiB1bnVzZWQgdmFsdWUKICAgd2l0aCBubyByb3dzIHJlZmVyZW5jaW5nIGl0IGlzIGhhcm1sZXNzIChzYW1lIGFjY2VwdGVkIHRyYWRlb2ZmIGFzIGFueQogICBvdGhlciB1bnVzZWQgZW51bSB2YWx1ZSkuCgojIyA5LiBGdXR1cmUgRW5oYW5jZW1lbnRzCgotIFB1c2gtYnV0dG9uICJwcm9tb3RlIiBmcm9tIGEgQ2xhdWRlLXJvdXRpbmUgbWF0Y2ggaW50byB0aGUgc2FtZQogIGBqb2Jfc3RhdGVgL3N0YXR1cyB0cmFja2luZyB0aGUgc2NyYXBlciBqb2JzIGFscmVhZHkgdXNlLCByZXBsYWNpbmcKICBqb2ItbWF0Y2gtdHJhY2tlcidzIGxvY2FsU3RvcmFnZS1vbmx5IHN0YXR1cyBlbnRpcmVseS4KLSBSZXRpcmUgdGhlIHN0YW5kYWxvbmUgYGpvYi1tYXRjaC10cmFja2VyYCBHaXRIdWIgUGFnZXMgc2l0ZSBvbmNlIHRoZQogIGRhc2hib2FyZCB0b2dnbGUgY292ZXJzIGl0cyB1c2UgY2FzZSwgcmVkaXJlY3RpbmcgaXQgdG8gam9iLXNjcmFwZXIuCi0gSWYgbWFudWFsLW1hdGNoIHZvbHVtZSBncm93cywgY29uc2lkZXIgd2hldGhlciBgbWFudWFsX3Njb3JlYCBzaG91bGQgYmUKICBub3JtYWxpemVkIHRvIHRoZSBzYW1lIDAuMC0xLjAgc2NhbGUgYXMgYGFpX3Njb3JlYCBmb3IgZWFzaWVyIGNyb3NzLW9yaWdpbgogIGNvbXBhcmlzb24g4oCUIGRlbGliZXJhdGVseSBkZWZlcnJlZCBoZXJlIHNpbmNlIHRoZSB0d28gYXJlIHByb2R1Y2VkIGJ5CiAgZGlmZmVyZW50IHByb2Nlc3NlcyAocmVnZXgvcnVsZXMgKyBvbmUgT3BlblJvdXRlciBjYWxsIHZzLiBhbiBpbnRlcmFjdGl2ZQogIENsYXVkZSBDb2RlIHNlc3Npb24pIGFuZCBjb25mbGF0aW5nIHRoZW0gcHJlbWF0dXJlbHkgaXMgZXhhY3RseSB0aGUgcmlzawogIGZsYWdnZWQgaW4gwqc3Lgo=
+# Manual (Claude-Routine) Job Matches — Design Handoff
+
+> **Status: not implemented.** This document is a pre-implementation design plan,
+> written the same way `docs/tasks/role-packs.md` was before it shipped. It does
+> not modify code, config, or schema. All changes still require the standard
+> domain → application → infrastructure → tests → UI flow per `CLAUDE.md`, and
+> the `design/*.md` updates listed in §8 must land in the same change as the code.
+
+## 1. Problem
+
+Job matches currently come from exactly one pipeline: the GitHub Actions cron
+(`scrape.ts` → `score.ts` → `notify.ts`) writing into Supabase `jobs` /
+`job_scores`, surfaced on `/dashboard`.
+
+A second, independent source of matches exists: **`job-match-tracker`**
+(`sahidhh/job-match-tracker`), a static GitHub Pages site. Its `data/state.json`
+is hand-curated during ad hoc Claude Code sessions ("the Claude routine") —
+the user searches/reads listings interactively and a session writes out
+scored, annotated matches. Per that repo's README, all per-job state (status,
+"not interested" list, 10-day purge) lives in browser `localStorage` only —
+there is no backend, no sync, and no relationship to job-scraper's schema
+today.
+
+The user considers the Claude-routine matches **more accurate** than the
+automated pipeline's `ai_score`, and wants both sources visible in the
+job-scraper dashboard, switchable via one global toggle, without running two
+dashboards and without touching the existing scraper data (explicitly:
+**truncation of `jobs` is not required and is not part of this plan** — the
+two sources coexist via the dedup key, see §3).
+
+## 2. Existing Flow (today)
+
+```
+scrape.ts → score.ts → notify.ts     (cron, scrape.yml, every 6h)
+  → jobs (source IN greenhouse|lever|ashby|wellfound|remoteok|remotive|
+          himalayas|mycareersfuture|jsearch|adzuna|careers_url)
+  → job_scores (keyword_score, ai_score 0.0-1.0, tied to role_selection_id
+    + resume_version, produced by one OpenRouter call via openrouterClient.ts)
+  → /dashboard reads via the jobs+job_scores repository query
+    (sorted by overall_score DESC NULLS LAST)
+
+job-match-tracker (separate repo, separate site):
+  data/state.json (runDate, runLabel, jobs[]: id/title/company/location/yoe/
+    salary/requirements/score 0-100/standout/tags/link/verify — all free text
+    except score/tags)
+  → index.html fetches it client-side
+  → status/denylist/purge tracked in localStorage only, per browser
+  → no relationship to job-scraper's DB
+```
+
+## 3. New Flow (proposed)
+
+```
+Claude-routine session produces a state.json-shaped file (as it does today
+for job-match-tracker)
+  → scripts/import-manual-matches.ts (new, manual/one-off entry point,
+    same category as scripts/discover:career-pages — not cron-scheduled)
+      → maps each entry to a `jobs` row:
+          source = 'claude_routine'   (new job_source enum value)
+          source_job_id = entry.id    (already stable/unique per job-match-tracker's
+                                        own id scheme)
+          title, company_name, location_raw ← direct
+          manual_score = entry.score            (new nullable column, 0-100 int)
+          manual_standout = entry.standout       (new nullable column, text)
+          manual_verify = entry.verify           (new nullable column, text)
+          manual_requirements = entry.requirements (new nullable column, text)
+          description = entry.requirements (fallback so existing description
+                                             consumers don't see a blank field)
+      → upsert on (source, source_job_id) — identical dedup mechanics to
+        every other source, no new conflict logic
+
+/dashboard (UNCHANGED route, unchanged page component tree):
+  reads an `origin` search param, default 'scraper'
+      origin=scraper        → WHERE source <> 'claude_routine'  (today's behavior)
+      origin=claude_routine  → WHERE source = 'claude_routine'
+  one new small client component (`OriginToggle`) in the dashboard header
+  updates the `origin` search param; no new page, no new route
+
+Everything else (scrape/score/notify cron, /analytics, /roles, /settings)
+UNCHANGED.
+```
+
+## 4. Design Decisions
+
+### 4.1 Reuse `jobs.source`, don't create a second table
+
+`source` is already a `job_source` enum differentiating pipelines
+(`greenhouse | lever | ... | jsearch | adzuna | careers_url`), with
+`UNIQUE(source, source_job_id)` as the only dedup key. Adding
+`claude_routine` as one more value is the same shape of change as the
+`jsearch`/`adzuna`/`careers_url` addition in
+`20260715000001_jsearch_adzuna_careers_url_sources.sql`.
+
+**Alternative considered:** a separate `manual_jobs` table. Rejected — the
+`Job` entity (title/company/location/link) is >80% identical, so a second
+table would be a duplicated DTO/type under `CLAUDE.md`'s rules, and every
+dashboard query, filter, and status (`job_state`) mechanism would need a
+second implementation.
+
+### 4.2 New nullable columns on `jobs`, not a reused `job_scores` row
+
+`job_scores` is shaped around the automated pipeline specifically:
+`UNIQUE(job_id, role_selection_id, resume_version)`, `keyword_score`/`ai_score`
+as 0.0–1.0 floats, plus `model`/`tokens_input`/`tokens_output`/
+`estimated_cost_usd`/`retry_count` that only mean something for a real
+OpenRouter call. The Claude-routine's `score` is a single ad hoc 0–100
+judgment with no role/resume linkage and no narrative-field home anywhere in
+the current schema (`standout`, `verify` don't exist on any table).
+
+**Alternative considered:** insert a `job_scores` row per manual match with a
+placeholder `role_selection_id`/`resume_version`. Rejected — would require
+fabricating FKs that don't correspond to anything real, and would mix a
+0–100 scale into a column whose only other values are 0.0–1.0, corrupting
+`overall_score DESC` as a sort key if the two are ever compared. New nullable
+columns directly on `jobs` (`manual_score`, `manual_standout`,
+`manual_verify`, `manual_requirements`) are additive and never touched by
+the automated pipeline's read/write paths.
+
+### 4.3 One dashboard + a search-param toggle, not two dashboard tabs
+
+**Alternative considered:** a second `/dashboard-manual` route or tab.
+Rejected — duplicates the page, the query composition, and the filter UI for
+what is really one more filter value alongside the existing `is_active` /
+`location_tags` / `ineligible_reason` filters the dashboard already applies.
+A toggle is consistent with how those filters already work.
+
+### 4.4 `claude_routine` is excluded from source-health / company iteration
+
+Same pattern as `careers_url` (AD-35): it's a valid `job_source` enum value,
+but it has no `companies` row, no probe, and isn't a "board" — it must be
+excluded from `JOB_SOURCES`-driven iteration (source-health checks,
+`/analytics` per-source probe table) the same way `careers_url` already is,
+or those checks will try to probe a health endpoint that doesn't exist.
+
+### 4.5 No truncation
+
+The dedup key is `(source, source_job_id)`. `claude_routine` rows can never
+collide with existing scraper rows regardless of how much or how little
+scraper history exists. Truncating `jobs` was raised as an option but adds
+no capability this plan needs — noted here so a future session doesn't
+mistake it for a prerequisite.
+
+## 5. Files Expected to Change (not yet created)
+
+### New
+
+| File | Purpose |
+|---|---|
+| `supabase/migrations/<timestamp>_manual_job_matches.sql` | Add `claude_routine` to `job_source` enum; add `manual_score`, `manual_standout`, `manual_verify`, `manual_requirements` nullable columns to `jobs` |
+| `scripts/import-manual-matches.ts` | Reads a state.json-shaped file, upserts into `jobs` with `source='claude_routine'`; service-role key usage stays in `scripts/` per the existing boundary rule |
+| `src/components/dashboard/OriginToggle.tsx` | Client component; reads/writes the `origin` search param |
+| `scripts/import-manual-matches.test.ts` | Unit tests for the mapping/upsert logic |
+| `docs/tasks/manual-job-matches.md` | This document |
+
+### Modified
+
+| File | Change |
+|---|---|
+| `src/features/jobs/domain/types.ts` (or equivalent) | Add `manual_score`/`manual_standout`/`manual_verify`/`manual_requirements` to the `Job` type; add `claude_routine` to the source union |
+| Dashboard repository query (`findForDashboard` or equivalent) | Accept an `origin` filter param |
+| `src/app/(protected)/dashboard/page.tsx` | Read `origin` from `searchParams`, pass through, render `OriginToggle` |
+| `src/shared/domain/enums.ts` (`JOB_SOURCES`) | Confirm `claude_routine` is excluded, matching the existing `careers_url` exclusion (AD-35) |
+| `supabase/database.types.ts` | Hand-add the new enum value + columns (no live Supabase project to regenerate from, per `AI_HANDOFF.md`) |
+| `design/erd.md` | New enum value; new nullable columns on `JOBS`; note on the exclusion from source-health iteration |
+| `design/use-cases.md` | New use case: importing/viewing Claude-routine matches |
+| `design/scope.md` | Note the second data origin and the toggle |
+| `design/api-reference.md` | Document the new script entry point if it's exposed as more than a CLI script |
+| `docs/decisions.md` | New AD entry recording 4.1–4.5 above (rationale + alternatives, matching the existing AD format) |
+
+## 6. Testing
+
+- Unit: `import-manual-matches.test.ts` — maps a sample state.json fixture to
+  `jobs` rows correctly, dedups on `(source, source_job_id)`, leaves
+  `manual_*` fields null for non-`claude_routine` rows.
+- Unit: dashboard query test — `origin=scraper` excludes `claude_routine`
+  rows and vice versa; default (`origin` absent) matches today's behavior
+  exactly (regression guard).
+- Manual validation checklist:
+  1. Existing `/dashboard` behavior (no `origin` param) unchanged.
+  2. Toggle switches the visible set; counts/pagination update accordingly.
+  3. `/analytics` source-health table doesn't attempt to probe `claude_routine`.
+  4. Running the import script twice with the same input file is a no-op
+     (idempotent upsert), matching `findByContentHash`-style parse-once
+     expectations elsewhere in this codebase.
+
+## 7. Risks
+
+| Risk | Mitigation |
+|---|---|
+| `manual_score` (0-100) visually confused with `overall_score` (0.0-1.0) if both render on the same card | Label explicitly in the UI ("Manual score" vs "AI score"); never sort the two scales together — sort key is scoped per `origin` |
+| A future session adds `claude_routine` to `JOB_SOURCES` by habit when adding a new source | Call out the exclusion inline next to `careers_url`'s existing AD-35 comment in `enums.ts` |
+| Import script run against a malformed/partial state.json silently drops fields | Validate required fields (`id`, `title`, `company`) before upsert; fail loud, don't insert partial rows |
+
+## 8. Rollback Plan
+
+1. Remove `OriginToggle` and the `origin` param handling from
+   `/dashboard/page.tsx` (revert to today's single query).
+2. Remove `scripts/import-manual-matches.ts` and its test.
+3. `claude_routine` rows can be deleted independently of scraper data:
+   `DELETE FROM jobs WHERE source = 'claude_routine'` — this is the only
+   truncation this plan ever needs, and it's scoped to the new source value
+   only, not the table.
+4. The enum value and the four nullable columns can remain unused — Postgres
+   enum values aren't droppable without a type rewrite, but an unused value
+   with no rows referencing it is harmless (same accepted tradeoff as any
+   other unused enum value).
+
+## 9. Future Enhancements
+
+- Push-button "promote" from a Claude-routine match into the same
+  `job_state`/status tracking the scraper jobs already use, replacing
+  job-match-tracker's localStorage-only status entirely.
+- Retire the standalone `job-match-tracker` GitHub Pages site once the
+  dashboard toggle covers its use case, redirecting it to job-scraper.
+- If manual-match volume grows, consider whether `manual_score` should be
+  normalized to the same 0.0-1.0 scale as `ai_score` for easier cross-origin
+  comparison — deliberately deferred here since the two are produced by
+  different processes (regex/rules + one OpenRouter call vs. an interactive
+  Claude Code session) and conflating them prematurely is exactly the risk
+  flagged in §7.
