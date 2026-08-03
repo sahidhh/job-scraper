@@ -291,7 +291,8 @@ P4 — Future
 
 ### Data Scope
 
-- **Job sources:** Only the ten cron-driven integrated sources (Greenhouse, Lever, Ashby, Wellfound, RemoteOK, Remotive, Himalayas, MyCareersFuture, JSearch, Adzuna) plus one manual-trigger-only source (the static careers-URL fetcher, `careers_url`). New cron sources require a new adapter implementing the `JobSourceScraper` interface and registration in `registry.ts`.
+- **Job sources:** Only the ten cron-driven integrated sources (Greenhouse, Lever, Ashby, Wellfound, RemoteOK, Remotive, Himalayas, MyCareersFuture, JSearch, Adzuna) plus two manual-trigger-only sources: the static careers-URL fetcher (`careers_url`) and the "Claude routine" import (`claude_routine`, `scripts/import-manual-matches.ts` — docs/tasks/manual-job-matches.md, AD-65). New cron sources require a new adapter implementing the `JobSourceScraper` interface and registration in `registry.ts`.
+- **Second data origin:** `/dashboard` has a Scraper/Claude-routine toggle (`origin` search param) so ad hoc, more-trusted matches from the "Claude routine" — an interactive Claude Code session that searches/reads/scores job listings, previously written only to the separate `job-match-tracker` repo's browser-localStorage `state.json` — are visible alongside the automated pipeline's matches without a second dashboard or touching scraper data. The two never collide (dedup key `(source, source_job_id)`); no truncation of `jobs` is required or supported by this feature.
 - **Geographies:** India, Singapore, UAE, Remote. Adding a new geography requires a migration to extend the `location_tag` enum and updating the `tagLocations()` function.
 - **Skill dictionary:** Fixed canonical list. New skills require updating `src/shared/domain/skillsDictionary.ts`.
 

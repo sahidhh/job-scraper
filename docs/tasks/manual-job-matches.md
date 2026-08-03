@@ -71,8 +71,16 @@ for job-match-tracker)
 
 /dashboard (UNCHANGED route, unchanged page component tree):
   reads an `origin` search param, default 'scraper'
-      origin=scraper        → WHERE source <> 'claude_routine'  (today's behavior)
+      origin=scraper         → WHERE source <> 'claude_routine'  (today's behavior)
       origin=claude_routine  → WHERE source = 'claude_routine'
+  existing filters (is_active, location_tags, ineligible_reason) apply to
+  BOTH origins unchanged — import gives manual rows sane defaults
+  (is_active=true, location_tags derived from location_raw via the same
+  tagging logic scrape.ts already uses) so one filter implementation covers
+  both, per §4.3
+  sort key branches on `origin`, not a new param:
+      origin=scraper         → overall_score DESC NULLS LAST (unchanged)
+      origin=claude_routine  → manual_score DESC NULLS LAST
   one new small client component (`OriginToggle`) in the dashboard header
   updates the `origin` search param; no new page, no new route
 
@@ -116,6 +124,10 @@ columns directly on `jobs` (`manual_score`, `manual_standout`,
 `manual_verify`, `manual_requirements`) are additive and never touched by
 the automated pipeline's read/write paths.
 
+`manual_score` gets a `CHECK (manual_score IS NULL OR manual_score BETWEEN 0
+AND 100)` constraint in the migration itself — enforced at the DB regardless
+of entry point, not just validated in the import script.
+
 ### 4.3 One dashboard + a search-param toggle, not two dashboard tabs
 
 **Alternative considered:** a second `/dashboard-manual` route or tab.
@@ -150,6 +162,7 @@ mistake it for a prerequisite.
 | `scripts/import-manual-matches.ts` | Reads a state.json-shaped file, upserts into `jobs` with `source='claude_routine'`; service-role key usage stays in `scripts/` per the existing boundary rule |
 | `src/components/dashboard/OriginToggle.tsx` | Client component; reads/writes the `origin` search param |
 | `scripts/import-manual-matches.test.ts` | Unit tests for the mapping/upsert logic |
+| `.claude/skills/manual-job-routine/SKILL.md` | Instructions for the ad hoc Claude-routine session: run the job search/read/score routine as today, but write output as a state.json-shaped file under `reports/manual-matches/<date>.json` instead of (or in addition to) `job-match-tracker`'s `data/state.json`, then invoke `npm run import:manual-matches -- <path>` |
 | `docs/tasks/manual-job-matches.md` | This document |
 
 ### Modified
@@ -161,20 +174,28 @@ mistake it for a prerequisite.
 | `src/app/(protected)/dashboard/page.tsx` | Read `origin` from `searchParams`, pass through, render `OriginToggle` |
 | `src/shared/domain/enums.ts` (`JOB_SOURCES`) | Confirm `claude_routine` is excluded, matching the existing `careers_url` exclusion (AD-35) |
 | `supabase/database.types.ts` | Hand-add the new enum value + columns (no live Supabase project to regenerate from, per `AI_HANDOFF.md`) |
-| `design/erd.md` | New enum value; new nullable columns on `JOBS`; note on the exclusion from source-health iteration |
+| `design/erd.md` | New enum value; new nullable columns on `JOBS` (incl. the `manual_score` CHECK constraint); note on the exclusion from source-health iteration |
 | `design/use-cases.md` | New use case: importing/viewing Claude-routine matches |
 | `design/scope.md` | Note the second data origin and the toggle |
 | `design/api-reference.md` | Document the new script entry point if it's exposed as more than a CLI script |
+| `design/security.md` | New service-role entry point (`scripts/import-manual-matches.ts`) — same `scripts/`-only boundary rule as existing scripts, recorded per new-entry-point convention |
 | `docs/decisions.md` | New AD entry recording 4.1–4.5 above (rationale + alternatives, matching the existing AD format) |
+| `package.json` | New `import:manual-matches` script entry (`tsx scripts/import-manual-matches.ts`), following the existing `backfill:*`/`discover:career-pages` naming convention |
 
 ## 6. Testing
 
 - Unit: `import-manual-matches.test.ts` — maps a sample state.json fixture to
   `jobs` rows correctly, dedups on `(source, source_job_id)`, leaves
-  `manual_*` fields null for non-`claude_routine` rows.
+  `manual_*` fields null for non-`claude_routine` rows, sets
+  `is_active=true` and derives `location_tags` from `location_raw` the same
+  way `scrape.ts` does.
 - Unit: dashboard query test — `origin=scraper` excludes `claude_routine`
   rows and vice versa; default (`origin` absent) matches today's behavior
-  exactly (regression guard).
+  exactly (regression guard); `origin=claude_routine` sorts by
+  `manual_score DESC NULLS LAST` while `origin=scraper` still sorts by
+  `overall_score DESC NULLS LAST`.
+- DB: migration test/manual check — inserting `manual_score` outside
+  0–100 violates the `CHECK` constraint.
 - Manual validation checklist:
   1. Existing `/dashboard` behavior (no `origin` param) unchanged.
   2. Toggle switches the visible set; counts/pagination update accordingly.

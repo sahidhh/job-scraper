@@ -50,7 +50,7 @@ interface DashboardJobRow extends Omit<JobRow, "description"> {
 // Columns selected in findForDashboard; mirrors DashboardJobRow but without
 // the embedded foreign-table columns (those are added by PostgREST).
 const DASHBOARD_SELECT =
-  "id, source, source_job_id, company_id, company_name, canonical_company_name, title, location_raw, location_tags, url, min_years, posted_at, first_seen_at, last_seen_at, updated_at, is_active, inactive_reason, ineligible_reason, fingerprint, contact_email, contact_email_category, contact_email_confidence, job_scores!left(keyword_score, ai_score, ai_reasoning, overall_score, overall_score_reasons, retry_count, role_selection_id), job_state!left(status_id, job_statuses(id, label, color))";
+  "id, source, source_job_id, company_id, company_name, canonical_company_name, title, location_raw, location_tags, url, min_years, posted_at, first_seen_at, last_seen_at, updated_at, is_active, inactive_reason, ineligible_reason, fingerprint, contact_email, contact_email_category, contact_email_confidence, manual_score, manual_standout, manual_verify, manual_requirements, job_scores!left(keyword_score, ai_score, ai_reasoning, overall_score, overall_score_reasons, retry_count, role_selection_id), job_state!left(status_id, job_statuses(id, label, color))";
 
 const UPSERT_BATCH_SIZE = 500;
 
@@ -91,6 +91,10 @@ function toJob(row: JobRow): Job {
     securityClearance: row.security_clearance,
     urgentHiring: row.urgent_hiring,
     ineligibleReason: row.ineligible_reason as Job["ineligibleReason"],
+    manualScore: row.manual_score,
+    manualStandout: row.manual_standout,
+    manualVerify: row.manual_verify,
+    manualRequirements: row.manual_requirements,
   };
 }
 
@@ -113,6 +117,20 @@ function byOverallScoreDescThenPostedAt(a: JobWithScore, b: JobWithScore): numbe
   const pa = a.postedAt ?? "";
   const pb = b.postedAt ?? "";
   return pa < pb ? 1 : pa > pb ? -1 : 0; // newer posted_at first
+}
+
+// Claude-routine rows never have a job_scores row (overallScore always
+// null), so origin='claude_routine' ranks by manualScore instead -- same
+// null-handling/tiebreaker shape as byOverallScoreDescThenPostedAt above.
+function byManualScoreDescThenPostedAt(a: JobWithScore, b: JobWithScore): number {
+  if (a.manualScore !== b.manualScore) {
+    if (a.manualScore === null) return 1;
+    if (b.manualScore === null) return -1;
+    return b.manualScore - a.manualScore;
+  }
+  const pa = a.postedAt ?? "";
+  const pb = b.postedAt ?? "";
+  return pa < pb ? 1 : pa > pb ? -1 : 0;
 }
 
 function toDashboardJob(row: DashboardJobRow): JobWithScore {
@@ -145,6 +163,10 @@ function toDashboardJob(row: DashboardJobRow): JobWithScore {
     statusId: status?.id ?? null,
     statusLabel: status?.label ?? null,
     statusColor: status?.color ?? null,
+    manualScore: row.manual_score,
+    manualStandout: row.manual_standout,
+    manualVerify: row.manual_verify,
+    manualRequirements: row.manual_requirements,
   };
 }
 
@@ -191,6 +213,10 @@ function toUpsertRow(job: NormalizedJob, fingerprint: string): JobInsertRow {
     security_clearance: job.securityClearance ?? false,
     urgent_hiring: job.urgentHiring ?? false,
     ineligible_reason: job.ineligibleReason ?? null,
+    manual_score: job.manualScore ?? null,
+    manual_standout: job.manualStandout ?? null,
+    manual_verify: job.manualVerify ?? null,
+    manual_requirements: job.manualRequirements ?? null,
   };
 }
 
@@ -468,6 +494,14 @@ export class SupabaseJobRepository implements JobRepository {
     if (filters.sources && filters.sources.length > 0) {
       query = query.in("source", filters.sources);
     }
+    // Default/'scraper' excludes claude_routine rows (today's behavior,
+    // unchanged); 'claude_routine' shows only those rows (docs/tasks/
+    // manual-job-matches.md §3).
+    if (filters.origin === "claude_routine") {
+      query = query.eq("source", "claude_routine");
+    } else {
+      query = query.neq("source", "claude_routine");
+    }
     if (filters.remoteOnly) {
       // Narrow to postings tagged remote. ANDs with any locationTags filter
       // (two overlaps) -- intentional: "remote only" is a hard narrowing.
@@ -544,7 +578,9 @@ export class SupabaseJobRepository implements JobRepository {
     const { data, error } = await query.returns<DashboardJobRow[]>();
     if (error) throw toAppError(error);
 
-    const ranked = (data ?? []).map(toDashboardJob).sort(byOverallScoreDescThenPostedAt);
+    const comparator =
+      filters.origin === "claude_routine" ? byManualScoreDescThenPostedAt : byOverallScoreDescThenPostedAt;
+    const ranked = (data ?? []).map(toDashboardJob).sort(comparator);
 
     // Stats are computed over the whole filtered set (`ranked`), not the page
     // slice, and cost nothing extra -- the rows are already in memory. This

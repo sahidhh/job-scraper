@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { DashboardNavigationProvider } from "@/components/dashboard/DashboardNavigationProvider";
 import { FilterBar } from "@/components/dashboard/FilterBar";
 import { JobsTable } from "@/components/dashboard/JobsTable";
+import { OriginToggle } from "@/components/dashboard/OriginToggle";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { SupabaseCompanyRepository } from "@/features/companies/infrastructure/SupabaseCompanyRepository";
@@ -35,6 +36,7 @@ type DashboardSearchParams = {
   ineligible?: string;
   lowmatch?: string;
   limit?: string;
+  origin?: string;
 };
 
 interface DashboardPageProps {
@@ -81,6 +83,9 @@ function parseFilters(params: DashboardSearchParams): JobFilters {
   if (params.lowmatch === "1") {
     filters.includeLowMatch = true;
   }
+  if (params.origin === "claude_routine") {
+    filters.origin = "claude_routine";
+  }
 
   return filters;
 }
@@ -103,6 +108,7 @@ function loadMoreHref(params: DashboardSearchParams, currentLimit: number): stri
   if (params.remote) next.set("remote", params.remote);
   if (params.ineligible) next.set("ineligible", params.ineligible);
   if (params.lowmatch) next.set("lowmatch", params.lowmatch);
+  if (params.origin) next.set("origin", params.origin);
   next.set("limit", String(currentLimit + DEFAULT_JOBS_LIMIT));
   return `/dashboard?${next.toString()}`;
 }
@@ -334,6 +340,7 @@ async function JobsSection({
       )}
 
       <DashboardNavigationProvider>
+        <OriginToggle />
         <FilterBar hasAiScores={stats.scoredCount > 0} statuses={statuses} effectiveMaxYears={effectiveFilters.maxYears ?? null} />
         <JobsTable jobs={jobs} statuses={statuses} />
       </DashboardNavigationProvider>

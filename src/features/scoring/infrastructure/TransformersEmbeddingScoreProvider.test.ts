@@ -45,6 +45,10 @@ function makeJob(overrides: Partial<Job> = {}): Job {
     securityClearance: false,
     urgentHiring: false,
     ineligibleReason: null,
+    manualScore: null,
+    manualStandout: null,
+    manualVerify: null,
+    manualRequirements: null,
     ...overrides,
   };
 }

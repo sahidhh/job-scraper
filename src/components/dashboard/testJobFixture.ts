@@ -31,6 +31,10 @@ export function makeJob(overrides: Partial<JobWithScore> = {}): JobWithScore {
     statusId: null,
     statusLabel: null,
     statusColor: null,
+    manualScore: null,
+    manualStandout: null,
+    manualVerify: null,
+    manualRequirements: null,
     ...overrides,
   };
 }

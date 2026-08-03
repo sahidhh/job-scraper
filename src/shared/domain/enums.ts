@@ -12,7 +12,8 @@ export type JobSource =
   | "mycareersfuture"
   | "jsearch"
   | "adzuna"
-  | "careers_url";
+  | "careers_url"
+  | "claude_routine";
 
 // The set of sources with an *expected regular cadence* -- iterated by
 // getSourceHealthReport (source-health tracking, staleness detection) and
@@ -23,6 +24,11 @@ export type JobSource =
 // source (scripts/scrape-careers-url.ts, not in sourceScrapers/registry.ts)
 // with no expected run cadence, so including it here would make every
 // source-health check flag it `isStale` forever after its first-ever run.
+// `claude_routine` is excluded for the identical reason (docs/tasks/
+// manual-job-matches.md §4.4): rows come from scripts/import-manual-
+// matches.ts, a one-off script never in sourceScrapers/registry.ts, and it
+// has no `companies` row/probe either -- a future source addition should
+// keep both exclusions together here, not just add the new one.
 export const JOB_SOURCES: readonly JobSource[] = [
   "greenhouse",
   "lever",
