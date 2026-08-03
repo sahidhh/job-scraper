@@ -333,6 +333,10 @@ export type Database = {
           last_seen_at: string
           location_raw: string
           location_tags: Database["public"]["Enums"]["location_tag"][]
+          manual_requirements: string | null
+          manual_score: number | null
+          manual_standout: string | null
+          manual_verify: string | null
           min_years: number | null
           posted_at: string | null
           relocation_assistance: boolean | null
@@ -370,6 +374,10 @@ export type Database = {
           last_seen_at?: string
           location_raw?: string
           location_tags?: Database["public"]["Enums"]["location_tag"][]
+          manual_requirements?: string | null
+          manual_score?: number | null
+          manual_standout?: string | null
+          manual_verify?: string | null
           min_years?: number | null
           posted_at?: string | null
           relocation_assistance?: boolean | null
@@ -407,6 +415,10 @@ export type Database = {
           last_seen_at?: string
           location_raw?: string
           location_tags?: Database["public"]["Enums"]["location_tag"][]
+          manual_requirements?: string | null
+          manual_score?: number | null
+          manual_standout?: string | null
+          manual_verify?: string | null
           min_years?: number | null
           posted_at?: string | null
           relocation_assistance?: boolean | null
@@ -806,6 +818,7 @@ export type Database = {
         | "jsearch"
         | "adzuna"
         | "careers_url"
+        | "claude_routine"
       location_tag: "india" | "singapore" | "uae" | "remote"
       role_map_source: "seed" | "ai"
       scrape_run_status: "success" | "partial" | "failed"
@@ -949,6 +962,7 @@ export const Constants = {
         "jsearch",
         "adzuna",
         "careers_url",
+        "claude_routine",
       ],
       location_tag: ["india", "singapore", "uae", "remote"],
       role_map_source: ["seed", "ai"],

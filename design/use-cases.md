@@ -427,6 +427,36 @@ the displayed value never diverges from the stored one (`design/architecture.md`
 
 ---
 
+### UC-20 — Import Claude-Routine Job Matches (docs/tasks/manual-job-matches.md, decisions.md AD-65)
+
+**Actor:** Operator (a Claude Code session running the "Claude routine" per `.claude/skills/manual-job-routine/SKILL.md`)
+**Trigger:** Manual run of `npm run import:manual-matches -- <path-to-state.json>`
+**Precondition:** The routine has already produced a state.json-shaped file (search, read, score, annotate — same process as `job-match-tracker`'s own workflow) at the given path
+**Main Flow:**
+1. Script reads the file and maps each `jobs[]` entry to a `jobs` row (`mapManualMatch`): `source = 'claude_routine'`, `source_job_id = entry.id`, `manual_score`/`manual_standout`/`manual_verify`/`manual_requirements` populated, `location_tags` derived via the same `tagLocations` scrape.ts uses
+2. Upserts on `(source, source_job_id)` — identical dedup mechanics to every other source; re-running with the same file is a no-op
+3. Entries missing `id`/`title`/`company` fail the whole run loudly rather than silently dropping a partial row
+
+**Postcondition:** Matches appear on `/dashboard` under the "Claude routine" origin toggle (UC-02b), ranked by `manual_score` descending
+
+---
+
+### UC-02b — Switch Dashboard Data Origin (docs/tasks/manual-job-matches.md)
+
+**Actor:** User
+**Trigger:** User clicks the Scraper/Claude routine toggle on `/dashboard`
+**Precondition:** Authenticated
+**Main Flow:**
+1. Toggle sets/clears the `origin` search param (`OriginToggle`)
+2. `origin` absent or `scraper` (default): dashboard excludes `source = 'claude_routine'` rows and sorts by `overall_score` descending — today's behavior, unchanged
+3. `origin=claude_routine`: dashboard shows only `source = 'claude_routine'` rows, sorted by `manual_score` descending; all other filters (location, status, max years, muted companies/keywords/employment-types) still apply, same as the scraper view
+
+**Postcondition:** The URL fully describes which origin is visible, same reload/back-forward/link-sharing guarantee as UC-02
+
+**Known limitation:** `minAiScore` has no effect on the Claude-routine view — those rows never have a `job_scores` row, so a `minAiScore` filter combined with `origin=claude_routine` returns zero results (`design/limitations.md`)
+
+---
+
 ## 3. User Story Summary
 
 | Story ID | As a user, I want to… | So that… |

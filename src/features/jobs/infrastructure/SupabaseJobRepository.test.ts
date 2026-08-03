@@ -59,6 +59,10 @@ const jobRow: JobRow = {
   security_clearance: false,
   urgent_hiring: false,
   ineligible_reason: null,
+  manual_score: null,
+  manual_standout: null,
+  manual_verify: null,
+  manual_requirements: null,
 };
 
 describe("SupabaseJobRepository", () => {
@@ -244,6 +248,10 @@ describe("SupabaseJobRepository", () => {
           relocationAssistance: null,
           securityClearance: false,
           urgentHiring: false,
+          manualScore: null,
+          manualStandout: null,
+          manualVerify: null,
+          manualRequirements: null,
         },
       ]);
 
@@ -518,6 +526,35 @@ describe("SupabaseJobRepository", () => {
       const result = await repo.findForDashboard("role-selection-1", {}, 50, 1, 0.25, 3);
 
       expect(result.jobs.map((j) => j.id)).toEqual(["newer", "older"]);
+    });
+
+    it("excludes claude_routine rows by default (origin absent) -- regression guard", async () => {
+      const { client, builder } = mockSupabaseClient({ data: [{ ...jobRow, job_scores: [] }], error: null });
+      const repo = new SupabaseJobRepository(client);
+
+      await repo.findForDashboard("role-selection-1", {}, 50, 1, 0.25, 3);
+
+      expect(builder.neq).toHaveBeenCalledWith("source", "claude_routine");
+      expect(builder.eq).not.toHaveBeenCalledWith("source", "claude_routine");
+    });
+
+    it("restricts to claude_routine rows and sorts by manual_score desc when origin='claude_routine'", async () => {
+      const { client, builder } = mockSupabaseClient({
+        data: [
+          { ...jobRow, id: "low", source: "claude_routine", manual_score: 40, job_scores: [] },
+          { ...jobRow, id: "top", source: "claude_routine", manual_score: 90, job_scores: [] },
+          { ...jobRow, id: "unscored", source: "claude_routine", manual_score: null, job_scores: [] },
+        ],
+        error: null,
+      });
+      const repo = new SupabaseJobRepository(client);
+
+      const result = await repo.findForDashboard("role-selection-1", { origin: "claude_routine" }, 50, 1, 0.25, 3);
+
+      expect(builder.eq).toHaveBeenCalledWith("source", "claude_routine");
+      expect(builder.neq).not.toHaveBeenCalledWith("source", "claude_routine");
+      // manual_score desc, nulls last -- overall_score (always null here) is not used.
+      expect(result.jobs.map((j) => j.id)).toEqual(["top", "low", "unscored"]);
     });
 
     it("returns a job with null score fields when it has no job_scores row", async () => {

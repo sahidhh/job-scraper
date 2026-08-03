@@ -63,6 +63,10 @@ erDiagram
         boolean security_clearance "NOT NULL default false"
         boolean urgent_hiring "NOT NULL default false"
         text ineligible_reason "nullable; null=can apply | geo_locked | no_sponsorship; classifyEligibility.ts at ingest (AD-51)"
+        integer manual_score "nullable; CHECK 0-100; 'Claude routine' ad hoc 0-100 judgment, source='claude_routine' only"
+        text manual_standout "nullable; Claude-routine narrative field"
+        text manual_verify "nullable; Claude-routine narrative field"
+        text manual_requirements "nullable; Claude-routine narrative field; also used as description fallback"
     }
 
     JOB_DUPLICATES {
@@ -245,6 +249,7 @@ erDiagram
 | `jobs` | `INDEX (ineligible_reason)` | `findUnscored`'s candidate query and `findForDashboard`'s default-on eligibility filter, both `IS NULL` (migration `20260720000001_job_eligibility.sql`, AD-51) |
 | `scrape_runs` | `INDEX (source, run_at DESC)` | `listRecentBySource` (per-source health report, called once per source per `/analytics` load) |
 | `jobs` | `INDEX (employment_type)` | Notification-preference `excludeEmploymentTypes` filter reads this at digest time |
+| `jobs` | `CHECK (manual_score IS NULL OR manual_score BETWEEN 0 AND 100)` | Guards the Claude-routine's 0-100 scale at the DB regardless of entry point (`20260803000001_manual_job_matches.sql`) |
 | `resumes` | `UNIQUE (is_active) WHERE is_active = true` | Enforce single active resume |
 | `resumes` | `INDEX (content_hash) WHERE content_hash IS NOT NULL` | sha256 parse-once cache lookup (`findByContentHash`); not unique -- re-uploading identical bytes still creates a new version row |
 | `role_selections` | `UNIQUE (is_active) WHERE is_active = true` | Enforce single active role |
@@ -300,7 +305,7 @@ Atomic single-round-trip write + conditional counter increment (Phase 1 Task 6) 
 ## Enum Values
 
 ```
-job_source           → greenhouse, lever, ashby, wellfound, remoteok, remotive, himalayas, mycareersfuture, jsearch, adzuna, careers_url
+job_source           → greenhouse, lever, ashby, wellfound, remoteok, remotive, himalayas, mycareersfuture, jsearch, adzuna, careers_url, claude_routine
 location_tag         → india, singapore, uae, remote
 role_map_source      → seed, ai
 scrape_run_status    → success, partial, failed
@@ -312,7 +317,11 @@ source_health_status → active, unhealthy, disabled
 `20260718000001_remote_board_sources.sql` (remote/visa-sponsorship refocus). `careers_url` is a valid enum value (jobs sourced from it need a real
 `jobs.source`) but is deliberately excluded from the TS-level `JOB_SOURCES` array
 (`src/shared/domain/enums.ts`) used for source-health iteration and notification-preference
-validation -- see `docs/decisions.md` AD-35.
+validation -- see `docs/decisions.md` AD-35. `claude_routine` (added
+`20260803000001_manual_job_matches.sql`, docs/tasks/manual-job-matches.md,
+AD-65) is excluded from `JOB_SOURCES` for the identical reason -- it's a
+manual/one-off entry point (`scripts/import-manual-matches.ts`), not a
+polled source.
 
 ---
 

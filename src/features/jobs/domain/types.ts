@@ -61,6 +61,13 @@ export interface Job {
   ineligibleReason: IneligibleReason | null;
   // Conflict resolution metadata (Phase 4 Task 1): tracks if the user
   // manually edited the job's status or metadata, and when.
+  // Claude-routine fields (docs/tasks/manual-job-matches.md): only set when
+  // source='claude_routine'. Null for every automated-pipeline row --
+  // never written by scrape.ts/score.ts.
+  manualScore: number | null;
+  manualStandout: string | null;
+  manualVerify: string | null;
+  manualRequirements: string | null;
 }
 
 // Input to JobRepository.upsertMany() -- a TaggedRawJob ready to persist.
@@ -105,6 +112,12 @@ export interface NormalizedJob {
   // Eligibility verdict (AD-51). Optional on input; derived by ingestJobs
   // from classifyEligibility, not by the scraper.
   ineligibleReason?: IneligibleReason | null;
+  // Claude-routine fields (docs/tasks/manual-job-matches.md). Optional on
+  // input; only set by mapManualMatch.ts for source='claude_routine' rows.
+  manualScore?: number | null;
+  manualStandout?: string | null;
+  manualVerify?: string | null;
+  manualRequirements?: string | null;
 }
 
 export interface UpsertResult {
@@ -199,6 +212,13 @@ export interface JobFilters {
   // Hide jobs whose title contains any of these (case-insensitive substring)
   // -- muted keywords, sourced from notification preferences' excludeKeywords.
   excludeKeywords?: string[];
+  // Which data origin the dashboard is viewing (docs/tasks/manual-job-
+  // matches.md §3/§4.3). 'scraper' (default, absent) excludes
+  // source='claude_routine'; 'claude_routine' shows only those rows. Not
+  // expressed via `sources` -- 'scraper' is a negative filter (every source
+  // except one), which `sources`' positive `.in()` list can't express
+  // without enumerating every other enum value.
+  origin?: "scraper" | "claude_routine";
 }
 
 // Job joined with its score for the active role_selection. Omits
