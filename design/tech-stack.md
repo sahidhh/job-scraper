@@ -192,6 +192,7 @@ ships with Next.
 | `setup:webhook` | `tsx scripts/setup-webhook.ts` | One-off Telegram webhook registration |
 | `scrape:careers-url` | `tsx scripts/scrape-careers-url.ts` | (merge-workspace Phase 5) Manual-trigger fetch of one operator-provided public careers page URL -- not part of any cron/workflow |
 | `migrate:jobhunt-sqlite` | `tsx scripts/migrate-jobhunt-sqlite.ts -- <path-to-jobhunt.db>` | (merge-workspace Phase 6) One-off jobhunt-app cutover: migrates its `resumes` and already-reviewed (`status != 'new'`) `jobs` rows into Supabase. Reads SQLite via Node's built-in `node:sqlite` -- no new dependency (`docs/decisions.md` AD-36) |
+| `print:manual-matches-sql` | `tsx scripts/print-manual-matches-sql.ts <path-to-state.json>` | (`docs/decisions.md` AD-66) Companion to `import:manual-matches` for environments without `SUPABASE_SERVICE_ROLE_KEY` (e.g. the cloud "Claude routine"). Reuses `mapManualMatch()`/`tagLocations()` -- no duplicated logic -- and prints the equivalent `INSERT ... ON CONFLICT (source, source_job_id) DO UPDATE` SQL to stdout instead of writing to Supabase itself; the caller runs that SQL via the Supabase connector's Execute SQL tool |
 
 ## 7. CI / CD
 

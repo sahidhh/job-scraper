@@ -5,7 +5,7 @@ description: Run the ad hoc "Claude routine" job search and import its matches i
 
 # Manual (Claude-Routine) Job Matches
 
-Design doc: `docs/tasks/manual-job-matches.md`. Decision record: `docs/decisions.md` AD-65.
+Design doc: `docs/tasks/manual-job-matches.md`. Decision records: `docs/decisions.md` AD-65, AD-66.
 
 This is the same interactive job-search routine historically run against the
 separate `job-match-tracker` repo (search, read listings, score, annotate) --
@@ -41,16 +41,28 @@ of (or in addition to) that repo's browser-localStorage `state.json`.
 
    Required per entry: `id`, `title`, `company`, `location`, `score`, `link`.
    `standout`/`verify`/`requirements` are optional narrative fields.
-3. **Import it:**
+3. **Import it.** Two paths, pick whichever fits where you're running:
 
-   ```
-   npm run import:manual-matches -- reports/manual-matches/<YYYY-MM-DD>.json
-   ```
+   - **Local, with `SUPABASE_SERVICE_ROLE_KEY` set:**
+     ```
+     npm run import:manual-matches -- reports/manual-matches/<YYYY-MM-DD>.json
+     ```
+   - **Cloud routine, no service-role key available (AD-66):** print the
+     equivalent SQL and run it via the account's Supabase connector's
+     `Execute SQL` tool instead:
+     ```
+     npm run print:manual-matches-sql -- reports/manual-matches/<YYYY-MM-DD>.json
+     ```
+     `SUPABASE_SERVICE_ROLE_KEY` must never be put in a routine's plaintext
+     environment-variables box (`design/security.md` §3) — this path exists
+     specifically so that's never necessary. Confirm the connector is
+     pointed at job-scraper's Supabase project before running the SQL.
 
-   This upserts each entry as a `jobs` row with `source='claude_routine'`,
+   Both paths upsert each entry as a `jobs` row with `source='claude_routine'`,
    `manual_score`/`manual_standout`/`manual_verify`/`manual_requirements`
    populated, and `location_tags` derived from `location` the same way the
-   automated scrapers do. Dedup key is `(source, source_job_id)` — re-running
+   automated scrapers do (both call `mapManualMatch`/`tagLocations` — no
+   duplicated logic). Dedup key is `(source, source_job_id)` — re-running
    with the same file (or an updated one reusing the same `id`s) is safe and
    idempotent, it never creates duplicates.
 4. **View the results** on `/dashboard` — click the "Claude routine" side of

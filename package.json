@@ -32,6 +32,7 @@
     "report:matches": "tsx scripts/report-top-matches.ts",
     "discover:career-pages": "tsx scripts/discover-career-pages.ts",
     "import:manual-matches": "tsx scripts/import-manual-matches.ts",
+    "print:manual-matches-sql": "tsx scripts/print-manual-matches-sql.ts",
     "setup:webhook": "tsx scripts/setup-webhook.ts",
     "scrape:careers-url": "tsx scripts/scrape-careers-url.ts",
     "migrate:jobhunt-sqlite": "tsx scripts/migrate-jobhunt-sqlite.ts"
