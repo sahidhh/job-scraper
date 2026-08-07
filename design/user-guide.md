@@ -355,6 +355,13 @@ Two tables cover source reliability from different signals (intentionally not me
 badge) when it hasn't run at all in `SOURCE_STALE_HOURS` (default 6h) — a distinct problem from a
 source that's running but failing, and sorted to the top of the table.
 
+### Claude Routine (Manual Matches)
+`source='claude_routine'` is intentionally excluded from the source-health tables above and from
+`/analytics`'s per-source probe table (AD-65 point 4 — it's not a polled source, has no `companies`
+row). Its own visibility lives on the **Operational** tab instead (AD-66/67): total count of
+claude-routine jobs, the most recent import timestamp, and a day-by-day breakdown of how many jobs
+were added on each of the last 7 days that had any.
+
 ---
 
 ## 9. Notifications

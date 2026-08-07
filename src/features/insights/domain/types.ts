@@ -90,3 +90,18 @@ export interface PipelineStats {
   totalDuplicates: number;
   avgDurationMs: number | null;
 }
+
+// AD-66/67: source='claude_routine' has no scrape_runs rows (it's not a
+// polled source, see AD-65 point 4) so it's invisible everywhere else in
+// /analytics on purpose. This is the one place that visibility is restored,
+// keyed off jobs.first_seen_at since there's no dedicated import-batch id.
+export interface ManualMatchDayCount {
+  date: string; // YYYY-MM-DD
+  count: number;
+}
+
+export interface ManualMatchStats {
+  totalCount: number;
+  lastAddedAt: string | null; // ISO timestamp, null when totalCount is 0
+  recentDays: ManualMatchDayCount[]; // most recent days with >0 imports, newest first
+}

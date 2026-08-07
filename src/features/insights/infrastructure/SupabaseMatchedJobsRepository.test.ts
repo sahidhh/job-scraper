@@ -159,4 +159,33 @@ describe("SupabaseMatchedJobsRepository", () => {
       { status: "failed", durationMs: null, duplicateCount: null },
     ]);
   });
+
+  it("getManualMatchStats counts claude_routine jobs by day and finds the latest", async () => {
+    const { client, builder } = mockSupabaseClient({
+      data: [
+        { first_seen_at: "2026-08-05T09:34:00Z" },
+        { first_seen_at: "2026-08-05T09:35:00Z" },
+        { first_seen_at: "2026-08-06T09:34:00Z" },
+      ],
+      error: null,
+    });
+    const repo = new SupabaseMatchedJobsRepository(client);
+    const result = await repo.getManualMatchStats();
+    expect(result).toEqual({
+      totalCount: 3,
+      lastAddedAt: "2026-08-06T09:34:00Z",
+      recentDays: [
+        { date: "2026-08-06", count: 1 },
+        { date: "2026-08-05", count: 2 },
+      ],
+    });
+    expect(builder.eq).toHaveBeenCalledWith("source", "claude_routine");
+  });
+
+  it("getManualMatchStats returns zero/null defaults when there are no claude_routine jobs", async () => {
+    const { client } = mockSupabaseClient({ data: [], error: null });
+    const repo = new SupabaseMatchedJobsRepository(client);
+    const result = await repo.getManualMatchStats();
+    expect(result).toEqual({ totalCount: 0, lastAddedAt: null, recentDays: [] });
+  });
 });

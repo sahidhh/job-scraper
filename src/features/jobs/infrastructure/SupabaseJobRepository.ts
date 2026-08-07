@@ -431,11 +431,17 @@ export class SupabaseJobRepository implements JobRepository {
     // entered the done-set above, so every run re-fetched it, re-ran the gate,
     // re-wrote the same null, and bumped retry_count -- forever. Now that the
     // verdict is persisted at ingest, those jobs never enter the queue at all.
+    // claude_routine jobs are never touched by the automated scrape/score
+    // pipeline (AD-65/AD-66, supabase/migrations/20260803000001_manual_job_
+    // matches.sql) -- they're ranked by manual_score, not overall_score, and
+    // have no job_scores row by design, so without this filter they'd be
+    // re-fetched and AI-scored (real token cost) on every run forever.
     const { data: candidateRows, error: candidateError } = await this.client
       .from("jobs")
       .select("id")
       .eq("is_active", true)
       .is("ineligible_reason", null)
+      .neq("source", "claude_routine")
       .or(roleFilter);
     if (candidateError) throw toAppError(candidateError);
 

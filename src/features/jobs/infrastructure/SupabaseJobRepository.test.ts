@@ -338,6 +338,23 @@ describe("SupabaseJobRepository", () => {
       expect(candidatesBuilder.is).toHaveBeenCalledWith("ineligible_reason", null);
     });
 
+    it("excludes claude_routine jobs so the manual routine's matches are never AI-scored (AD-66/67)", async () => {
+      // claude_routine rows never get a job_scores row (mapManualMatch.ts
+      // never writes one), so without this filter they'd never land in the
+      // "done" set and would be re-fetched/AI-scored every run forever.
+      const { client, builders } = queuedSupabaseClient([
+        { data: [], error: null },
+        { data: [{ id: "job-1" }], error: null },
+        { data: [jobRow], error: null },
+      ]);
+      const repo = new SupabaseJobRepository(client);
+
+      await repo.findUnscored("role-selection-1", ["React Developer"], 1, 0.25, 3);
+
+      const candidatesBuilder = builders[1] as Record<string, ReturnType<typeof vi.fn>>;
+      expect(candidatesBuilder.neq).toHaveBeenCalledWith("source", "claude_routine");
+    });
+
     it("returns an empty array without querying when there are no expanded roles", async () => {
       const { client, builders } = queuedSupabaseClient([]);
       const repo = new SupabaseJobRepository(client);

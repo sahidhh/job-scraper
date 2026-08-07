@@ -1,5 +1,6 @@
 import type {
   JobsBySourceEntry,
+  ManualMatchStats,
   ScrapeRunDataPoint,
   StatusBreakdownEntry,
   TokenUsageStats,
@@ -86,4 +87,11 @@ export interface MatchedJobsRepository {
 
   /** status/duration_ms/duplicate_count for every scrape_runs row, any status. Used for pipeline stats. */
   getScrapeRunStats(): Promise<ScrapeRunStatRow[]>;
+
+  /**
+   * Count + recency of source='claude_routine' jobs, keyed off first_seen_at
+   * (AD-66/67). The one place this source is surfaced in /analytics --
+   * everywhere else it's deliberately excluded (AD-65 point 4).
+   */
+  getManualMatchStats(): Promise<ManualMatchStats>;
 }

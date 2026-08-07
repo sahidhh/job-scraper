@@ -1,4 +1,4 @@
-import { PipelineStatsCards, ScoringQueueStatsCards, TokenStatsCards } from "@/features/insights/ui/AnalyticsCharts";
+import { ManualMatchStatsCards, PipelineStatsCards, ScoringQueueStatsCards, TokenStatsCards } from "@/features/insights/ui/AnalyticsCharts";
 import { computePipelineStats } from "@/features/insights/application/computePipelineStats";
 import { SupabaseMatchedJobsRepository } from "@/features/insights/infrastructure/SupabaseMatchedJobsRepository";
 import { SupabaseResumeRepository } from "@/features/resume/infrastructure/SupabaseResumeRepository";
@@ -26,7 +26,7 @@ export default async function OperationalAnalyticsPage() {
   ]);
   const keywordThreshold = Number(optionalEnv("KEYWORD_THRESHOLD", "0.25"));
 
-  const [scrapeRunStats, tokenStats, scoringQueueSummary, recentRuns] = await Promise.all([
+  const [scrapeRunStats, tokenStats, scoringQueueSummary, recentRuns, manualMatchStats] = await Promise.all([
     matchedJobsRepository.getScrapeRunStats(),
     matchedJobsRepository.getTokenUsageStats(),
     activeSelection && activeResume
@@ -38,6 +38,7 @@ export default async function OperationalAnalyticsPage() {
         })
       : Promise.resolve(null),
     scrapeRunRepository.listRecent(10),
+    matchedJobsRepository.getManualMatchStats(),
   ]);
 
   const pipelineStats = computePipelineStats(scrapeRunStats);
@@ -82,6 +83,31 @@ export default async function OperationalAnalyticsPage() {
             </tbody>
           </table>
         </div>
+      </div>
+
+      <div className="space-y-4">
+        <h2 className="text-lg font-semibold">Claude Routine (Manual Matches)</h2>
+        <ManualMatchStatsCards stats={manualMatchStats} />
+        {manualMatchStats.recentDays.length > 0 && (
+          <div className="rounded-md border">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b bg-muted/50 text-left">
+                  <th className="px-4 py-2">Date</th>
+                  <th className="px-4 py-2">Jobs Added</th>
+                </tr>
+              </thead>
+              <tbody>
+                {manualMatchStats.recentDays.map((day) => (
+                  <tr key={day.date} className="border-b">
+                    <td className="px-4 py-2">{day.date}</td>
+                    <td className="px-4 py-2">{day.count}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {recentFailures.length > 0 && (

@@ -7,7 +7,13 @@ import type {
   SalaryRow,
   ScrapeRunStatRow,
 } from "@/features/insights/domain/MatchedJobsRepository";
-import type { JobsBySourceEntry, ScrapeRunDataPoint, StatusBreakdownEntry, TokenUsageStats } from "@/features/insights/domain/types";
+import type {
+  JobsBySourceEntry,
+  ManualMatchStats,
+  ScrapeRunDataPoint,
+  StatusBreakdownEntry,
+  TokenUsageStats,
+} from "@/features/insights/domain/types";
 import { buildRoleFilter } from "@/shared/infrastructure/roleFilter";
 import type { TypedSupabaseClient } from "@/shared/infrastructure/supabaseClient";
 import { toAppError } from "@/shared/infrastructure/supabaseError";
@@ -237,5 +243,30 @@ export class SupabaseMatchedJobsRepository implements MatchedJobsRepository {
       durationMs: row.duration_ms,
       duplicateCount: row.duplicate_count,
     }));
+  }
+
+  async getManualMatchStats(): Promise<ManualMatchStats> {
+    const { data, error } = await this.client
+      .from("jobs")
+      .select("first_seen_at")
+      .eq("source", "claude_routine")
+      .returns<{ first_seen_at: string }[]>();
+    if (error) throw toAppError(error);
+
+    const rows = data ?? [];
+    const dayCounts = new Map<string, number>();
+    let lastAddedAt: string | null = null;
+    for (const row of rows) {
+      const date = row.first_seen_at.slice(0, 10);
+      dayCounts.set(date, (dayCounts.get(date) ?? 0) + 1);
+      if (!lastAddedAt || row.first_seen_at > lastAddedAt) lastAddedAt = row.first_seen_at;
+    }
+
+    const recentDays = Array.from(dayCounts.entries())
+      .map(([date, count]) => ({ date, count }))
+      .sort((a, b) => b.date.localeCompare(a.date))
+      .slice(0, 7);
+
+    return { totalCount: rows.length, lastAddedAt, recentDays };
   }
 }

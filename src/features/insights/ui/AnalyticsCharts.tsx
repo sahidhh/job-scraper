@@ -18,6 +18,7 @@ import type {
   JobsByLocationPoint,
   JobsBySourceEntry,
   JobsOverTimePoint,
+  ManualMatchStats,
   PipelineStats,
   RemoteStats,
   SalaryStatsEntry,
@@ -209,6 +210,15 @@ export function ScoredBySourceChart({ data }: { data: JobsBySourceEntry[] }) {
         <Bar dataKey="count" fill="#8b5cf6" radius={[3, 3, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
+  );
+}
+
+export function ManualMatchStatsCards({ stats }: { stats: ManualMatchStats }) {
+  return (
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-2">
+      <StatCard label="Claude-routine jobs" value={stats.totalCount.toLocaleString()} />
+      <StatCard label="Last added" value={stats.lastAddedAt ? shortDate(stats.lastAddedAt) : "—"} />
+    </div>
   );
 }
 
