@@ -678,8 +678,7 @@ describe("SupabaseJobRepository", () => {
 
     it("maps the joined status and excludes Archived jobs by default", async () => {
       const { client, builders } = queuedSupabaseClient([
-        { data: { id: "status-archived" }, error: null }, // statusIdByLabel(Archived)
-        { data: [{ job_id: "job-9" }], error: null }, // job ids currently Archived
+        { data: [{ job_id: "job-9" }], error: null }, // job ids currently Archived (single joined lookup)
         {
           data: [
             {
@@ -699,7 +698,11 @@ describe("SupabaseJobRepository", () => {
         expect.objectContaining({ id: "job-1", statusId: "s1", statusLabel: "Applied", statusColor: "#DCFCE7" }),
       ]);
 
-      const mainBuilder = builders[2] as Record<string, ReturnType<typeof vi.fn>>;
+      const [archivedBuilder, mainBuilder] = builders as [
+        Record<string, ReturnType<typeof vi.fn>>,
+        Record<string, ReturnType<typeof vi.fn>>,
+      ];
+      expect(archivedBuilder.eq).toHaveBeenCalledWith("job_statuses.label", "Archived");
       expect(mainBuilder.not).toHaveBeenCalledWith("id", "in", "(job-9)");
     });
 

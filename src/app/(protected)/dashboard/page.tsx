@@ -235,9 +235,10 @@ async function JobsSection({
   const notificationPreferencesRepository = new SupabaseNotificationPreferencesRepository(client);
   const limit = parseLimit(params);
 
-  const [desiredExperience, notificationPreferences] = await Promise.all([
+  const [desiredExperience, notificationPreferences, activeResume] = await Promise.all([
     settingsRepository.getDesiredExperienceYears(),
     notificationPreferencesRepository.getPreferences(),
+    resumeRepository.getActive(),
   ]);
   const effectiveFilters: JobFilters = {
     ...filters,
@@ -250,7 +251,6 @@ async function JobsSection({
     excludeKeywords: notificationPreferences?.excludeKeywords,
   };
 
-  const activeResume = await resumeRepository.getActive();
   const resumeVersion = activeResume?.version ?? 0;
 
   // Same default as score.ts -- it decides which unscored jobs are genuinely

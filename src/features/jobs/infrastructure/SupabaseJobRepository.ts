@@ -623,10 +623,7 @@ export class SupabaseJobRepository implements JobRepository {
     }
 
     if (!filters.includeArchived) {
-      const archivedId = await this.statusIdByLabel(ARCHIVED_STATUS_LABEL);
-      if (archivedId) {
-        return { excludeIds: await this.jobIdsWithStatuses([archivedId]) };
-      }
+      return { excludeIds: await this.jobIdsWithStatusLabel(ARCHIVED_STATUS_LABEL) };
     }
 
     return {};
@@ -638,10 +635,17 @@ export class SupabaseJobRepository implements JobRepository {
     return (data ?? []).map((row) => row.job_id);
   }
 
-  private async statusIdByLabel(label: string): Promise<string | null> {
-    const { data, error } = await this.client.from("job_statuses").select("id").eq("label", label).maybeSingle();
+  // Merges the old statusIdByLabel + jobIdsWithStatuses pair into one round
+  // trip via an inner join filter -- this runs on every dashboard load
+  // (default "hide Archived" path), so the extra sequential query was a
+  // fixed latency tax on every page view and every origin-toggle switch.
+  private async jobIdsWithStatusLabel(label: string): Promise<string[]> {
+    const { data, error } = await this.client
+      .from("job_state")
+      .select("job_id, job_statuses!inner(label)")
+      .eq("job_statuses.label", label);
     if (error) throw toAppError(error);
-    return data?.id ?? null;
+    return (data ?? []).map((row) => row.job_id);
   }
 
   async listStatuses(): Promise<JobStatus[]> {
