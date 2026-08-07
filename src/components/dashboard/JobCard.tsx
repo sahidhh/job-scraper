@@ -8,9 +8,28 @@ import { cn } from "@/lib/utils";
 import type { JobStatus, JobWithScore } from "@/features/jobs/domain/types";
 import { ApplicationDraftDialog } from "./ApplicationDraftDialog";
 import { JobStatusSheet } from "./JobStatusSheet";
-import { formatScore, pendingScoreLabel, scoreBadgeVariant } from "./jobScore";
+import { formatScore, manualScoreBadgeVariant, pendingScoreLabel, scoreBadgeVariant } from "./jobScore";
 
-function ScorePill({ aiScore, keywordScore }: { aiScore: number | null; keywordScore: number | null }) {
+function ScorePill({
+  source,
+  aiScore,
+  manualScore,
+  keywordScore,
+}: {
+  source: JobWithScore["source"];
+  aiScore: number | null;
+  manualScore: number | null;
+  keywordScore: number | null;
+}) {
+  // claude_routine rows never enter the AI queue (AD-67) -- manual_score is
+  // the truth for them, not "Pending".
+  if (source === "claude_routine") {
+    return manualScore === null ? (
+      <Badge variant="outline" className="text-xs font-normal text-muted-foreground">—</Badge>
+    ) : (
+      <Badge variant={manualScoreBadgeVariant(manualScore)}>{manualScore}%</Badge>
+    );
+  }
   // Unscored reads as one self-describing pill carrying the keyword score that
   // stands in until the AI stage runs -- "Pending" alone was indistinguishable
   // at a glance from a genuinely low AI score (docs/decisions.md AD-56).
@@ -67,7 +86,12 @@ export function JobCard({
           <div className="flex items-start justify-between gap-2">
             <p className="line-clamp-2 font-semibold leading-snug">{job.title}</p>
             <div className="flex shrink-0 items-center gap-1.5">
-              <ScorePill aiScore={job.aiScore} keywordScore={job.keywordScore} />
+              <ScorePill
+                source={job.source}
+                aiScore={job.aiScore}
+                manualScore={job.manualScore}
+                keywordScore={job.keywordScore}
+              />
               {expanded
                 ? <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
                 : <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
@@ -97,7 +121,9 @@ export function JobCard({
       {expanded && (
         <div className="border-t px-4 py-3 space-y-1">
           <p className="text-sm text-muted-foreground">
-            {job.aiReasoning ?? `AI review pending — keyword match: ${formatScore(job.keywordScore)}`}
+            {job.source === "claude_routine"
+              ? job.manualStandout ?? "No standout notes from the Claude routine for this match."
+              : job.aiReasoning ?? `AI review pending — keyword match: ${formatScore(job.keywordScore)}`}
           </p>
           {job.overallScoreReasons && job.overallScoreReasons.length > 0 && (
             <p className="text-xs text-muted-foreground">

@@ -23,7 +23,7 @@ export function OriginToggle() {
   }
 
   return (
-    <div className="flex items-center gap-1 rounded-md border border-border p-0.5">
+    <div className="inline-flex items-center gap-1 rounded-md border border-border p-0.5">
       <Button
         type="button"
         size="sm"

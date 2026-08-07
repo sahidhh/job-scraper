@@ -10,7 +10,7 @@ import { ApplicationDraftDialog } from "./ApplicationDraftDialog";
 import { CompanyHistoryPanel } from "./CompanyHistoryPanel";
 import { JobStatusSelect } from "./JobStatusSelect";
 import { setJobStatusAction } from "@/features/jobs/actions";
-import { formatScore, pendingScoreLabel, scoreBadgeVariant } from "./jobScore";
+import { formatScore, manualScoreBadgeVariant, pendingScoreLabel, scoreBadgeVariant } from "./jobScore";
 import { Button } from "@/components/ui/button";
 
 // Total column count, used for the expanded-reasoning row's colSpan:
@@ -28,14 +28,32 @@ const FOCUS_CURSOR =
 
 // AI score thresholds mirror scoring.md §3/§5 via jobScore.ts.
 function ScoreBadge({
+  source,
   aiScore,
+  manualScore,
   keywordScore,
   overallScoreReasons,
 }: {
+  source: JobWithScore["source"];
   aiScore: number | null;
+  manualScore: number | null;
   keywordScore: number | null;
   overallScoreReasons: string[] | null;
 }) {
+  // claude_routine rows never enter the AI queue (AD-67) -- manual_score is
+  // the truth for them, not "Pending" (which would imply AI scoring is
+  // coming; it never runs for this source).
+  if (source === "claude_routine") {
+    return manualScore === null ? (
+      <Badge variant="outline" className="font-normal text-muted-foreground">—</Badge>
+    ) : (
+      <div className="flex flex-col gap-0.5">
+        <Badge variant={manualScoreBadgeVariant(manualScore)}>{manualScore}%</Badge>
+        <span className="text-xs text-muted-foreground">Claude routine score</span>
+      </div>
+    );
+  }
+
   // Unscored reads as one self-describing pill carrying the keyword score that
   // stands in until the AI stage runs -- "Pending" over a separate "Keyword: N%"
   // caption was indistinguishable at a glance from a genuinely low AI score,
@@ -154,7 +172,13 @@ export function JobRow({
         </TableCell>
         <TableCell>
           <div className="flex flex-col gap-0.5">
-            <ScoreBadge aiScore={job.aiScore} keywordScore={job.keywordScore} overallScoreReasons={job.overallScoreReasons} />
+            <ScoreBadge
+              source={job.source}
+              aiScore={job.aiScore}
+              manualScore={job.manualScore}
+              keywordScore={job.keywordScore}
+              overallScoreReasons={job.overallScoreReasons}
+            />
             {job.minYears !== null && (
               <span className="text-xs text-muted-foreground">{job.minYears}+ yrs</span>
             )}
@@ -199,7 +223,9 @@ export function JobRow({
         <TableRow>
           <TableCell colSpan={COLUMN_COUNT} className="space-y-4 whitespace-normal p-4 text-sm">
             <div className="text-muted-foreground">
-              {job.aiReasoning ?? "AI review pending — keyword match score shown above."}
+              {job.source === "claude_routine"
+                ? job.manualStandout ?? "No standout notes from the Claude routine for this match."
+                : job.aiReasoning ?? "AI review pending — keyword match score shown above."}
             </div>
             <div className="font-semibold">Company History</div>
             <CompanyHistoryPanel companyName={job.companyName} />

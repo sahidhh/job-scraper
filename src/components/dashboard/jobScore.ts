@@ -26,6 +26,17 @@ export function scoreBadgeVariant(aiScore: number): BadgeVariant {
 }
 
 /**
+ * claude_routine jobs carry their own 0-100 `manual_score` and never get a
+ * job_scores row (by design -- AD-67), so they must never render through the
+ * AI "Pending" path. `manualScore` is the truth for these rows; reuse the
+ * same band thresholds by normalizing to the 0-1 scale `scoreBadgeVariant`
+ * expects.
+ */
+export function manualScoreBadgeVariant(manualScore: number): BadgeVariant {
+  return scoreBadgeVariant(manualScore / 100);
+}
+
+/**
  * Label for a job the AI has not scored yet. The keyword score rides inside
  * the pending pill so the row is self-describing — "Pending" on its own was
  * indistinguishable from a genuinely low AI score (AD-56).
