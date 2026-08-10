@@ -210,7 +210,7 @@ erDiagram
     }
 
     APP_SETTINGS {
-        text key PK "desired_experience_years | ranking_preferences | notification_preferences | skip_unsponsored_foreign_jobs"
+        text key PK "desired_experience_years | ranking_preferences | notification_preferences | skip_unsponsored_foreign_jobs | show_status_dropdown"
         jsonb value
         timestamptz updated_at
     }

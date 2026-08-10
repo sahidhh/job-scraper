@@ -1,13 +1,16 @@
 "use client";
 
-import { ChevronDown, ChevronRight, ExternalLink } from "lucide-react";
+import { Archive, Check, ChevronDown, ChevronRight, Eye, ExternalLink, ThumbsDown } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { setJobStatusAction } from "@/features/jobs/actions";
 import type { JobStatus, JobWithScore } from "@/features/jobs/domain/types";
 import { ApplicationDraftDialog } from "./ApplicationDraftDialog";
 import { JobStatusSheet } from "./JobStatusSheet";
+import { StatusBadge } from "./StatusBadge";
 import { formatScore, manualScoreBadgeVariant, pendingScoreLabel, scoreBadgeVariant } from "./jobScore";
 
 function ScorePill({
@@ -46,15 +49,30 @@ function ScorePill({
 export function JobCard({
   job,
   statuses,
+  showStatusDropdown,
   selected,
   onToggleSelect,
 }: {
   job: JobWithScore;
   statuses: JobStatus[];
+  /** Settings → Workflow toggle. False renders a read-only badge instead of the sheet. */
+  showStatusDropdown: boolean;
   selected: boolean;
   onToggleSelect: (jobId: string) => void;
 }) {
+  const router = useRouter();
   const [expanded, setExpanded] = useState(false);
+  const notInterestedStatus = statuses.find((s) => s.label === "Not Interested")?.id;
+  const viewedStatus = statuses.find((s) => s.label === "Viewed")?.id;
+  const appliedStatus = statuses.find((s) => s.label === "Applied")?.id;
+  const archiveStatus = statuses.find((s) => s.label === "Archived")?.id;
+  const currentStatus = statuses.find((s) => s.id === job.statusId);
+
+  const onAction = async (statusId: string | undefined) => {
+    if (!statusId) return;
+    await setJobStatusAction([job.id], statusId);
+    router.refresh();
+  };
 
   return (
     <article
@@ -133,10 +151,54 @@ export function JobCard({
         </div>
       )}
 
-      {/* Bottom bar: status + view link */}
+      {/* Bottom bar: status + quick actions + view link */}
       <div className="flex items-center justify-between border-t bg-muted/30 px-4 py-2.5">
-        <JobStatusSheet jobId={job.id} statusId={job.statusId} statuses={statuses} />
+        {showStatusDropdown ? (
+          <JobStatusSheet jobId={job.id} statusId={job.statusId} statuses={statuses} />
+        ) : (
+          <StatusBadge status={currentStatus} />
+        )}
         <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-11 text-primary hover:text-primary"
+            onClick={() => onAction(notInterestedStatus)}
+            aria-label={`Not interested in ${job.title}`}
+            title="Not interested"
+          >
+            <ThumbsDown className="size-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-11 text-primary hover:text-primary"
+            onClick={() => onAction(viewedStatus)}
+            aria-label={`Mark ${job.title} as viewed`}
+            title="Mark viewed"
+          >
+            <Eye className="size-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-11 text-primary hover:text-primary"
+            onClick={() => onAction(appliedStatus)}
+            aria-label={`Mark ${job.title} as applied`}
+            title="Mark applied"
+          >
+            <Check className="size-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-11 text-primary hover:text-primary"
+            onClick={() => onAction(archiveStatus)}
+            aria-label={`Archive ${job.title}`}
+            title="Archive"
+          >
+            <Archive className="size-4" />
+          </Button>
           <a
             href={job.url}
             target="_blank"

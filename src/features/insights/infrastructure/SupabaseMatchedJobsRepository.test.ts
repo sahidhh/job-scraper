@@ -175,8 +175,8 @@ describe("SupabaseMatchedJobsRepository", () => {
       totalCount: 3,
       lastAddedAt: "2026-08-06T09:34:00Z",
       recentDays: [
-        { date: "2026-08-06", count: 1 },
-        { date: "2026-08-05", count: 2 },
+        { date: "2026-08-06", count: 1, runCount: 1 },
+        { date: "2026-08-05", count: 2, runCount: 2 },
       ],
     });
     expect(builder.eq).toHaveBeenCalledWith("source", "claude_routine");

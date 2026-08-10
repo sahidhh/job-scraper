@@ -95,6 +95,7 @@ export default async function OperationalAnalyticsPage() {
                 <tr className="border-b bg-muted/50 text-left">
                   <th className="px-4 py-2">Date</th>
                   <th className="px-4 py-2">Jobs Added</th>
+                  <th className="px-4 py-2">Runs</th>
                 </tr>
               </thead>
               <tbody>
@@ -102,6 +103,7 @@ export default async function OperationalAnalyticsPage() {
                   <tr key={day.date} className="border-b">
                     <td className="px-4 py-2">{day.date}</td>
                     <td className="px-4 py-2">{day.count}</td>
+                    <td className="px-4 py-2">{day.runCount}</td>
                   </tr>
                 ))}
               </tbody>

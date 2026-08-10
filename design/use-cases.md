@@ -69,12 +69,12 @@ reproduce it exactly
 1. Tab moves into the table body and lands on one row — the table is a single tab stop, not one per
    row. The focused row is marked with a leading rail and a tinted background
 2. `↑` / `↓` move the focus cursor between rows without leaving the table
-3. On the focused row: **`R`** sets it to Rejected, **`A`** sets it to Archived, **`D`** expands or
-   collapses the row's detail panel (the AI reasoning and company history)
+3. On the focused row: **`R`** sets it to Not Interested, **`A`** sets it to Archived, **`D`** expands
+   or collapses the row's detail panel (the AI reasoning and company history)
 4. `R` and `A` call `setJobStatusAction([jobId], statusId)` for **that row only** and refresh the
-   route, exactly as the row's reject/archive buttons do
-5. A `↑ ↓ move between rows · R reject · A archive · D details` legend sits above the table, rendered
-   from the same shortcut table the handler reads, and is announced with the table via
+   route, exactly as the row's Not Interested/Archive buttons do
+5. A `↑ ↓ move between rows · R not interested · A archive · D details` legend sits above the table,
+   rendered from the same shortcut table the handler reads, and is announced with the table via
    `aria-describedby`
 
 **Alternate Flow:** The keystroke carries Ctrl/Cmd/Alt, or focus is in a text field, an open status
@@ -92,10 +92,12 @@ into the search box types it)
 ### UC-03 — Change Job Status
 
 **Actor:** User  
-**Trigger:** User selects a status from the job row dropdown  
+**Trigger:** User selects a status from the job row dropdown, or clicks a quick-action button  
 **Precondition:** Authenticated; at least one job_status row exists  
 **Main Flow:**
-1. User clicks status selector on a job row (desktop dropdown, or the mobile card's bottom sheet)
+1. User clicks status selector on a job row (desktop dropdown, or the mobile card's bottom sheet) —
+   or, on a row/card, clicks one of the four quick-action buttons (Not Interested / Mark Viewed /
+   Mark Applied / Archive), which look up their target status by label and set it directly
 2. The control shows the new status immediately and the sheet, if used, closes on select
 3. `setJobStatusAction(jobId, statusId)` called
 4. Upserts job_state row
@@ -103,10 +105,19 @@ into the search box types it)
 
 **Alternate Flow:** Bulk status — user selects multiple rows → bulk action sets same status for all
 
-**Alternate Flow:** Keyboard — `R`/`A` on the focused row sets Rejected/Archived (UC-02a)
+**Alternate Flow:** Keyboard — `R`/`A` on the focused row sets Not Interested/Archived (UC-02a)
 
 **Alternate Flow:** The action returns `ok: false` → the control puts the previous status back, so
 the displayed value never diverges from the stored one (`design/architecture.md` §12.3)
+
+**Alternate Flow:** A quick-action button's target status has been renamed or deleted (Settings →
+Workflow) → `statuses.find(s => s.label === ...)` returns `undefined` and the button is a no-op —
+same convention Archive already used pre-existing; renaming a status back to its expected label
+(Not Interested/Viewed/Applied/Archived) reconnects the button, no code change needed
+
+**Alternate Flow:** `show_status_dropdown` (`app_settings`) is `false` (Settings → Workflow toggle) →
+the dropdown/sheet is replaced by a read-only `StatusBadge`; the quick-action buttons are the only
+way left to change status
 
 ---
 
@@ -477,4 +488,5 @@ the displayed value never diverges from the stored one (`design/architecture.md`
 | US-14 | get an AI-drafted, reviewable application for a job, then send it from my own mail client | I apply faster without the platform sending anything on my behalf |
 | US-15 | get reminded in Telegram when I have draft applications sitting unreviewed | I don't forget to follow up on jobs I meant to apply to |
 | US-16 | point the platform at one company's careers page and have it pull in the roles listed there | I can cover a company that isn't on any supported ATS/aggregator without a full new source integration |
-| US-17 | triage the job list from the keyboard — arrow between rows, reject, archive, expand details — with the shortcuts visible on screen | I clear a scrape run's worth of jobs without reaching for the mouse, and I can tell the shortcuts exist without being told |
+| US-17 | triage the job list from the keyboard — arrow between rows, mark not interested, archive, expand details — with the shortcuts visible on screen | I clear a scrape run's worth of jobs without reaching for the mouse, and I can tell the shortcuts exist without being told |
+| US-18 | one-click a job to Not Interested / Viewed / Applied / Archived without opening the status dropdown, and optionally turn the dropdown off entirely | I triage fast with the four statuses I actually use, without the full status list in the way |

@@ -28,7 +28,7 @@ export const JOB_HOTKEYS: readonly {
   readonly action: JobHotkeyAction;
   readonly label: string;
 }[] = [
-  { key: "r", action: "reject", label: "reject" },
+  { key: "r", action: "reject", label: "not interested" },
   { key: "a", action: "archive", label: "archive" },
   { key: "d", action: "details", label: "details" },
 ];

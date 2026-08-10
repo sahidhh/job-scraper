@@ -13,4 +13,12 @@ export interface SettingsRepository {
    */
   getSkipUnsponsoredForeignJobs(): Promise<boolean>;
   setSkipUnsponsoredForeignJobs(enabled: boolean): Promise<void>;
+  /**
+   * When true (the default), the dashboard's per-job status control renders
+   * as an interactive dropdown/sheet. When false, it renders as a read-only
+   * badge -- the quick-action buttons (Not Interested/Viewed/Applied/Archive)
+   * remain the only way to change status.
+   */
+  getShowStatusDropdown(): Promise<boolean>;
+  setShowStatusDropdown(enabled: boolean): Promise<void>;
 }

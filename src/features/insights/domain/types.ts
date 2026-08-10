@@ -98,6 +98,7 @@ export interface PipelineStats {
 export interface ManualMatchDayCount {
   date: string; // YYYY-MM-DD
   count: number;
+  runCount: number; // distinct first_seen_at timestamps that day (proxy for import runs)
 }
 
 export interface ManualMatchStats {

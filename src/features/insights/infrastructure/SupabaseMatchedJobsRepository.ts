@@ -255,15 +255,18 @@ export class SupabaseMatchedJobsRepository implements MatchedJobsRepository {
 
     const rows = data ?? [];
     const dayCounts = new Map<string, number>();
+    const dayRunTimestamps = new Map<string, Set<string>>();
     let lastAddedAt: string | null = null;
     for (const row of rows) {
       const date = row.first_seen_at.slice(0, 10);
       dayCounts.set(date, (dayCounts.get(date) ?? 0) + 1);
+      if (!dayRunTimestamps.has(date)) dayRunTimestamps.set(date, new Set());
+      dayRunTimestamps.get(date)!.add(row.first_seen_at);
       if (!lastAddedAt || row.first_seen_at > lastAddedAt) lastAddedAt = row.first_seen_at;
     }
 
     const recentDays = Array.from(dayCounts.entries())
-      .map(([date, count]) => ({ date, count }))
+      .map(([date, count]) => ({ date, count, runCount: dayRunTimestamps.get(date)!.size }))
       .sort((a, b) => b.date.localeCompare(a.date))
       .slice(0, 7);
 

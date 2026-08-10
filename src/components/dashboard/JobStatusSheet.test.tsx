@@ -35,10 +35,10 @@ describe("JobStatusSheet", () => {
     renderSheet();
 
     await user.click(screen.getByRole("button", { name: "New" }));
-    await user.click(await screen.findByRole("button", { name: /Rejected/ }));
+    await user.click(await screen.findByRole("button", { name: /Not Interested/ }));
 
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
-    expect(screen.getByRole("button", { name: "Rejected" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Not Interested" })).toBeInTheDocument();
     expect(setJobStatusAction).toHaveBeenCalledTimes(1);
   });
 
@@ -48,9 +48,9 @@ describe("JobStatusSheet", () => {
     renderSheet();
 
     await user.click(screen.getByRole("button", { name: "New" }));
-    await user.click(await screen.findByRole("button", { name: /Rejected/ }));
+    await user.click(await screen.findByRole("button", { name: /Not Interested/ }));
 
     await waitFor(() => expect(screen.getByRole("button", { name: "New" })).toBeInTheDocument());
-    expect(screen.queryByRole("button", { name: "Rejected" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Not Interested" })).not.toBeInTheDocument();
   });
 });

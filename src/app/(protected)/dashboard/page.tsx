@@ -235,10 +235,11 @@ async function JobsSection({
   const notificationPreferencesRepository = new SupabaseNotificationPreferencesRepository(client);
   const limit = parseLimit(params);
 
-  const [desiredExperience, notificationPreferences, activeResume] = await Promise.all([
+  const [desiredExperience, notificationPreferences, activeResume, showStatusDropdown] = await Promise.all([
     settingsRepository.getDesiredExperienceYears(),
     notificationPreferencesRepository.getPreferences(),
     resumeRepository.getActive(),
+    settingsRepository.getShowStatusDropdown(),
   ]);
   const effectiveFilters: JobFilters = {
     ...filters,
@@ -342,7 +343,7 @@ async function JobsSection({
       <DashboardNavigationProvider>
         <OriginToggle />
         <FilterBar hasAiScores={stats.scoredCount > 0} statuses={statuses} effectiveMaxYears={effectiveFilters.maxYears ?? null} />
-        <JobsTable jobs={jobs} statuses={statuses} />
+        <JobsTable jobs={jobs} statuses={statuses} showStatusDropdown={showStatusDropdown} />
       </DashboardNavigationProvider>
 
       {hasMore && (

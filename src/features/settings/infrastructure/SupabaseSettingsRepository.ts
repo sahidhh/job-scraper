@@ -4,6 +4,7 @@ import { toAppError } from "@/shared/infrastructure/supabaseError";
 
 const DESIRED_EXPERIENCE_KEY = "desired_experience_years";
 const SKIP_UNSPONSORED_FOREIGN_KEY = "skip_unsponsored_foreign_jobs";
+const SHOW_STATUS_DROPDOWN_KEY = "show_status_dropdown";
 
 export class SupabaseSettingsRepository implements SettingsRepository {
   constructor(private readonly client: TypedSupabaseClient) {}
@@ -53,6 +54,29 @@ export class SupabaseSettingsRepository implements SettingsRepository {
       .from("app_settings")
       .upsert(
         { key: SKIP_UNSPONSORED_FOREIGN_KEY, value: enabled, updated_at: new Date().toISOString() },
+        { onConflict: "key" },
+      );
+    if (error) throw toAppError(error);
+  }
+
+  async getShowStatusDropdown(): Promise<boolean> {
+    const { data, error } = await this.client
+      .from("app_settings")
+      .select("value")
+      .eq("key", SHOW_STATUS_DROPDOWN_KEY)
+      .maybeSingle();
+    if (error) throw toAppError(error);
+
+    // Unset means "on" -- the dropdown is the default, established behavior;
+    // only an explicit false turns it off.
+    return data?.value !== false;
+  }
+
+  async setShowStatusDropdown(enabled: boolean): Promise<void> {
+    const { error } = await this.client
+      .from("app_settings")
+      .upsert(
+        { key: SHOW_STATUS_DROPDOWN_KEY, value: enabled, updated_at: new Date().toISOString() },
         { onConflict: "key" },
       );
     if (error) throw toAppError(error);

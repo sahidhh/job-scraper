@@ -27,7 +27,16 @@ function Kbd({ children }: { children: ReactNode }) {
   );
 }
 
-export function JobsTable({ jobs, statuses }: { jobs: JobWithScore[]; statuses: JobStatus[] }) {
+export function JobsTable({
+  jobs,
+  statuses,
+  showStatusDropdown,
+}: {
+  jobs: JobWithScore[];
+  statuses: JobStatus[];
+  /** Settings → Workflow toggle. False renders a read-only badge instead of the dropdown. */
+  showStatusDropdown: boolean;
+}) {
   const router = useRouter();
   const { isPending: isNavPending } = useDashboardNavigation();
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -84,7 +93,7 @@ export function JobsTable({ jobs, statuses }: { jobs: JobWithScore[]; statuses: 
   }
 
   const archivedStatus = statuses.find((status) => status.label === "Archived");
-  const rejectedStatus = statuses.find((status) => status.label === "Rejected");
+  const notInterestedStatus = statuses.find((status) => status.label === "Not Interested");
 
   function focusRow(index: number) {
     setFocusedIndex(index);
@@ -96,7 +105,7 @@ export function JobsTable({ jobs, statuses }: { jobs: JobWithScore[]; statuses: 
       toggleExpand(job.id);
       return;
     }
-    const statusId = action === "reject" ? rejectedStatus?.id : archivedStatus?.id;
+    const statusId = action === "reject" ? notInterestedStatus?.id : archivedStatus?.id;
     if (statusId === undefined) return;
     startTransition(async () => {
       await setJobStatusAction([job.id], statusId);
@@ -213,6 +222,7 @@ export function JobsTable({ jobs, statuses }: { jobs: JobWithScore[]; statuses: 
                   key={job.id}
                   job={job}
                   statuses={statuses}
+                  showStatusDropdown={showStatusDropdown}
                   selected={selected.has(job.id)}
                   onToggleSelect={toggleSelect}
                 />
@@ -268,6 +278,7 @@ export function JobsTable({ jobs, statuses }: { jobs: JobWithScore[]; statuses: 
                   key={job.id}
                   job={job}
                   statuses={statuses}
+                  showStatusDropdown={showStatusDropdown}
                   selected={selected.has(job.id)}
                   onToggleSelect={toggleSelect}
                   expanded={expanded.has(job.id)}

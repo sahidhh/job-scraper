@@ -41,6 +41,8 @@ export function makeJob(overrides: Partial<JobWithScore> = {}): JobWithScore {
 
 export const TEST_STATUSES: JobStatus[] = [
   { id: "status-new", label: "New", color: "#888888", sortOrder: 0 },
-  { id: "status-rejected", label: "Rejected", color: "#ff0000", sortOrder: 1 },
-  { id: "status-archived", label: "Archived", color: "#333333", sortOrder: 2 },
+  { id: "status-viewed", label: "Viewed", color: "#a855f7", sortOrder: 1 },
+  { id: "status-applied", label: "Applied", color: "#22c55e", sortOrder: 2 },
+  { id: "status-not-interested", label: "Not Interested", color: "#ff0000", sortOrder: 3 },
+  { id: "status-archived", label: "Archived", color: "#333333", sortOrder: 4 },
 ];

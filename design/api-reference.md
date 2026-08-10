@@ -308,6 +308,16 @@ Actions **never throw** to the client. On success they call `revalidatePath()` t
 
 **Returns:** `ActionResult<undefined>`
 
+#### `setShowStatusDropdownAction(enabled)`
+**File:** `src/features/settings/actions.ts`  
+**Description:** Stores the `show_status_dropdown` flag in `app_settings`. Defaults to `true` (on) when unset. When off, the dashboard's per-job status control (`JobStatusSelect`/`JobStatusSheet`) renders as a read-only `StatusBadge` instead — the quick-action buttons (Not Interested/Viewed/Applied/Archive) remain the only way to change status.
+
+| Param | Type | Description |
+|---|---|---|
+| enabled | `boolean` | `true` shows the interactive dropdown/sheet |
+
+**Returns:** `ActionResult<undefined>`
+
 ---
 
 ### Notification Preferences

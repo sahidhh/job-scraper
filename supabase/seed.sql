@@ -98,9 +98,10 @@ on conflict (role) do nothing;
 --     same guard), same convention as the role_expansion_map seed above.
 --   - A job with no job_state row renders as the first status (New).
 insert into job_statuses (label, color, sort_order) values
-  ('New',        '#E5E7EB', 0),
-  ('Interested', '#DBEAFE', 1),
-  ('Applied',    '#DCFCE7', 2),
-  ('Rejected',   '#FEE2E2', 3),
-  ('Archived',   '#F3F4F6', 4)
+  ('New',            '#E5E7EB', 0),
+  ('Viewed',         '#EDE9FE', 1),
+  ('Interested',     '#DBEAFE', 2),
+  ('Applied',        '#DCFCE7', 3),
+  ('Not Interested', '#FEE2E2', 4),
+  ('Archived',       '#F3F4F6', 5)
 on conflict (label) do nothing;

@@ -38,7 +38,7 @@ function renderTable(list = jobs) {
   return render(
     <DashboardNavigationProvider>
       <input aria-label="Search jobs" />
-      <JobsTable jobs={list} statuses={TEST_STATUSES} />
+      <JobsTable jobs={list} statuses={TEST_STATUSES} showStatusDropdown />
     </DashboardNavigationProvider>,
   );
 }
@@ -83,7 +83,7 @@ describe("JobsTable keyboard shortcuts", () => {
     await user.keyboard("r");
 
     await waitFor(() => expect(setJobStatusAction).toHaveBeenCalledTimes(1));
-    expect(setJobStatusAction).toHaveBeenCalledWith(["job-2"], "status-rejected");
+    expect(setJobStatusAction).toHaveBeenCalledWith(["job-2"], "status-not-interested");
   });
 
   it("fires archive for the focused row", async () => {
@@ -190,7 +190,7 @@ describe("JobsTable shortcut legend", () => {
     expect(legend).not.toBeNull();
     expect(legend).toHaveTextContent("move between rows");
     expect(legend).toHaveTextContent("R");
-    expect(legend).toHaveTextContent("reject");
+    expect(legend).toHaveTextContent("not interested");
     expect(legend).toHaveTextContent("A");
     expect(legend).toHaveTextContent("archive");
     expect(legend).toHaveTextContent("D");

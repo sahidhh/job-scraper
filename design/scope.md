@@ -26,7 +26,7 @@ A single technical professional (software engineer, data scientist, or similar) 
 | Two-stage scoring | Keyword score (free) → AI score (gated) per job |
 | Telegram notifications | Push alert for jobs above AI score threshold |
 | Dashboard | Paginated, filterable, sortable job table with scores and statuses |
-| Status workflow | Customizable workflow statuses (New, Interested, Applied, Rejected, Archived) |
+| Status workflow | Customizable workflow statuses (New, Viewed, Interested, Applied, Not Interested, Archived). Dashboard quick-action buttons (Not Interested/Viewed/Applied/Archive) set these four by label match; the per-job dropdown/sheet itself can be toggled off in `/settings/workflow` (`show_status_dropdown`), leaving a read-only badge and the quick-action buttons as the only status control |
 | Company configuration | Add/remove Greenhouse/Lever/Ashby board tokens via UI |
 | Observability | scrape_runs log per source |
 | Source validation | Probe Greenhouse/Lever/Ashby boards pre-scrape; report dead tokens |
@@ -189,7 +189,7 @@ no new routes, no data-model change, and no new server action.
 
 | Feature | Description |
 |---|---|
-| Dashboard keyboard shortcuts | Roving row focus with `↑`/`↓`, `R` reject, `A` archive, `D` details, scoped to the one focused row, guarded against modifiers and text entry, and printed on screen as a `<kbd>` legend. Replaces a per-row `window` listener that fired every shortcut on every job (decisions.md AD-60, use-cases.md UC-02a) |
+| Dashboard keyboard shortcuts | Roving row focus with `↑`/`↓`, `R` not interested, `A` archive, `D` details, scoped to the one focused row, guarded against modifiers and text entry, and printed on screen as a `<kbd>` legend. Replaces a per-row `window` listener that fired every shortcut on every job (decisions.md AD-60, use-cases.md UC-02a) |
 | Enter applies a filter | Search, min-score and max-years commit on Enter as well as on blur — via a real `<form onSubmit>`, in both the desktop toolbar and the mobile sheet — and navigate once for both. Same for the Roles screen's primary-role input, where Enter triggers Expand |
 | Mobile status sheet parity | `JobStatusSheet` becomes controlled: it closes on select, shows the new status immediately, and rolls back on failure — the contract `JobStatusSelect` already had on desktop |
 | Route loading skeletons | `/dashboard`, `/roles`, `/resume`, `/insights` gain `loading.tsx`; all six protected routes now have one (architecture.md §12.4) |

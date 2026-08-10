@@ -112,8 +112,10 @@ your AI relevance score plus any ranking bonuses you've configured (see "Ranking
 - **Keyword Score** (0–100%) — cheap keyword overlap score
 - **AI Score** (0–100%) — AI-assessed relevance (may be null if below keyword threshold or pending)
 - **Ranking bonus** — shown next to the AI score when a bonus applied (e.g. "+ preferred company, remote")
-- **Status** — your workflow status for this job
-- **Actions** — open job URL in new tab, or draft an application (mail icon — see "Draft an Application" below)
+- **Status** — your workflow status for this job (a dropdown by default, or a read-only badge if the
+  status dropdown toggle in `/settings/workflow` is off — see "Status dropdown toggle" below)
+- **Actions** — quick-action buttons (Not Interested / Mark Viewed / Mark Applied / Archive), open job
+  URL in new tab, or draft an application (mail icon — see "Draft an Application" below)
 
 Click a row's title to expand it and read the AI's reasoning for the score.
 
@@ -125,7 +127,7 @@ tinted background. The same shortcuts are printed above the table, so you never 
 | Key | Does |
 |---|---|
 | `↑` `↓` | Move between rows |
-| `R` | Reject the focused job |
+| `R` | Mark the focused job Not Interested |
 | `A` | Archive the focused job |
 | `D` | Expand or collapse the focused row's details (AI reasoning, company history) |
 
@@ -134,8 +136,9 @@ nothing while you're typing in the search box or any other field, while a status
 open, or when you hold Ctrl/Cmd/Alt, so `Ctrl+R` still reloads the page and typing the word "remote"
 into search doesn't archive anything.
 
-`R` and `A` do exactly what the reject and archive buttons on the row do, so an accidental one is
-undone the same way — set the status back from the row's dropdown.
+`R` and `A` do exactly what the row's Not Interested and Archive buttons do, so an accidental one is
+undone the same way — set the status back from the row's dropdown (or its read-only badge's row/card
+quick-action buttons, if the dropdown is turned off — see "Status dropdown toggle" below).
 
 > Shortcuts are desktop-only. On mobile there's no focused row to act on; use the card's buttons and
 > status sheet instead.
@@ -155,7 +158,8 @@ from a low score: pending means no AI verdict exists yet, not that the verdict w
 ### On mobile
 The dashboard reflows rather than shrinking:
 - The job table becomes a list of **cards** — title and score badge on the top row, company beneath,
-  location and source chips, then a footer strip with the status dropdown.
+  location and source chips, then a footer strip with the status dropdown (or badge) and the same
+  quick-action buttons as the desktop row.
 - The filter toolbar collapses to a single **Filters** pill showing a count of how many filters are
   active. Tapping it opens a bottom sheet with the full set of controls, plus **Clear all** and
   **Done**.
@@ -221,6 +225,7 @@ Freshness isn't a separate bonus — the dashboard already breaks ties by postin
 without double-counting. Leave everything blank (or click "Clear all") to rank by AI score alone.
 
 ### Changing Job Status
+**Dropdown/sheet (default):**
 1. Click the status badge on any job row
 2. Select the new status from the dropdown
 3. Change is saved instantly
@@ -229,8 +234,21 @@ The badge shows the new status the moment you pick it, before the save finishes.
 the old status comes back — so what the badge says is always what's actually stored. On mobile the
 same control is a bottom sheet, and it closes as soon as you pick.
 
-Keyboard: `R` and `A` set Rejected and Archived on the focused row without opening the dropdown at
-all — see "Keyboard shortcuts" above.
+**Quick-action buttons:** Every row (and card, on mobile) also carries four one-click buttons —
+**Not Interested**, **Mark Viewed**, **Mark Applied**, **Archive** — that set the matching status
+directly, without opening the dropdown/sheet. These work the same whether the status dropdown toggle
+(below) is on or off, so they're the only way to change status once it's off.
+
+Keyboard: `R` and `A` set Not Interested and Archived on the focused row without opening the dropdown
+at all — see "Keyboard shortcuts" above.
+
+### Status dropdown toggle
+**Location:** `/settings/workflow`
+
+Default: on — the interactive dropdown/sheet described above. Turn it off to replace it
+with a read-only badge showing the current status; the quick-action buttons remain the only way to
+change status. Useful if the dropdown's full status list gets in the way and you only ever use the
+four quick actions.
 
 ### Bulk Status Change
 1. Select multiple jobs using the checkboxes
@@ -265,10 +283,15 @@ Dismissed drafts can be redrafted at any time. See §9 for how pending (unreview
 | Status | Color | Description |
 |---|---|---|
 | New | Blue | Freshly scraped, not yet reviewed |
+| Viewed | Purple | You've looked at it |
 | Interested | Green | Worth applying to |
 | Applied | Yellow | Application submitted |
-| Rejected | Red | Application rejected / not pursuing |
+| Not Interested | Red | Not pursuing |
 | Archived | Grey | No longer relevant |
+
+`Not Interested`, `Viewed`, `Applied`, and `Archived` are also the four targets of the dashboard's
+quick-action buttons (§4) — matched by label, so renaming or deleting one of these four disconnects
+the matching button (it becomes a no-op) until you rename/recreate a status with that exact label.
 
 ### Customise Statuses
 - **Add status:** Click "Add Status", enter label and choose color
@@ -360,7 +383,8 @@ source that's running but failing, and sorted to the top of the table.
 `/analytics`'s per-source probe table (AD-65 point 4 — it's not a polled source, has no `companies`
 row). Its own visibility lives on the **Operational** tab instead (AD-66/67): total count of
 claude-routine jobs, the most recent import timestamp, and a day-by-day breakdown of how many jobs
-were added on each of the last 7 days that had any.
+were added — and how many distinct import runs produced them, keyed off distinct `first_seen_at`
+timestamps since there's no dedicated import-batch id — on each of the last 7 days that had any.
 
 ---
 
@@ -427,7 +451,7 @@ Every Telegram message — individual mode, the digest's strong-match listing, a
 - 📄 Employment type, only shown for non-full-time types (contract/freelance/internship/temporary/part-time)
 
 ### Stop Notifications for a Job
-Mark the job as "Archived" or "Rejected" in the dashboard. (Note: this does not directly suppress notifications — the threshold is score-based only. A job already notified will not be notified again regardless of status.) To stop notifications for an entire company or keyword going forward, use the notification filters above instead.
+Mark the job as "Archived" or "Not Interested" in the dashboard. (Note: this does not directly suppress notifications — the threshold is score-based only. A job already notified will not be notified again regardless of status.) To stop notifications for an entire company or keyword going forward, use the notification filters above instead.
 
 ---
 

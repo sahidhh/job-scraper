@@ -1,6 +1,6 @@
 "use client";
 
-import { Archive, ChevronDown, ChevronRight, ExternalLink, ThumbsDown } from "lucide-react";
+import { Archive, Check, ChevronDown, ChevronRight, Eye, ExternalLink, ThumbsDown } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { TableCell, TableRow } from "@/components/ui/table";
@@ -9,6 +9,7 @@ import { INELIGIBLE_REASON_LABELS } from "@/features/scoring/domain/classifyElig
 import { ApplicationDraftDialog } from "./ApplicationDraftDialog";
 import { CompanyHistoryPanel } from "./CompanyHistoryPanel";
 import { JobStatusSelect } from "./JobStatusSelect";
+import { StatusBadge } from "./StatusBadge";
 import { setJobStatusAction } from "@/features/jobs/actions";
 import { formatScore, manualScoreBadgeVariant, pendingScoreLabel, scoreBadgeVariant } from "./jobScore";
 import { Button } from "@/components/ui/button";
@@ -85,6 +86,7 @@ function ScoreBadge({
 export function JobRow({
   job,
   statuses,
+  showStatusDropdown,
   selected,
   onToggleSelect,
   expanded,
@@ -95,6 +97,8 @@ export function JobRow({
 }: {
   job: JobWithScore;
   statuses: JobStatus[];
+  /** Settings → Workflow toggle. False renders a read-only badge instead of the dropdown. */
+  showStatusDropdown: boolean;
   selected: boolean;
   onToggleSelect: (jobId: string) => void;
   /** Detail row visibility. Owned by JobsTable so the `d` hotkey can reach it. */
@@ -106,8 +110,11 @@ export function JobRow({
   rowRef: (element: HTMLTableRowElement | null) => void;
 }) {
   const router = useRouter();
-  const rejectStatus = statuses.find(s => s.label === "Rejected")?.id;
+  const notInterestedStatus = statuses.find(s => s.label === "Not Interested")?.id;
+  const viewedStatus = statuses.find(s => s.label === "Viewed")?.id;
+  const appliedStatus = statuses.find(s => s.label === "Applied")?.id;
   const archiveStatus = statuses.find(s => s.label === "Archived")?.id;
+  const currentStatus = statuses.find(s => s.id === job.statusId);
 
   const onAction = async (statusId: string | undefined) => {
     if (!statusId) return;
@@ -168,7 +175,11 @@ export function JobRow({
           </Badge>
         </TableCell>
         <TableCell>
-          <JobStatusSelect jobId={job.id} statusId={job.statusId} statuses={statuses} />
+          {showStatusDropdown ? (
+            <JobStatusSelect jobId={job.id} statusId={job.statusId} statuses={statuses} />
+          ) : (
+            <StatusBadge status={currentStatus} />
+          )}
         </TableCell>
         <TableCell>
           <div className="flex flex-col gap-0.5">
@@ -190,11 +201,31 @@ export function JobRow({
                 variant="ghost"
                 size="icon-sm"
                 className="text-primary hover:text-primary"
-                onClick={() => rejectStatus && onAction(rejectStatus)}
-                aria-label={`Reject ${job.title}`}
-                title="Reject"
+                onClick={() => notInterestedStatus && onAction(notInterestedStatus)}
+                aria-label={`Not interested in ${job.title}`}
+                title="Not interested"
               >
                 <ThumbsDown className="size-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className="text-primary hover:text-primary"
+                onClick={() => viewedStatus && onAction(viewedStatus)}
+                aria-label={`Mark ${job.title} as viewed`}
+                title="Mark viewed"
+              >
+                <Eye className="size-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className="text-primary hover:text-primary"
+                onClick={() => appliedStatus && onAction(appliedStatus)}
+                aria-label={`Mark ${job.title} as applied`}
+                title="Mark applied"
+              >
+                <Check className="size-4" />
               </Button>
               <Button
                 variant="ghost"

@@ -87,4 +87,41 @@ describe("SupabaseSettingsRepository", () => {
       expect(builder.delete).not.toHaveBeenCalled();
     });
   });
+
+  describe("getShowStatusDropdown", () => {
+    it("returns true when no row exists (default on)", async () => {
+      const { client, builder } = mockSupabaseClient({ data: null, error: null });
+      const repo = new SupabaseSettingsRepository(client);
+
+      expect(await repo.getShowStatusDropdown()).toBe(true);
+      expect(builder.eq).toHaveBeenCalledWith("key", "show_status_dropdown");
+    });
+
+    it("returns false only when the stored value is exactly false", async () => {
+      const { client } = mockSupabaseClient({ data: { value: false }, error: null });
+      const repo = new SupabaseSettingsRepository(client);
+
+      expect(await repo.getShowStatusDropdown()).toBe(false);
+    });
+
+    it("returns true for a non-boolean stored value rather than coercing it", async () => {
+      const { client } = mockSupabaseClient({ data: { value: "no" }, error: null });
+      const repo = new SupabaseSettingsRepository(client);
+
+      expect(await repo.getShowStatusDropdown()).toBe(true);
+    });
+  });
+
+  describe("setShowStatusDropdown", () => {
+    it("upserts on conflict of key", async () => {
+      const { client, builder } = mockSupabaseClient({ data: null, error: null });
+      const repo = new SupabaseSettingsRepository(client);
+
+      await repo.setShowStatusDropdown(false);
+
+      const upsertCall = builder.upsert!.mock.calls[0] as unknown[];
+      expect(upsertCall[0]).toMatchObject({ key: "show_status_dropdown", value: false });
+      expect(upsertCall[1]).toEqual({ onConflict: "key" });
+    });
+  });
 });
