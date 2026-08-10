@@ -2,7 +2,7 @@
 
 import { Archive, Check, ChevronDown, ChevronRight, Eye, ExternalLink, ThumbsDown } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -66,13 +66,30 @@ export function JobCard({
   const viewedStatus = statuses.find((s) => s.label === "Viewed")?.id;
   const appliedStatus = statuses.find((s) => s.label === "Applied")?.id;
   const archiveStatus = statuses.find((s) => s.label === "Archived")?.id;
-  const currentStatus = statuses.find((s) => s.id === job.statusId);
 
-  const onAction = async (statusId: string | undefined) => {
+  // Optimistic status, same contract as JobStatusSheet: shows the new value
+  // immediately (badge/pressed-icon update before the request resolves) and
+  // reverts if the action fails, instead of leaving the tap looking like it
+  // did nothing until router.refresh() completes.
+  const [optimisticStatusId, setOptimisticStatusId] = useState(job.statusId);
+  const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    setOptimisticStatusId(job.statusId);
+  }, [job.statusId]);
+
+  const currentStatus = statuses.find((s) => s.id === optimisticStatusId);
+
+  function onAction(statusId: string | undefined) {
     if (!statusId) return;
-    await setJobStatusAction([job.id], statusId);
-    router.refresh();
-  };
+    const previousStatusId = optimisticStatusId;
+    setOptimisticStatusId(statusId);
+    startTransition(async () => {
+      const result = await setJobStatusAction([job.id], statusId);
+      if (!result.ok) setOptimisticStatusId(previousStatusId);
+      router.refresh();
+    });
+  }
 
   return (
     <article
@@ -151,20 +168,45 @@ export function JobCard({
         </div>
       )}
 
-      {/* Bottom bar: status + quick actions + view link */}
-      <div className="flex items-center justify-between border-t bg-muted/30 px-4 py-2.5">
-        {showStatusDropdown ? (
-          <JobStatusSheet jobId={job.id} statusId={job.statusId} statuses={statuses} />
-        ) : (
-          <StatusBadge status={currentStatus} />
-        )}
-        <div className="flex items-center gap-1">
+      {/* Bottom bar: status + view/draft on one row, quick actions on their
+          own row beneath -- six 44px tap targets plus the status control
+          never fit on one line at mobile widths. */}
+      <div className={cn("space-y-2 border-t bg-muted/30 px-4 py-2.5", isPending && "opacity-60")}>
+        <div className="flex items-center justify-between">
+          {showStatusDropdown ? (
+            <JobStatusSheet jobId={job.id} statusId={optimisticStatusId} statuses={statuses} />
+          ) : (
+            <StatusBadge status={currentStatus} />
+          )}
+          <div className="flex items-center gap-1">
+            <a
+              href={job.url}
+              target="_blank"
+              rel="noreferrer"
+              className={cn(
+                buttonVariants({ variant: "ghost", size: "icon" }),
+                // 44px minimum tap target on mobile; this card only renders there.
+                "size-11 text-primary hover:text-primary",
+              )}
+              aria-label={`View ${job.title}`}
+            >
+              <ExternalLink className="size-4" />
+            </a>
+            <ApplicationDraftDialog jobId={job.id} jobTitle={job.title} />
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-1">
           <Button
             variant="ghost"
             size="icon"
-            className="size-11 text-primary hover:text-primary"
+            disabled={isPending}
+            className={cn(
+              "size-11 text-primary hover:text-primary",
+              optimisticStatusId === notInterestedStatus && "bg-accent text-foreground",
+            )}
             onClick={() => onAction(notInterestedStatus)}
             aria-label={`Not interested in ${job.title}`}
+            aria-pressed={optimisticStatusId === notInterestedStatus}
             title="Not interested"
           >
             <ThumbsDown className="size-4" />
@@ -172,9 +214,14 @@ export function JobCard({
           <Button
             variant="ghost"
             size="icon"
-            className="size-11 text-primary hover:text-primary"
+            disabled={isPending}
+            className={cn(
+              "size-11 text-primary hover:text-primary",
+              optimisticStatusId === viewedStatus && "bg-accent text-foreground",
+            )}
             onClick={() => onAction(viewedStatus)}
             aria-label={`Mark ${job.title} as viewed`}
+            aria-pressed={optimisticStatusId === viewedStatus}
             title="Mark viewed"
           >
             <Eye className="size-4" />
@@ -182,9 +229,14 @@ export function JobCard({
           <Button
             variant="ghost"
             size="icon"
-            className="size-11 text-primary hover:text-primary"
+            disabled={isPending}
+            className={cn(
+              "size-11 text-primary hover:text-primary",
+              optimisticStatusId === appliedStatus && "bg-accent text-foreground",
+            )}
             onClick={() => onAction(appliedStatus)}
             aria-label={`Mark ${job.title} as applied`}
+            aria-pressed={optimisticStatusId === appliedStatus}
             title="Mark applied"
           >
             <Check className="size-4" />
@@ -192,27 +244,18 @@ export function JobCard({
           <Button
             variant="ghost"
             size="icon"
-            className="size-11 text-primary hover:text-primary"
+            disabled={isPending}
+            className={cn(
+              "size-11 text-primary hover:text-primary",
+              optimisticStatusId === archiveStatus && "bg-accent text-foreground",
+            )}
             onClick={() => onAction(archiveStatus)}
             aria-label={`Archive ${job.title}`}
+            aria-pressed={optimisticStatusId === archiveStatus}
             title="Archive"
           >
             <Archive className="size-4" />
           </Button>
-          <a
-            href={job.url}
-            target="_blank"
-            rel="noreferrer"
-            className={cn(
-              buttonVariants({ variant: "ghost", size: "icon" }),
-              // 44px minimum tap target on mobile; this card only renders there.
-              "size-11 text-primary hover:text-primary",
-            )}
-            aria-label={`View ${job.title}`}
-          >
-            <ExternalLink className="size-4" />
-          </a>
-          <ApplicationDraftDialog jobId={job.id} jobTitle={job.title} />
         </div>
       </div>
     </article>

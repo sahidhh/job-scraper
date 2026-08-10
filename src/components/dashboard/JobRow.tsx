@@ -2,8 +2,10 @@
 
 import { Archive, Check, ChevronDown, ChevronRight, Eye, ExternalLink, ThumbsDown } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useEffect, useState, useTransition } from "react";
 import { Badge } from "@/components/ui/badge";
 import { TableCell, TableRow } from "@/components/ui/table";
+import { cn } from "@/lib/utils";
 import type { JobStatus, JobWithScore } from "@/features/jobs/domain/types";
 import { INELIGIBLE_REASON_LABELS } from "@/features/scoring/domain/classifyEligibility";
 import { ApplicationDraftDialog } from "./ApplicationDraftDialog";
@@ -114,13 +116,30 @@ export function JobRow({
   const viewedStatus = statuses.find(s => s.label === "Viewed")?.id;
   const appliedStatus = statuses.find(s => s.label === "Applied")?.id;
   const archiveStatus = statuses.find(s => s.label === "Archived")?.id;
-  const currentStatus = statuses.find(s => s.id === job.statusId);
 
-  const onAction = async (statusId: string | undefined) => {
+  // Optimistic status, same contract as JobStatusSelect: shows the new value
+  // immediately (row color/badge/pressed-icon all update before the request
+  // resolves) and reverts if the action fails, instead of leaving the click
+  // looking like it did nothing until router.refresh() completes.
+  const [optimisticStatusId, setOptimisticStatusId] = useState(job.statusId);
+  const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    setOptimisticStatusId(job.statusId);
+  }, [job.statusId]);
+
+  const currentStatus = statuses.find(s => s.id === optimisticStatusId);
+
+  function onAction(statusId: string | undefined) {
     if (!statusId) return;
-    await setJobStatusAction([job.id], statusId);
-    router.refresh();
-  };
+    const previousStatusId = optimisticStatusId;
+    setOptimisticStatusId(statusId);
+    startTransition(async () => {
+      const result = await setJobStatusAction([job.id], statusId);
+      if (!result.ok) setOptimisticStatusId(previousStatusId);
+      router.refresh();
+    });
+  }
 
   return (
     <>
@@ -176,7 +195,7 @@ export function JobRow({
         </TableCell>
         <TableCell>
           {showStatusDropdown ? (
-            <JobStatusSelect jobId={job.id} statusId={job.statusId} statuses={statuses} />
+            <JobStatusSelect jobId={job.id} statusId={optimisticStatusId} statuses={statuses} />
           ) : (
             <StatusBadge status={currentStatus} />
           )}
@@ -195,14 +214,19 @@ export function JobRow({
             )}
           </div>
         </TableCell>
-        <TableCell className="min-w-40">
-            <div className="flex items-center gap-1">
+        <TableCell className="min-w-60">
+            <div className={cn("flex flex-wrap items-center gap-1", isPending && "opacity-60")}>
               <Button
                 variant="ghost"
                 size="icon-sm"
-                className="text-primary hover:text-primary"
-                onClick={() => notInterestedStatus && onAction(notInterestedStatus)}
+                disabled={isPending}
+                className={cn(
+                  "text-primary hover:text-primary",
+                  optimisticStatusId === notInterestedStatus && "bg-accent text-foreground",
+                )}
+                onClick={() => onAction(notInterestedStatus)}
                 aria-label={`Not interested in ${job.title}`}
+                aria-pressed={optimisticStatusId === notInterestedStatus}
                 title="Not interested"
               >
                 <ThumbsDown className="size-4" />
@@ -210,9 +234,14 @@ export function JobRow({
               <Button
                 variant="ghost"
                 size="icon-sm"
-                className="text-primary hover:text-primary"
-                onClick={() => viewedStatus && onAction(viewedStatus)}
+                disabled={isPending}
+                className={cn(
+                  "text-primary hover:text-primary",
+                  optimisticStatusId === viewedStatus && "bg-accent text-foreground",
+                )}
+                onClick={() => onAction(viewedStatus)}
                 aria-label={`Mark ${job.title} as viewed`}
+                aria-pressed={optimisticStatusId === viewedStatus}
                 title="Mark viewed"
               >
                 <Eye className="size-4" />
@@ -220,9 +249,14 @@ export function JobRow({
               <Button
                 variant="ghost"
                 size="icon-sm"
-                className="text-primary hover:text-primary"
-                onClick={() => appliedStatus && onAction(appliedStatus)}
+                disabled={isPending}
+                className={cn(
+                  "text-primary hover:text-primary",
+                  optimisticStatusId === appliedStatus && "bg-accent text-foreground",
+                )}
+                onClick={() => onAction(appliedStatus)}
                 aria-label={`Mark ${job.title} as applied`}
+                aria-pressed={optimisticStatusId === appliedStatus}
                 title="Mark applied"
               >
                 <Check className="size-4" />
@@ -230,9 +264,14 @@ export function JobRow({
               <Button
                 variant="ghost"
                 size="icon-sm"
-                className="text-primary hover:text-primary"
-                onClick={() => archiveStatus && onAction(archiveStatus)}
+                disabled={isPending}
+                className={cn(
+                  "text-primary hover:text-primary",
+                  optimisticStatusId === archiveStatus && "bg-accent text-foreground",
+                )}
+                onClick={() => onAction(archiveStatus)}
                 aria-label={`Archive ${job.title}`}
+                aria-pressed={optimisticStatusId === archiveStatus}
                 title="Archive"
               >
                 <Archive className="size-4" />

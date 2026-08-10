@@ -263,13 +263,13 @@ export function JobsTable({
                     className="size-4 accent-primary"
                   />
                 </TableHead>
-                <TableHead className="w-[25%]">Title</TableHead>
-                <TableHead className="w-[15%]">Company</TableHead>
-                <TableHead className="hidden w-[12%] md:table-cell">Location</TableHead>
-                <TableHead className="hidden w-[9%] md:table-cell">Source</TableHead>
-                <TableHead className="w-[13%]">Status</TableHead>
-                <TableHead className="w-[9%]">Score</TableHead>
-                <TableHead className="w-[13%] min-w-40">Link</TableHead>
+                <TableHead className="w-[20%]">Title</TableHead>
+                <TableHead className="w-[12%]">Company</TableHead>
+                <TableHead className="hidden w-[10%] md:table-cell">Location</TableHead>
+                <TableHead className="hidden w-[8%] md:table-cell">Source</TableHead>
+                <TableHead className="w-[12%]">Status</TableHead>
+                <TableHead className="w-[8%]">Score</TableHead>
+                <TableHead className="w-[26%] min-w-60">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody ref={bodyRef}>
