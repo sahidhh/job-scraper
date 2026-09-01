@@ -12,7 +12,8 @@ import type {
   UpsertResult,
 } from "@/features/jobs/domain/types";
 import { computeFingerprint } from "@/features/jobs/application/computeFingerprint";
-import { computeJobStats } from "@/features/jobs/domain/computeJobStats";
+import { computeJobStats, judgedScore } from "@/features/jobs/domain/computeJobStats";
+import { isAboveShrug } from "@/features/scoring/domain/scoreBands";
 import { normalizeCompanyName } from "@/features/companies/domain/normalizeCompanyName";
 import type { JobSource } from "@/shared/domain/enums";
 import { buildRoleFilter, sanitizeRoleForFilter } from "@/shared/infrastructure/roleFilter";
@@ -601,9 +602,25 @@ export class SupabaseJobRepository implements JobRepository {
     // nulls the embedding rather than dropping the parent row (the same
     // constraint that forces the in-memory ranking above). Jobs with no score
     // row at all are never cut here -- they're unscored, not low-match.
-    const visible = filters.includeLowMatch
+    const afterLowMatch = filters.includeLowMatch
       ? ranked
       : ranked.filter((job) => job.keywordScore === null || job.keywordScore >= keywordThreshold);
+
+    // Weak matches are cut here rather than via `minAiScore`'s SQL `gte`, for
+    // three reasons: it keeps the `!left` join (a `gte` on the embedded
+    // job_scores resource forces `!inner`, which would also drop every
+    // unscored row, a different filter than the one asked for); it lets the
+    // one cut serve both origins, since claude_routine rows carry
+    // manual_score and no ai_score at all (AD-65); and `minAiScore` stays
+    // what the user typed, not something the page silently pre-set.
+    //
+    // Default ON (AD-69), same inverted sense as the two cuts above: the AI
+    // returns exactly AI_SCORE_SHRUG when a posting gives it nothing to judge,
+    // and that single value was 47% of the scored, eligible, active set. They
+    // are scored, so nothing else hides them -- they are simply not answers.
+    const visible = filters.includeWeakMatch
+      ? afterLowMatch
+      : afterLowMatch.filter((job) => isAboveShrug(judgedScore(job)));
 
     const hasMore = visible.length > limit;
     const jobs = visible.slice(0, limit);

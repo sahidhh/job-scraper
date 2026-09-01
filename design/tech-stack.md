@@ -301,6 +301,59 @@ adopted. Do not introduce a third variant.
 Lucide React only, stroke-based, 24×24 viewBox. `size-3.5`/`size-4` in content, `size-4` in nav.
 Do not mix in a second icon set or inline raw SVG paths — `components.json` pins `"iconLibrary": "lucide"`.
 
+The brand mark below is the one deliberate exception, and is not a licence for others: it is
+artwork, not iconography, it never appears in content or nav, and no Lucide glyph can stand in for
+a logo.
+
+### Brand mark
+
+One mark, three renderings, one geometry: a rounded square (`rx` 7/32 ≈ 22%, matching the
+wordmark's `rounded-md` on `size-6`) holding a bold `J` drawn as a **stroked path**, not a text
+glyph — `stroke-width: 4` on a 32×32 viewBox, round caps, the counter inside the bowl left open.
+
+| Where | File | Notes |
+|---|---|---|
+| In-app, beside the product name | `src/components/layout/Wordmark.tsx` | Text glyph (`font-extrabold`), tinted `bg-foreground`/`text-background` so it inverts with the theme |
+| Browser tab / bookmark | `src/app/icon.svg` | **Source of truth for the geometry.** Theme-aware via `prefers-color-scheme` inside the SVG |
+| iOS home screen | `src/app/apple-icon.png` (180×180) | Full-bleed — iOS applies its own squircle mask |
+| Installed app | `public/icon-192.png`, `public/icon-512.png`, `public/icon-maskable-512.png` | Referenced from `src/app/manifest.ts` |
+
+Three rules, each of which someone will otherwise get wrong:
+
+- **The favicon is a path, not a letter.** It is rasterised at 16px, where a font-rendered `J`
+  hints unpredictably and the bowl's counter closes up. The stroke weight is the largest that
+  keeps that counter open at 16px — measured, not guessed. `Wordmark.tsx` keeps the text glyph
+  because at 24px in a webfont-loaded page there is no such problem.
+- **The favicon inverts with the theme; the PNGs do not.** `Wordmark.tsx` paints the tile
+  `bg-foreground`, so a favicon frozen at near-black would disappear into a dark browser tab
+  strip — the one place the mark has to survive with no page around it. Browsers that ignore the
+  media query fall back to the light values. Installed-app and home-screen icons sit on a
+  wallpaper the app does not control, so they stay fixed at near-black.
+- **The PNGs are rasterised from `icon.svg`'s exact geometry** (`viewBox`, path `d`, stroke width,
+  `#0a0a0a`/`#fafafa`), at `rx="7"` for the `any`-purpose icons and `rx="0"` for the full-bleed
+  `maskable` and Apple ones. Changing the mark means re-rasterising all four, not editing one.
+  The glyph fits inside the maskable safe circle (80% diameter) at this size, which is why one
+  geometry serves both purposes.
+
+`#0a0a0a` and `#fafafa` are the sRGB forms of `--foreground`/`--background` (`oklch(0.145 0 0)`
+and `oklch(0.985 0 0)`). They are hex here, and only here, because none of these files is a
+stylesheet: an SVG served as a favicon and a JSON manifest cannot read a CSS custom property. The
+"no hex, anywhere" rule above still holds for `globals.css` and components.
+
+### Document metadata
+
+`src/app/layout.tsx` owns the defaults; **every route sets its own `title`**, because this app is
+read with a dozen job listings open beside it and an undifferentiated tab strip is unusable. The
+root declares `title: { default: "Job Intelligence", template: "%s · Job Intelligence" }`, so a
+page exports only its own name. Nested routes disambiguate inline (`"Workflow · Settings"`) rather
+than via nested templates, which apply one level only and silently drop the app name.
+
+`robots: { index: false, follow: false }` is set app-wide: the tool is single-user and auth-gated,
+and `/login` is the one publicly reachable, perfectly indexable page. `viewport.themeColor` carries
+two media-scoped values so the browser's own chrome follows the OS theme — metadata, not markup,
+so it does not breach the "never branch server-rendered output on theme" rule in §Theming; the
+browser chooses between both values client-side exactly as the CSS does.
+
 ### Theming
 
 **Light and dark, and nothing else.** There is no density toggle and no accent picker

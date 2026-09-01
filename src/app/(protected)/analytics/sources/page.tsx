@@ -5,6 +5,9 @@ import { SourceHealthTable } from "@/features/insights/ui/SourceHealthTable";
 import { getSourceHealthReport } from "@/features/sources/application/getSourceHealthReport";
 import { SupabaseScrapeRunRepository } from "@/features/sources/infrastructure/SupabaseScrapeRunRepository";
 import { createSupabaseServerClient } from "@/shared/infrastructure/supabase/server";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "Sources · Analytics" };
 
 export default async function AnalyticsSourcesPage() {
   const client = await createSupabaseServerClient();

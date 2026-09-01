@@ -3,6 +3,9 @@ import { RoleSelectorForm } from "@/components/roles/RoleSelectorForm";
 import { SupabaseRolePackRepository } from "@/features/roles/infrastructure/SupabaseRolePackRepository";
 import { SupabaseRoleRepository } from "@/features/roles/infrastructure/SupabaseRoleRepository";
 import { createSupabaseServerClient } from "@/shared/infrastructure/supabase/server";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "Role selection" };
 
 export default async function RolesPage() {
   const client = await createSupabaseServerClient();

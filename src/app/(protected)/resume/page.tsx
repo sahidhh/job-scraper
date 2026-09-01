@@ -5,6 +5,9 @@ import { SkillsEditor } from "@/components/resume/SkillsEditor";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { SupabaseResumeRepository } from "@/features/resume/infrastructure/SupabaseResumeRepository";
 import { createSupabaseServerClient } from "@/shared/infrastructure/supabase/server";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "Resume" };
 
 export default async function ResumePage() {
   const client = await createSupabaseServerClient();

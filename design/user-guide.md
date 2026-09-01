@@ -163,8 +163,9 @@ The dashboard reflows rather than shrinking:
 - The filter toolbar collapses to a single **Filters** pill showing a count of how many filters are
   active. Tapping it opens a bottom sheet with the full set of controls, plus **Clear all** and
   **Done**.
-- Two filters are labelled for the action rather than the field: **Can apply** reads "Hide jobs I
-  can't apply to", **Good match** reads "Hide low keyword matches".
+- Three filters are labelled for the action rather than the field: **Can apply** reads "Hide jobs I
+  can't apply to", **Good match** reads "Hide low keyword matches", **Worth applying** reads "Hide
+  weak AI matches".
 - Primary navigation moves from the sidebar to a **bottom tab bar**.
 
 On desktop the table is sized to fit the window — long titles, company names, and sources truncate
@@ -180,6 +181,7 @@ with an ellipsis (hover for the full value) instead of forcing a horizontal scro
 - **Remote:** Show only jobs tagged `remote`
 - **Can apply** (labelled "Hide jobs I can't apply to" on mobile): **on by default.** Hides postings you could never actually take — remote roles locked to a region you can't work from, and onsite roles that explicitly refuse visa sponsorship. India and remote-open jobs are never hidden by this: neither needs a visa. Untick it to see the excluded jobs, each badged with the reason.
 - **Good match** ("Hide low keyword matches" on mobile): **on by default.** Hides jobs whose keyword overlap fell below `KEYWORD_THRESHOLD`. These were never sent to the AI and never will be, so they're noise in a list you scan for matches. The stats row still counts them as "N low match (hidden)" so you always know how many are behind the filter.
+- **Worth applying** ("Hide weak AI matches" on mobile): **on by default.** Hides jobs the AI scored at **40% or below**. That specific number is not a taste setting: 40% is what the scorer returns when a posting gives it nothing to judge against your resume, and it lands there far more often than anywhere else — on the set this was measured against, 160 of 340 scored jobs (47%) sat on exactly 40%, against 30 above it. Leaving them in is what made the dashboard a list of 340 jobs with 30 real ones buried in it. Untick to see them; the stats row counts them as "N weak (hidden)" either way. Jobs that are *queued* or *unscored* are never hidden by this — no rating is not a bad rating.
 - **Show archived jobs:** Off by default
 - Companies you've muted (Notification preferences, §9) never appear here either
 
@@ -196,10 +198,11 @@ stays on screen while this happens — it dims rather than being replaced by a
 skeleton, so the page never flashes empty between filter changes.
 
 ### The stats row
-Above the filters: `X of Y jobs · N AI-scored · N low match · N queued`. Every number describes the
+Above the filters: `X of Y jobs · N AI-scored · N weak · N low match · N queued`. Every number describes the
 currently filtered set, so they always reconcile with the list below.
 
 - **AI-scored** — the AI has rated this job against your resume.
+- **weak** — scored at or below 40%, the value the AI returns when it has nothing to go on. Hidden by default (above). This one **overlaps** "AI-scored" rather than adding to it: a weak match is scored, just badly, so the buckets below it still sum to the total on their own.
 - **low match** — keyword overlap fell below `KEYWORD_THRESHOLD`, so the AI stage was skipped to save budget. These will **not** be scored later; the keyword score is all you get unless you upload a new resume. Hidden by default (above).
 - **queued** — cleared the keyword gate but the AI call hasn't succeeded yet. The next `npm run score` run retries these. **This is the only bucket that costs money** — every retry is a paid API call. Only these are described as "awaiting AI review".
 - **gave up** — the AI call failed `MAX_AI_RETRIES` times (default 3), so scoring stopped paying for it. Still visible, still keyword-scored; it just won't be retried. Bump `MAX_AI_RETRIES` and re-run scoring if you think the failures were transient.

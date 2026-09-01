@@ -1,0 +1,60 @@
+{
+  "runDate": "2026-09-01",
+  "jobs": [
+    {
+      "id": "swk-as313-frontend-fullstack-angular-dotnet",
+      "title": "Frontend-Focused Full Stack Developer - Angular / .NET",
+      "company": "Smart Working Solutions",
+      "location": "Remote - India",
+      "score": 84,
+      "link": "https://jobs.lever.co/smart-working-solutions/456efb17-90e9-4d55-9529-a69480b29875",
+      "standout": "The closest thing to your exact resume on the market right now: Angular + .NET Core + ASP.NET MVC + TypeScript, and it asks for 2+ years, which is what you have rather than a stretch. The work is a staged AngularJS-to-Angular-21 migration on a live recruitment platform (ATS, careers sites, job board) with real traffic - and modernising a legacy codebase in stages without breaking production is exactly the Propel CQRS/Clean-Architecture migration story, told in the frontend. Remote, full-time, India-based, UK team, so no visa question at all.",
+      "verify": "Two real gaps to close before you apply. (1) They want STRONG AngularJS - the legacy 1.x framework, not modern Angular - and your resume shows modern Angular only; if you have not touched AngularJS, say so up front and lead with the migration parallel instead. (2) They ask for 2+ years on Angular 20 and above specifically, which is a very recent release - be ready to say which Angular version Propel actually runs. Also confirm they mean standalone components/signals as day-one knowledge, not something you pick up.",
+      "requirements": "Strong AngularJS experience (read, maintain, rewrite a live codebase). Two years or more building and shipping Angular applications on Angular 20+. Strong TypeScript. .NET Core development experience. ASP.NET MVC development experience. Modern Angular: standalone components, signals for state, OnPush, Nx monorepo boundaries. Sprint work, PR review both directions, breaking features down and estimating."
+    },
+    {
+      "id": "particle41-frontend-developer-india-remote",
+      "title": "Frontend Developer",
+      "company": "Particle41",
+      "location": "Remote - India",
+      "score": 72,
+      "link": "https://job-boards.greenhouse.io/particle41llc/jobs/4251714008",
+      "standout": "Framework-agnostic on the frontend - it names React, Next.js AND Angular, so both halves of your resume count instead of one of them being dead weight. Backend is Node/Python/PHP with PostgreSQL and ORMs, and you have Node and PostgreSQL already. Consultancy work across client projects, which builds range fast at your stage.",
+      "verify": "Asks for 3 years and you have 2 - close enough to apply, but lead with the fact that you have shipped both an Angular frontend and the .NET backend behind it at Propel, which most 3-year frontend applicants cannot say. Next.js is named and is not on your resume; the Learning Card Generator project is the nearest thing to point at.",
+      "requirements": "React.js / Next.js / Angular with TypeScript. Tailwind or Bootstrap. Server-side logic and DB integration with Node.js, Python or PHP; ORMs with MySQL, MongoDB or PostgreSQL an advantage. REST/OpenAPI documentation. API auth: OAuth, JWT, API keys. Strong JavaScript ecosystem understanding and third-party library integration."
+    },
+    {
+      "id": "particle41-fullstack-js-database-developer",
+      "title": "Full Stack Javascript & Database Developer",
+      "company": "Particle41",
+      "location": "Remote - India",
+      "score": 66,
+      "link": "https://job-boards.greenhouse.io/particle41llc/jobs/4484773008",
+      "standout": "Same company and the same remote-India setup as the Frontend Developer role, so one application effort covers two shots. Explicitly values the database half - your PostgreSQL schema normalisation at Propel (6 redundant tables removed, duplicate client records eliminated) is a stronger story than most JS-first applicants will have.",
+      "verify": "This one leans harder on the Node.js ecosystem than the Frontend Developer role does, and Node is your lighter side next to .NET. GraphQL appears in the requirements and is not on your resume. Decide which of the two Particle41 roles you actually want before applying to both - applying to both without a reason can read as scattershot.",
+      "requirements": "Modern JS/TS frameworks: Next.js, React.js or Angular; Tailwind/Bootstrap. Strong Node.js ecosystem understanding and architecture. RESTful and GraphQL API design. API documentation and OpenAPI basics. API authentication and authorisation (OAuth, JWT, API keys). Database work alongside the frontend."
+    },
+    {
+      "id": "jobgether-software-engineer-i-aspnet-angular",
+      "title": "Software Engineer I (ASP.NET + Angular)",
+      "company": "Jobgether (partner company)",
+      "location": "Remote - India",
+      "score": 62,
+      "link": "https://jobs.lever.co/jobgether/b51d50d2-a3a3-40b0-9e15-f3ba539fb3e4",
+      "standout": "Requirement list reads like your stack: TypeScript, Angular, C#, SQL Server, Git, and 2+ years on Angular specifically - which you have. They also explicitly want familiarity with AI-assisted development tools (Copilot, Claude, OpenAI), which is unusually easy for you to evidence given the projects on your GitHub.",
+      "verify": "The headline gap: they ask for 3-5 years of professional ASP.NET and you have 2, so you are applying a year under on the primary requirement. Bigger technical catch - it is ASP.NET 4.8 on the .NET Framework in a Windows environment, and possibly VB, not the .NET Core / EF Core / CQRS work you actually do. Confirm whether the codebase is being modernised or maintained as-is before investing much in the application; a pure legacy-maintenance role would be a step sideways from Propel.",
+      "requirements": "Bachelor's in CS or equivalent. 3-5 years professional ASP.NET in a Windows development environment. 3+ years JavaScript and/or TypeScript. 2+ years Angular. Strong TypeScript, Angular, and ASP.NET 4.8 with C# and/or VB. SQL Server, Git/Bitbucket, Jira, Visual Studio. Familiarity with AI-assisted development tools (OpenAI, GitHub Copilot, Claude). Agile lifecycle, code review, customer-reported issue remediation."
+    },
+    {
+      "id": "jumpcloud-fullstack-swe-frontend-focus-india",
+      "title": "Full Stack Software Engineer, Front-End Focus",
+      "company": "JumpCloud",
+      "location": "Remote - Bangalore, India",
+      "score": 55,
+      "link": "https://jobs.lever.co/jumpcloud/4ebbdea9-39c2-465d-bbdf-bf379a8e4a06",
+      "standout": "The one on this list where the company is the draw rather than the stack: an established product company (identity and device management), remote anywhere in India, and the posting explicitly targets 2-4 years, so you are inside the band rather than reaching. 80% frontend / 20% backend split suits where your Angular component work is strongest, and they are unusually explicit about wanting AI-assisted development habits.",
+      "verify": "Be honest with yourself about the stack gap before spending time here - it is Vue 3 + Pinia + PrimeVue on the frontend and Golang + MongoDB + AWS on the backend. You have React and Angular (not Vue), .NET (not Go), PostgreSQL (not Mongo), Azure (not AWS). The transferable part is real - TypeScript, Nx, component architecture, Playwright - but you would be learning the framework and the backend language on the job, so only apply if you are genuinely happy to leave the .NET track for a while.",
+      "requirements": "JavaScript/TypeScript, Nx, pnpm workspaces, Vite, Vue 3, Pinia, Stratus/Circuit component libraries, PrimeVue, Axios, Tailwind. Golang, Node.js, REST APIs, MongoDB/Mongoose, Postgres, Redis, SQS, Kafka. Playwright for UI test coverage, DataDog/Grafana observability, K8s and AWS. Roughly 80% front-end, 20% back-end. 2-4 years experience."
+    }
+  ]
+}

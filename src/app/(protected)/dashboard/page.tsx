@@ -13,6 +13,7 @@ import { SupabaseNotificationPreferencesRepository } from "@/features/notificati
 import { SupabaseResumeRepository } from "@/features/resume/infrastructure/SupabaseResumeRepository";
 import { SupabaseRoleRepository } from "@/features/roles/infrastructure/SupabaseRoleRepository";
 import { SupabaseSettingsRepository } from "@/features/settings/infrastructure/SupabaseSettingsRepository";
+import { AI_SCORE_SHRUG } from "@/features/scoring/domain/scoreBands";
 import { SCORING_QUEUE_CONFIG } from "@/features/scoring/domain/scoringQueueConfig";
 import type { ScrapeRun } from "@/features/sources/domain/types";
 import { SupabaseScrapeRunRepository } from "@/features/sources/infrastructure/SupabaseScrapeRunRepository";
@@ -20,6 +21,7 @@ import type { JobSource, LocationTag } from "@/shared/domain/enums";
 import { JOB_SOURCES, LOCATION_TAGS } from "@/shared/domain/enums";
 import { optionalEnv } from "@/shared/infrastructure/env";
 import { createSupabaseServerClient } from "@/shared/infrastructure/supabase/server";
+import type { Metadata } from "next";
 
 const DEFAULT_JOBS_LIMIT = 50;
 const MAX_JOBS_LIMIT = 500;
@@ -35,6 +37,7 @@ type DashboardSearchParams = {
   remote?: string;
   ineligible?: string;
   lowmatch?: string;
+  weak?: string;
   limit?: string;
   origin?: string;
 };
@@ -83,6 +86,9 @@ function parseFilters(params: DashboardSearchParams): JobFilters {
   if (params.lowmatch === "1") {
     filters.includeLowMatch = true;
   }
+  if (params.weak === "1") {
+    filters.includeWeakMatch = true;
+  }
   if (params.origin === "claude_routine") {
     filters.origin = "claude_routine";
   }
@@ -108,10 +114,13 @@ function loadMoreHref(params: DashboardSearchParams, currentLimit: number): stri
   if (params.remote) next.set("remote", params.remote);
   if (params.ineligible) next.set("ineligible", params.ineligible);
   if (params.lowmatch) next.set("lowmatch", params.lowmatch);
+  if (params.weak) next.set("weak", params.weak);
   if (params.origin) next.set("origin", params.origin);
   next.set("limit", String(currentLimit + DEFAULT_JOBS_LIMIT));
   return `/dashboard?${next.toString()}`;
 }
+
+export const metadata: Metadata = { title: "Dashboard" };
 
 export default async function DashboardPage({ searchParams }: DashboardPageProps) {
   const params = await searchParams;
@@ -296,6 +305,13 @@ async function JobsSection({
           <StatChip
             value={String(stats.lowMatchCount)}
             label={`low match${effectiveFilters.includeLowMatch ? "" : " (hidden)"}`}
+          />
+        )}
+        {stats.weakMatchCount > 0 && (
+          <StatChip
+            value={String(stats.weakMatchCount)}
+            label={`weak${effectiveFilters.includeWeakMatch ? "" : " (hidden)"}`}
+            title={`Scored at or below ${Math.round(AI_SCORE_SHRUG * 100)}% — the value the AI returns when a posting gives it nothing to judge`}
           />
         )}
         {stats.awaitingAiCount > 0 && <StatChip value={String(stats.awaitingAiCount)} label="queued" />}

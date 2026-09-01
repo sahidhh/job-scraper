@@ -11,6 +11,9 @@ import { SupabaseRankingPreferencesRepository } from "@/features/scoring/infrast
 import { SupabaseSettingsRepository } from "@/features/settings/infrastructure/SupabaseSettingsRepository";
 import { optionalEnv } from "@/shared/infrastructure/env";
 import { createSupabaseServerClient } from "@/shared/infrastructure/supabase/server";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "Sources · Settings" };
 
 export default async function SettingsSourcesPage() {
   const client = await createSupabaseServerClient();
