@@ -8,5 +8,6 @@ coverage/
 verification-reports/
 supabase/.temp
 supabase/.temp/*
+reports/manual-matches/
 .claude/settings.local.json
 .claude/worktrees/
