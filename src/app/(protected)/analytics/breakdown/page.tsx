@@ -14,6 +14,9 @@ import {
   StatusBreakdownChart,
 } from "@/features/insights/ui/AnalyticsCharts";
 import { createSupabaseServerClient } from "@/shared/infrastructure/supabase/server";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "Breakdown · Analytics" };
 
 export default async function AnalyticsBreakdownPage() {
   const client = await createSupabaseServerClient();

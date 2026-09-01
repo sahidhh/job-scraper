@@ -11,6 +11,9 @@ import {
 } from "@/features/insights/ui/AnalyticsCharts";
 import { SupabaseRoleRepository } from "@/features/roles/infrastructure/SupabaseRoleRepository";
 import { createSupabaseServerClient } from "@/shared/infrastructure/supabase/server";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "Scraping · Analytics" };
 
 export default async function AnalyticsScrapingPage() {
   const client = await createSupabaseServerClient();

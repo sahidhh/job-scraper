@@ -9,6 +9,7 @@ The platform uses **Supabase Auth** (email + password) for the single user accou
 | Session storage | httpOnly cookies (managed by `@supabase/ssr`) |
 | Session refresh | `middleware.ts` refreshes session on every request |
 | Route protection | Middleware redirects unauthenticated requests to `/login` |
+| Middleware exclusions | `/api` (self-authenticating, §9), Next's static assets, any `.svg`/`.png`/`.jpg`/`.jpeg`/`.gif`/`.webp` path, and `/manifest.webmanifest`. Everything excluded here is public by design and carries no user data — the icons are brand artwork and the manifest is the app's name, colours, and icon list. All of it is fetched by the browser *before* there is a session, so redirecting it to `/login` breaks the feature (no install prompt, no tab icon) without protecting anything |
 | Token exposure | Anon key is public (safe — RLS enforces access); service role key is never in client-reachable Next.js code (one server-only route handler exception, §3/AD-29) |
 | No JWT manipulation | Supabase handles all token lifecycle; no custom JWT logic |
 

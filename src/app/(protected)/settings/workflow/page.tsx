@@ -4,6 +4,9 @@ import { StatusDropdownToggleCard } from "@/components/settings/StatusDropdownTo
 import { SupabaseJobRepository } from "@/features/jobs/infrastructure/SupabaseJobRepository";
 import { SupabaseSettingsRepository } from "@/features/settings/infrastructure/SupabaseSettingsRepository";
 import { createSupabaseServerClient } from "@/shared/infrastructure/supabase/server";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "Workflow · Settings" };
 
 export default async function SettingsWorkflowPage() {
   const client = await createSupabaseServerClient();

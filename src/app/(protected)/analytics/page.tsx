@@ -7,6 +7,9 @@ import { getScoringQueueReport } from "@/features/scoring/application/getScoring
 import { SupabaseScoreRepository } from "@/features/scoring/infrastructure/SupabaseScoreRepository";
 import { optionalEnv } from "@/shared/infrastructure/env";
 import { createSupabaseServerClient } from "@/shared/infrastructure/supabase/server";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "Analytics" };
 
 export default async function AnalyticsOverviewPage() {
   const client = await createSupabaseServerClient();

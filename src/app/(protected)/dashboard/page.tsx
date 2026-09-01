@@ -20,6 +20,7 @@ import type { JobSource, LocationTag } from "@/shared/domain/enums";
 import { JOB_SOURCES, LOCATION_TAGS } from "@/shared/domain/enums";
 import { optionalEnv } from "@/shared/infrastructure/env";
 import { createSupabaseServerClient } from "@/shared/infrastructure/supabase/server";
+import type { Metadata } from "next";
 
 const DEFAULT_JOBS_LIMIT = 50;
 const MAX_JOBS_LIMIT = 500;
@@ -112,6 +113,8 @@ function loadMoreHref(params: DashboardSearchParams, currentLimit: number): stri
   next.set("limit", String(currentLimit + DEFAULT_JOBS_LIMIT));
   return `/dashboard?${next.toString()}`;
 }
+
+export const metadata: Metadata = { title: "Dashboard" };
 
 export default async function DashboardPage({ searchParams }: DashboardPageProps) {
   const params = await searchParams;

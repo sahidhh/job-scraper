@@ -11,9 +11,12 @@ import { SupabaseRoleRepository } from "@/features/roles/infrastructure/Supabase
 import { SKILLS_DICTIONARY } from "@/shared/config/skills-dictionary";
 import { extractSkills } from "@/shared/domain/skills";
 import { createSupabaseServerClient } from "@/shared/infrastructure/supabase/server";
+import type { Metadata } from "next";
 
 // How many rows each card shows before it gets noisy.
 const MAX_ROWS = 15;
+
+export const metadata: Metadata = { title: "Insights" };
 
 export default async function InsightsPage() {
   const client = await createSupabaseServerClient();

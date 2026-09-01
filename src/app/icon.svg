@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Job Intelligence">
+  <!-- The same mark as Wordmark.tsx: a rounded square holding a bold "J".
+       Kept as a hand-drawn stroke rather than a text glyph because a favicon
+       is rasterised at 16px, where a font-rendered letterform hints
+       unpredictably and loses the counter inside the bowl.
+
+       Theme-aware on purpose. Wordmark.tsx paints the tile `bg-foreground`,
+       which inverts between themes; a favicon frozen at near-black would
+       vanish into a dark browser tab strip -- the one place the mark has to
+       survive on its own. Browsers that ignore the media query (Safari) get
+       the light-theme values, which is the correct fallback.
+
+       PNG derivatives (apple-icon.png, public/icon-*.png) are rasterised from
+       this exact geometry -- see design/tech-stack.md §8 "Brand mark". -->
+  <style>
+    .tile { fill: #0a0a0a }
+    .glyph { stroke: #fafafa }
+    @media (prefers-color-scheme: dark) {
+      .tile { fill: #fafafa }
+      .glyph { stroke: #0a0a0a }
+    }
+  </style>
+  <rect class="tile" width="32" height="32" rx="7"/>
+  <path class="glyph" d="M21 8.5V18.5a5 5 0 0 1-10 0" fill="none" stroke-width="4" stroke-linecap="round"/>
+</svg>

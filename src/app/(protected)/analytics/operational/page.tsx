@@ -8,10 +8,13 @@ import { SupabaseScoreRepository } from "@/features/scoring/infrastructure/Supab
 import { SupabaseScrapeRunRepository } from "@/features/sources/infrastructure/SupabaseScrapeRunRepository";
 import { optionalEnv } from "@/shared/infrastructure/env";
 import { createSupabaseServerClient } from "@/shared/infrastructure/supabase/server";
+import type { Metadata } from "next";
 
 // Operational health view: scraper health, scrape success/failure, source
 // health signal, AI request volume/cost, and recent failures -- all sourced
 // from existing repositories, same pattern as /analytics/overview.
+export const metadata: Metadata = { title: "Operational · Analytics" };
+
 export default async function OperationalAnalyticsPage() {
   const client = await createSupabaseServerClient();
   const roleRepository = new SupabaseRoleRepository(client);
