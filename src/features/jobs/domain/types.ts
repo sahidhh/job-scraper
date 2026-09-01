@@ -185,6 +185,13 @@ export interface JobFilters {
   // (role, resume), so they're hidden by default as noise. Same inverted
   // sense as includeIneligible (AD-52).
   includeLowMatch?: boolean;
+  // Show jobs the AI scored at or below its shrug value (AI_SCORE_SHRUG) --
+  // i.e. postings it was asked about and declined to rate. Distinct from
+  // includeLowMatch, which is about jobs the AI was never asked about at all.
+  // Hidden by default, same inverted sense as includeIneligible/
+  // includeLowMatch (AD-69). For claude_routine rows the cut is applied to
+  // manual_score normalised to 0-1, since those never carry an ai_score.
+  includeWeakMatch?: boolean;
   minAiScore?: number;
   // Restrict to jobs whose current status is one of these ids.
   statusIds?: string[];
@@ -294,9 +301,18 @@ export interface CompanyHistoryPage {
 // how "50 jobs" ended up sitting next to "466 scored".
 //
 // The five buckets partition `total` exactly: every job is in exactly one.
+// `weakMatchCount` is deliberately NOT one of them -- it is a subset of
+// `scoredCount` (a weak match is scored, just badly), so adding it to the
+// others would double-count. It is reported so the dashboard can say how many
+// rows the default weak-match cut is hiding, the same way `lowMatchCount`
+// explains the low-match cut.
 export interface JobStats {
   // AI-scored: ai_score is set.
   scoredCount: number;
+  // Subset of scoredCount: scored at or below the AI's shrug value
+  // (AI_SCORE_SHRUG) -- the model was asked and declined to rate them.
+  // Hidden by default (AD-69).
+  weakMatchCount: number;
   // Genuinely queued for AI: cleared the keyword gate but the AI call hasn't
   // succeeded yet (failed/pending). score.ts retries these -- each retry is a
   // real, paid API call, which is why they're capped (see abandonedCount).

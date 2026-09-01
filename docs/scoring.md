@@ -69,6 +69,13 @@ purpose, never retried), **queued** (cleared the gate, AI call not yet successfu
 run), **gave up** (retried `MAX_AI_RETRIES` times, default 3 -- see below), and **ineligible**
 (hard-excluded, or no score row at all).
 
+It also reports one population that *does* have an AI score: **weak** (`weakMatchCount`) -- scored at
+or below `AI_SCORE_SHRUG`, the value the model returns when a posting gives it nothing to judge
+against. This is a subset of **AI-scored**, not a fifth "no score" bucket, and it is hidden from the
+dashboard by default (AD-69). Calibration warning: 0.4 is measured against the current model and
+prompt, where it accounted for 47% of all scored rows -- **re-measure the `ai_score` histogram before
+trusting it after any change to `LLM_PROVIDER`, the scoring model, or the scoring prompt.**
+
 **Only "queued" costs tokens.** Low-match and hard-excluded jobs are rejected by `scoreJob`'s gate
 *before* the provider call, so re-processing them is free. A queued job, by contrast, is a real paid
 API call on every cron run -- which is why `findUnscored` also excludes rows whose `retry_count` has

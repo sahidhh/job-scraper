@@ -45,7 +45,7 @@
    are **on by default**: "can apply" (hides a non-null `ineligible_reason`, AD-51) and "good match"
    (hides jobs below `KEYWORD_THRESHOLD`, AD-52); muted companies, employment types, and keywords
    (UC-13) are always excluded
-4. A stats row reports the filtered set's breakdown (AI-scored / low match / queued for AI / gave up
+4. A stats row reports the filtered set's breakdown (AI-scored / weak / low match / queued for AI / gave up
    after repeated AI failures), computed from the same rows the table renders so the numbers always
    reconcile. Only "queued" costs tokens on subsequent runs
 5. "Load more" grows the current page by another `DEFAULT_JOBS_LIMIT` (50) by rewriting `?limit` in the

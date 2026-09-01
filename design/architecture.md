@@ -482,7 +482,7 @@ There is no state library and there will not be one (tech-stack.md §2). State l
 places, in this order of preference:
 
 1. **The URL** — all dashboard filters. `?q`, `?location`, `?source`, `?status`, `?minScore`,
-   `?maxYears`, `?remote`, `?ineligible`, `?lowmatch`, `?archived`, `?limit`. This is the default for
+   `?maxYears`, `?remote`, `?ineligible`, `?lowmatch`, `?weak`, `?archived`, `?limit`. This is the default for
    anything a user would expect to survive a refresh, a back button, or a shared link. `FilterBar`
    never holds filter values in `useState`; it reads `useSearchParams()` and navigates.
 

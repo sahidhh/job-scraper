@@ -782,12 +782,17 @@ an absent parameter means "no constraint", **except** the two inverted flags not
 | `remote` | `"1"` | `remoteOnly` | "Remote only" checkbox |
 | `ineligible` | `"1"` | `includeIneligible` | **Inverted** — "Hide jobs I can't apply to", default ON (AD-51) |
 | `lowmatch` | `"1"` | `includeLowMatch` | **Inverted** — "Hide low keyword matches", default ON (AD-52) |
+| `weak` | `"1"` | `includeWeakMatch` | **Inverted** — "Worth applying" / "Hide weak AI matches", default ON (AD-69) |
 | `archived` | `"1"` | `includeArchived` | "Show archived jobs", default OFF |
 | `limit` | int | page size | Not a control — "Load more" rewrites it |
 
-The two inverted flags are the only ones whose *absence* narrows the result set. Both are named for
+The three inverted flags are the only ones whose *absence* narrows the result set. All are named for
 what the checkbox says (`Hide …`), not for what the field means (`include…`), which is why the mapping
 is written out here.
+
+`lowmatch` and `weak` are easy to confuse and are not the same cut: `lowmatch` hides jobs the AI was
+**never asked about** (below the keyword gate), `weak` hides jobs it **was** asked about and declined
+to rate (AD-69).
 
 **Always applied, never user-facing:** `excludeCompanies`, `excludeEmploymentTypes`, and
 `excludeKeywords` are read from Notification Preferences (§ Notification Preferences) and injected into
@@ -821,8 +826,10 @@ simpler shape was chosen.
 
 ### 7.4 Stats row
 
-`countJobStats` (§5) returns five buckets computed over the filtered set **before** the low-match and
-eligibility cuts, so the row can honestly report "N low match (hidden)". This means
-`stats.total` can legitimately exceed the number of rows rendered; the gap is exactly
-`lowMatchCount` (decisions.md AD-52). The chips render only when non-zero, except the AI-scored chip,
+`countJobStats` (§5) returns five buckets computed over the filtered set **before** the low-match,
+weak-match and eligibility cuts, so the row can honestly report "N low match (hidden)" and "N weak
+(hidden)". This means `stats.total` can legitimately exceed the number of rows rendered; the gap is
+exactly `lowMatchCount + weakMatchCount` (decisions.md AD-52, AD-69). `weakMatchCount` is a **sixth**
+field but not a sixth bucket — it is a subset of `scoredCount`, so it is excluded from the partition
+sum on purpose. The chips render only when non-zero, except the AI-scored chip,
 which is always shown and is the one carrying accent tint as the row's key metric.

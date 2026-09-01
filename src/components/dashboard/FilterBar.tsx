@@ -72,6 +72,10 @@ export function FilterBar({
   // actually apply to (region-locked remote, onsite refusing sponsorship).
   const hidingIneligible = searchParams.get("ineligible") !== "1";
   const hidingLowMatch = searchParams.get("lowmatch") !== "1";
+  // Third default-on cut (AD-69). Distinct from `hidingLowMatch`: that one
+  // hides jobs the AI was never asked about, this one hides jobs it was asked
+  // about and declined to rate.
+  const hidingWeakMatch = searchParams.get("weak") !== "1";
 
   // Shared by both default-on filters: ticked = param absent.
   function toggleHiddenByDefault(key: string, checked: boolean) {
@@ -116,6 +120,7 @@ export function FilterBar({
     // "you changed something from the default view".
     searchParams.get("ineligible") === "1" ? "1" : null,
     searchParams.get("lowmatch") === "1" ? "1" : null,
+    searchParams.get("weak") === "1" ? "1" : null,
   ].filter(Boolean).length;
 
   function clearAll() {
@@ -246,6 +251,16 @@ export function FilterBar({
           className="size-4 accent-primary"
         />
         <span>Hide low keyword matches</span>
+      </label>
+
+      <label className="flex cursor-pointer items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          checked={hidingWeakMatch}
+          onChange={(e) => toggleHiddenByDefault("weak", e.target.checked)}
+          className="size-4 accent-primary"
+        />
+        <span>Hide weak AI matches</span>
       </label>
 
       <label className="flex cursor-pointer items-center gap-2 text-sm">
@@ -451,6 +466,19 @@ export function FilterBar({
             className="size-4 accent-primary"
           />
           Good match
+        </label>
+
+        <label
+          className="flex cursor-pointer items-center gap-1.5 text-sm text-muted-foreground"
+          title="Hide jobs the AI scored at its shrug value -- it was asked and had nothing to go on"
+        >
+          <input
+            type="checkbox"
+            checked={hidingWeakMatch}
+            onChange={(e) => toggleHiddenByDefault("weak", e.target.checked)}
+            className="size-4 accent-primary"
+          />
+          Worth applying
         </label>
 
         <label className="flex cursor-pointer items-center gap-1.5 text-sm text-muted-foreground">

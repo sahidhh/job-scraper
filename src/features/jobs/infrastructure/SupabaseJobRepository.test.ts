@@ -489,7 +489,7 @@ describe("SupabaseJobRepository", () => {
         ],
         hasMore: false,
         total: 1,
-        stats: { scoredCount: 1, awaitingAiCount: 0, abandonedCount: 0, lowMatchCount: 0, ineligibleCount: 0, total: 1 },
+        stats: { scoredCount: 1, weakMatchCount: 0, awaitingAiCount: 0, abandonedCount: 0, lowMatchCount: 0, ineligibleCount: 0, total: 1 },
       });
       expect(builder.eq).toHaveBeenCalledWith("job_scores.role_selection_id", "role-selection-1");
       // Default-on eligibility filter (AD-51): includeIneligible was not set.
@@ -514,7 +514,10 @@ describe("SupabaseJobRepository", () => {
       });
       const repo = new SupabaseJobRepository(client);
 
-      const result = await repo.findForDashboard("role-selection-1", {}, 50, 1, 0.25, 3);
+      // includeWeakMatch so this stays a test about ordering: "mid" sits on
+      // the AI's shrug value and the default quality cut (AD-69) would
+      // otherwise remove it before the sort could be observed.
+      const result = await repo.findForDashboard("role-selection-1", { includeWeakMatch: true }, 50, 1, 0.25, 3);
 
       // overall_score desc, unscored (null) last.
       expect(result.jobs.map((j) => j.id)).toEqual(["top", "high", "mid", "unscored"]);
@@ -566,7 +569,16 @@ describe("SupabaseJobRepository", () => {
       });
       const repo = new SupabaseJobRepository(client);
 
-      const result = await repo.findForDashboard("role-selection-1", { origin: "claude_routine" }, 50, 1, 0.25, 3);
+      // includeWeakMatch for the same reason as the ranking test above: "low"
+      // is a manual_score of 40, exactly the shrug value once normalised.
+      const result = await repo.findForDashboard(
+        "role-selection-1",
+        { origin: "claude_routine", includeWeakMatch: true },
+        50,
+        1,
+        0.25,
+        3,
+      );
 
       expect(builder.eq).toHaveBeenCalledWith("source", "claude_routine");
       expect(builder.neq).not.toHaveBeenCalledWith("source", "claude_routine");
@@ -735,7 +747,7 @@ describe("SupabaseJobRepository", () => {
         jobs: [],
         hasMore: false,
         total: 0,
-        stats: { scoredCount: 0, awaitingAiCount: 0, abandonedCount: 0, lowMatchCount: 0, ineligibleCount: 0, total: 0 },
+        stats: { scoredCount: 0, weakMatchCount: 0, awaitingAiCount: 0, abandonedCount: 0, lowMatchCount: 0, ineligibleCount: 0, total: 0 },
       });
       expect(builders).toHaveLength(1);
     });
@@ -782,6 +794,7 @@ describe("SupabaseJobRepository", () => {
       expect(result.total).toBe(3);
       expect(result.stats).toEqual({
         scoredCount: 1,
+        weakMatchCount: 0,
         awaitingAiCount: 1,
         abandonedCount: 0,
         lowMatchCount: 1,
@@ -822,6 +835,70 @@ describe("SupabaseJobRepository", () => {
       const result = await repo.findForDashboard("role-selection-1", {}, 50, 1, 0.25, 3);
 
       expect(result.jobs.map((j) => j.id)).toEqual(["unscored"]);
+    });
+
+    // AD-69: cut in memory alongside the low-match cut, not via minAiScore's
+    // SQL gte -- that would force the !inner join and drop unscored rows too.
+    it("hides jobs scored at the AI's shrug value by default", async () => {
+      const { client } = mockSupabaseClient({
+        data: [
+          { ...jobRow, id: "real", job_scores: [{ keyword_score: 0.9, ai_score: 0.6, overall_score: 0.6 }] },
+          { ...jobRow, id: "shrug", job_scores: [{ keyword_score: 0.9, ai_score: 0.4, overall_score: 0.4 }] },
+        ],
+        error: null,
+      });
+      const repo = new SupabaseJobRepository(client);
+
+      const result = await repo.findForDashboard("role-selection-1", {}, 50, 1, 0.25, 3);
+
+      expect(result.jobs.map((j) => j.id)).toEqual(["real"]);
+      expect(result.total).toBe(1);
+      // Reported, not silently dropped -- this is what the dashboard chip says.
+      expect(result.stats.weakMatchCount).toBe(1);
+      expect(result.stats.total).toBe(2);
+    });
+
+    it("shows weak matches when includeWeakMatch is set", async () => {
+      const { client } = mockSupabaseClient({
+        data: [{ ...jobRow, id: "shrug", job_scores: [{ keyword_score: 0.9, ai_score: 0.4, overall_score: 0.4 }] }],
+        error: null,
+      });
+      const repo = new SupabaseJobRepository(client);
+
+      const result = await repo.findForDashboard("role-selection-1", { includeWeakMatch: true }, 50, 1, 0.25, 3);
+
+      expect(result.jobs.map((j) => j.id)).toEqual(["shrug"]);
+    });
+
+    it("keeps an unscored job when hiding weak matches -- no judgement is not a bad one", async () => {
+      // The queue must stay visible: hiding it behind a quality filter would
+      // make a scoring outage look like an empty job market.
+      const { client } = mockSupabaseClient({
+        data: [{ ...jobRow, id: "queued", job_scores: [{ keyword_score: 0.9, ai_score: null }] }],
+        error: null,
+      });
+      const repo = new SupabaseJobRepository(client);
+
+      const result = await repo.findForDashboard("role-selection-1", {}, 50, 1, 0.25, 3);
+
+      expect(result.jobs.map((j) => j.id)).toEqual(["queued"]);
+      expect(result.stats.weakMatchCount).toBe(0);
+    });
+
+    it("applies the weak cut to claude_routine rows via manual_score, which carry no ai_score", async () => {
+      const { client } = mockSupabaseClient({
+        data: [
+          { ...jobRow, id: "strong", source: "claude_routine", manual_score: 80, job_scores: [] },
+          { ...jobRow, id: "weak", source: "claude_routine", manual_score: 40, job_scores: [] },
+        ],
+        error: null,
+      });
+      const repo = new SupabaseJobRepository(client);
+
+      const result = await repo.findForDashboard("role-selection-1", { origin: "claude_routine" }, 50, 1, 0.25, 3);
+
+      expect(result.jobs.map((j) => j.id)).toEqual(["strong"]);
+      expect(result.stats.weakMatchCount).toBe(1);
     });
 
     it("shows low-match jobs when includeLowMatch is set", async () => {

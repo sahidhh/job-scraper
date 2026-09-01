@@ -7,11 +7,12 @@ import type { badgeVariants } from "@/components/ui/badge";
 
 type BadgeVariant = NonNullable<VariantProps<typeof badgeVariants>["variant"]>;
 
-// Fixed by docs/decisions.md AD-56: `0.75` is NOTIFY_THRESHOLD (docs/scoring.md
-// §3/§5), so a green badge means "this one would have pinged you". Do not
-// retune these without amending that decision.
-export const AI_SCORE_STRONG = 0.75;
-export const AI_SCORE_MODERATE = 0.4;
+// Defined in the scoring domain (features/scoring/domain/scoreBands.ts), not
+// here: the dashboard repository filters on the same boundaries, and
+// infrastructure cannot import from `src/components/`. Re-exported so the
+// existing UI import path keeps working and there is still one definition.
+export { AI_SCORE_MODERATE, AI_SCORE_STRONG } from "@/features/scoring/domain/scoreBands";
+import { AI_SCORE_MODERATE, AI_SCORE_STRONG } from "@/features/scoring/domain/scoreBands";
 
 /** `0.83` -> `"83%"`. Unscored reads as an em dash. */
 export function formatScore(score: number | null): string {
