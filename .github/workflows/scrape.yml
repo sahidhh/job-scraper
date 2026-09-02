@@ -4,19 +4,22 @@ name: Scrape pipeline
 # (AD-12 -- bypasses RLS for cron scripts only).
 #
 # Phase 4 go-live (docs/agent-workflow.md) has happened -- the recurring
-# schedule below is live, running every 6 hours, alongside manual dispatch.
-# See PROJECT_STATE.md §3 for the go-live note; a couple of older docs
-# (design/limitations.md §1.3, docs/deployment.md §11) still describe an
-# earlier not-yet-live state and are tracked as known drift in
-# TECHNICAL_DEBT.md pending confirmation of whether 6h (vs. the originally
-# planned 2h) was a deliberate choice.
+# schedule below is live alongside manual dispatch.
+#
+# Cadence is twice daily, 06:00 and 14:00 UTC (11:30 / 19:30 IST), set from
+# 30 days of measured yield rather than a guess (decisions.md AD-70): at the
+# previous 6-hourly cadence each run re-fetched ~950 postings to insert a
+# median of 4 new ones, so three quarters of the aggregator quota and DB
+# writes bought nothing. The two slots straddle the IN/SG working day, which
+# is where the new postings actually land; UAE's afternoon falls inside the
+# second one.
 on:
   workflow_dispatch: {}
   schedule:
-    - cron: "0 */6 * * *"
+    - cron: "0 6,14 * * *"
 
 # A manual dispatch overlapping a scheduled run (or two scheduled runs if a
-# prior one overruns its 6h slot) could each independently pass the
+# prior one overruns its slot) could each independently pass the
 # fingerprint dedup check-then-write for the same logical job before either
 # has committed, producing two rows with the same fingerprint. Queue instead
 # of running concurrently; never cancel a run partway through scrape/score/

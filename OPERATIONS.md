@@ -5,7 +5,7 @@ Runbook for deploying, migrating, and keeping this project healthy in production
 ## 1. Deployment
 
 - **Web app:** Vercel, auto-deploys on push to `main` (standard Next.js Vercel integration — no custom workflow needed).
-- **Cron pipeline:** GitHub Actions, `scrape.yml`. **Live schedule: every 6 hours** (`cron: "0 */6 * * *"`), plus manual `workflow_dispatch`. Runs `scrape → score → notify` sequentially in one job, `concurrency: { group: scrape-pipeline, cancel-in-progress: false }` so overlapping runs queue instead of racing or being killed mid-pipeline.
+- **Cron pipeline:** GitHub Actions, `scrape.yml`. **Live schedule: twice daily** at 06:00 and 14:00 UTC / 11:30 and 19:30 IST (`cron: "0 6,14 * * *"`, AD-70), plus manual `workflow_dispatch`. Runs `scrape → score → notify` sequentially in one job, `concurrency: { group: scrape-pipeline, cancel-in-progress: false }` so overlapping runs queue instead of racing or being killed mid-pipeline.
 - **Source validation:** `validate-sources.yml`, weekly (Sunday 06:00 UTC) + manual dispatch. Probes every configured Greenhouse/Lever/Ashby board token; auto-disables sources past `SOURCE_DISABLE_THRESHOLD` consecutive failures.
 - **CI:** `ci.yml`, every push/PR — service-role-boundary check, typecheck, tests. Does not run a build (build correctness is validated by `npm run verify` locally/manually — see `design/tech-stack.md` §7 for the exact gap).
 
@@ -76,5 +76,5 @@ See `design/user-guide.md` §11 for the user-facing troubleshooting table (dashb
 | Problem | Fix |
 |---|---|
 | `npm run verify` fails on a fresh clone | Run `npm install` first — `node_modules` is not committed |
-| Cron pipeline hasn't run in >6h and no manual dispatch was made | Check the Actions tab for a `scrape-pipeline` concurrency-group backlog — a stuck run (rare; only possible if a step hangs past GitHub's own job timeout) will queue, not skip, subsequent scheduled runs |
+| Cron pipeline hasn't run in >12h and no manual dispatch was made | Check the Actions tab for a `scrape-pipeline` concurrency-group backlog — a stuck run (rare; only possible if a step hangs past GitHub's own job timeout) will queue, not skip, subsequent scheduled runs |
 | `check:service-role-boundary` fails in CI | A new file under `src/app/` or `src/features/` imports `createSupabaseServiceClient` or references `SUPABASE_SERVICE_ROLE_KEY` directly — move that logic into `scripts/` or use the anon-key server client instead (AD-12) |

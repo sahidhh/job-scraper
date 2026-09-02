@@ -68,7 +68,7 @@ parsing, no AI" extraction standard than `extractSalary`/`extractContactEmail`. 
 |---|---|
 | Cross-source duplicate detection | Deterministic fingerprint (normalized title + canonical company + location) prevents the same logical job scraped from two sources from becoming two rows, two scoring runs, or two notifications; provenance preserved in `job_duplicates` |
 | Company name normalization | `jobs.canonical_company_name` strips legal-entity suffixes (LLC/Inc/Corp) and regional qualifiers (India/Singapore/...) from `company_name` for grouping, without discarding the original |
-| Source-level health summary | `computeSourceHealthSummary`/`getSourceHealthReport` derive success rate, latency, consecutive failures, recovery detection, staleness (no run at all in `SOURCE_STALE_HOURS`, default 6h -- distinct from actively failing), and a deterministic recommendation per source from `scrape_runs` -- covers feed-based sources (wellfound/remoteok/mycareersfuture) that `companies.health_status` can't see. Surfaced on `/analytics` (Phase 4) |
+| Source-level health summary | `computeSourceHealthSummary`/`getSourceHealthReport` derive success rate, latency, consecutive failures, recovery detection, staleness (no run at all in `SOURCE_STALE_HOURS`, default 36h = 3x the twice-daily cadence -- distinct from actively failing), and a deterministic recommendation per source from `scrape_runs` -- covers feed-based sources (wellfound/remoteok/mycareersfuture) that `companies.health_status` can't see. Surfaced on `/analytics` (Phase 4) |
 | Scrape failure classification | `classifyScrapeFailure.ts` tags every failed/empty scrape_runs row with a deterministic category (timeout/parsing/selector/captcha/blocked/authentication/rate_limited/not_found/empty_feed) |
 | Pending-scoring queue monitoring | `getScoringQueueReport`/`computeScoringQueueSummary` surface AI-retry queue depth, oldest-pending age, stuck jobs, and retry counts (`job_scores.retry_count`, `upsert_job_score` RPC); logged by `score.ts` each run. Surfaced on `/analytics` (Phase 4) |
 
@@ -313,7 +313,7 @@ P4 — Future
 | Constraint | Impact |
 |---|---|
 | Single-user | No RLS per-user isolation; all authenticated requests share data |
-| No real-time ATS webhooks | 2-hour scrape cadence; new jobs may be seen up to 2h late |
+| No real-time ATS webhooks | Twice-daily scrape cadence (AD-70); new jobs may be seen up to ~16h late |
 | LLM cost | AI scoring gated behind keyword threshold to control OpenRouter spend |
 | Telegram rate limits | Bot API rate-limited; large notification batches may experience delay |
 | PDF/DOCX-only resumes | Plain text, HTML, and other formats not supported |

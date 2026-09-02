@@ -378,7 +378,7 @@ active resume. These are the highest-leverage skills to learn or add.
 ### Source Health
 Two tables cover source reliability from different signals (intentionally not merged — see
 `design/limitations.md`). The scrape-run-derived table now also flags a source **stale** (orange
-badge) when it hasn't run at all in `SOURCE_STALE_HOURS` (default 6h) — a distinct problem from a
+badge) when it hasn't run at all in `SOURCE_STALE_HOURS` (default 36h — three missed half-days at the twice-daily cadence) — a distinct problem from a
 source that's running but failing, and sorted to the top of the table.
 
 ### Claude Routine (Manual Matches)

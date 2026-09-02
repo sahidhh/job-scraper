@@ -255,7 +255,7 @@ way left to change status
 ### UC-10 — Automated Job Scrape
 
 **Actor:** Cron  
-**Trigger:** GitHub Actions cron (every 2 hours) or `workflow_dispatch`  
+**Trigger:** GitHub Actions cron (twice daily, 06:00/14:00 UTC) or `workflow_dispatch`  
 **Main Flow:**
 1. For each active company (greenhouse/lever/ashby): fetch postings via ATS board API
 2. Fetch from Wellfound, RemoteOK, MyCareersFuture

@@ -22,7 +22,7 @@ Both are remote-global boards fetched once per run with no server-side keyword s
 The Wellfound adapter requires a custom feed URL (`WELLFOUND_FEED_URL`) because Wellfound has no documented public API. If the URL is not configured, the adapter auto-disables and returns zero results. `WELLFOUND_DISABLED=true` is set explicitly in `scrape.yml` to suppress any residual log noise. Users without a Wellfound feed receive no Wellfound data. See `docs/sources/wellfound.md` for setup instructions.
 
 ### 1.3 Scrape Cadence
-Jobs are fetched every 2 hours. New postings may be up to 2 hours old before appearing in the dashboard. There is no webhook or push mechanism from any ATS source.
+Jobs are fetched twice daily, at 06:00 and 14:00 UTC (11:30 / 19:30 IST). A new posting may therefore be up to ~16 hours old before it appears in the dashboard — the gap between the evening run and the next morning's. This is a deliberate trade (AD-70): at the previous 6-hourly cadence a run inserted a median of 4 new jobs against ~950 re-fetched ones, so the extra runs bought freshness nobody was watching for at 4x the aggregator quota. There is no webhook or push mechanism from any ATS source; `workflow_dispatch` is the manual escape hatch when freshness matters on a given day.
 
 ### 1.4 Geographic Coverage
 Location tagging is hardcoded to four tags: India, Singapore, UAE, Remote. Jobs from other geographies are dropped during filtering. Expanding to new regions requires a database migration (extending the `location_tag` enum) and code changes.
@@ -185,7 +185,7 @@ Skill gap and skill demand insights are meaningful only when both an active resu
 ## 8. Applications (`docs/decisions.md` AD-34)
 
 ### 8.1 Pending-Drafts Reminder Repeats Until Resolved
-The Telegram reminder for draft applications (`notifyPendingDrafts`) is stateless — it lists whatever `applications` rows currently have `status = 'draft'` on every cron run, with no "already reminded" tracking. This is deliberate (see AD-34's Rationale), but it means a draft the user genuinely intends to send "later" will show up in every notify run (every 2 hours, per the standard cron cadence) until it's sent or dismissed. There is no snooze.
+The Telegram reminder for draft applications (`notifyPendingDrafts`) is stateless — it lists whatever `applications` rows currently have `status = 'draft'` on every cron run, with no "already reminded" tracking. This is deliberate (see AD-34's Rationale), but it means a draft the user genuinely intends to send "later" will show up in every notify run (twice daily, per the standard cron cadence) until it's sent or dismissed. There is no snooze.
 
 ### 8.2 One Application Per (Job, Kind)
 `applications` has a `UNIQUE (job_id, kind)` constraint — at most one email draft and one cover-letter draft per job, ever. Redrafting overwrites the existing `draft`/`dismissed` row in place; there is no history of prior draft attempts for the same job+kind, and a `sent` row can never be redrafted or edited (`draftApplication`/`updateApplicationContent`/`markApplicationSent` all reject a non-`draft` status).

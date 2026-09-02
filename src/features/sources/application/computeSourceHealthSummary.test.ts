@@ -126,9 +126,9 @@ describe("computeSourceHealthSummary", () => {
   describe("staleness", () => {
     it("is not stale when the last run was within the staleAfterHours window", () => {
       const runs = [makeRun({ runAt: "2026-01-01T00:00:00Z", status: "success" })];
-      const now = new Date("2026-01-01T05:00:00Z"); // 5h later, default threshold is 6h
+      const now = new Date("2026-01-02T00:00:00Z"); // 24h later, default threshold is 36h
       const result = computeSourceHealthSummary("greenhouse", runs, now);
-      expect(result.hoursSinceLastRun).toBeCloseTo(5, 5);
+      expect(result.hoursSinceLastRun).toBeCloseTo(24, 5);
       expect(result.isStale).toBe(false);
       expect(result.recommendation).toBe("Healthy.");
     });
@@ -138,17 +138,17 @@ describe("computeSourceHealthSummary", () => {
         makeRun({ runAt: "2026-01-01T00:00:00Z", status: "success" }),
         makeRun({ runAt: "2025-12-31T00:00:00Z", status: "success" }),
       ];
-      const now = new Date("2026-01-01T07:00:00Z"); // 7h later, past the default 6h threshold
+      const now = new Date("2026-01-02T16:00:00Z"); // 40h later, past the default 36h threshold
       const result = computeSourceHealthSummary("greenhouse", runs, now);
-      expect(result.hoursSinceLastRun).toBeCloseTo(7, 5);
+      expect(result.hoursSinceLastRun).toBeCloseTo(40, 5);
       expect(result.isStale).toBe(true);
       expect(result.recommendation).toContain("Stale");
-      expect(result.recommendation).toContain("7h");
+      expect(result.recommendation).toContain("40h");
     });
 
     it("stale recommendation takes priority over a failing-streak recommendation", () => {
       const runs = [makeRun({ runAt: "2026-01-01T00:00:00Z", status: "failed", failureCategory: "timeout" })];
-      const now = new Date("2026-01-02T00:00:00Z"); // 24h later -- both stale and "failing"
+      const now = new Date("2026-01-03T00:00:00Z"); // 48h later -- both stale and "failing"
       const result = computeSourceHealthSummary("greenhouse", runs, now);
       expect(result.isStale).toBe(true);
       expect(result.recommendation).toContain("Stale");

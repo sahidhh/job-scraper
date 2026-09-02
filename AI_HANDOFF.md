@@ -35,7 +35,7 @@ Read this first. It's the minimum needed to be productive in this repo without r
 
 ## Gotchas that will burn you if you skip them
 
-- **The cron pipeline is live**, running every 6 hours (`scrape.yml`'s `schedule:` is active, not commented out despite what a couple of older docs still say). Changes to `scripts/scrape.ts`/`score.ts`/`notify.ts` affect a running production pipeline, not a staged one.
+- **The cron pipeline is live**, running twice daily at 06:00/14:00 UTC (`scrape.yml`'s `schedule:` is active; cadence set from measured yield, AD-70). Changes to `scripts/scrape.ts`/`score.ts`/`notify.ts` affect a running production pipeline, not a staged one.
 - **Migrations auto-apply on merge to `main`** via `migrate.yml` (`supabase db push`). A migration you write and merge takes effect automatically — it is not a manual step someone remembers to run later.
 - **No live Supabase/Telegram credentials exist in this sandboxed environment.** You cannot browser-test the app or run a real cron script end-to-end here. Verification is `tsc --noEmit` + `vitest run` (mocked Supabase client) + `next build`. Say so explicitly if asked to "verify it works" — don't imply live verification happened when it didn't.
 - **`filterMatches.ts` and `scoreJob.ts` must use the same text source** (`title + "\n" + description`) when matching skills — a real bug (fixed in v1.2) where they diverged and silently dropped valid matches. If you touch either, check the other.

@@ -60,6 +60,8 @@ Phase 2 has a single agent, so "parallel execution" within the phase is not appl
 
 ## Phase 4 — Integration, Re-Audit, Go-Live
 
+> **Status: complete.** The cron schedule is live. Cadence is `0 6,14 * * *` (twice daily, 06:00/14:00 UTC), set from measured run yield — see `docs/decisions.md` AD-70. The "schedule stays commented out" language below is the pre-go-live plan, kept as the record of the gate, not a description of the current workflow file.
+
 | Agent | Work item(s) |
 |---|---|
 | **Architecture Review Agent** | Full re-audit. `architecture-audit.md` #1/#2 should now show "Resolved." Confirms no new drift introduced by Phases 1–3. |
