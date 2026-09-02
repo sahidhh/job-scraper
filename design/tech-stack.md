@@ -262,6 +262,16 @@ Cards, frames, and the filter toolbar use `--radius-lg` (10px); buttons, inputs,
 Spacing is plain Tailwind scale, applied consistently rather than tokenised: page padding `p-6`,
 card padding `p-4`, vertical rhythm between page sections `space-y-5`, chip/icon gaps `gap-1.5`–`gap-2`.
 
+### Cursors
+
+`globals.css`'s base layer restores Tailwind v3's `button, [role="button"] { cursor: pointer }`, which
+v4's preflight dropped in favour of the raw browser default. It is a global rule, never a
+`cursor-pointer` utility sprinkled on individual controls: the failure it fixes is *inconsistency* —
+the job row's status buttons (not interested / viewed / applied / archive) showed an arrow while the
+external-link anchor beside them in the same toolbar showed a hand, so the same-looking group of
+affordances disagreed about whether it was clickable. `:not(:disabled)` keeps disabled controls from
+claiming to be clickable. Anchors and native inputs keep their own defaults untouched.
+
 ### Typography
 
 **IBM Plex Sans**, self-hosted by `next/font/google` in `src/app/layout.tsx` — latin subset, the

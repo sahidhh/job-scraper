@@ -585,6 +585,11 @@ worth keeping:
   sending mail itself, so the inert state has to be assembled by hand.
 - Colour is never the only signal: the score badge carries its number, the status pill carries its
   label, and eligibility carries a reason badge.
+- **Pointer affordance is uniform across a control group.** Every enabled `<button>` and
+  `[role="button"]` gets `cursor: pointer` from one base rule in `globals.css` (Tailwind v4's
+  preflight dropped v3's version of it). Without it, `JobRow`'s status buttons showed an arrow next
+  to an external-link anchor showing a hand — a mixed signal about clickability inside a single
+  toolbar. Do not re-solve this per component with a `cursor-pointer` class; see tech-stack.md §8.
 - **Text contrast is enforced, not reviewed.** Solid-chip token pairings must clear WCAG AA (4.5:1),
   and `src/app/globals.contrast.test.ts` parses `globals.css` to fail the gate if one drops below it.
   This is the one place the "not a formal WCAG commitment" caveat above does not apply, because the

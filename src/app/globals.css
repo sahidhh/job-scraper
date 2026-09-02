@@ -154,4 +154,16 @@
   body {
     @apply bg-background text-foreground;
   }
+  /* Tailwind v4's preflight dropped v3's `button, [role="button"] { cursor: pointer }`
+     to match the raw browser default, which left every button in the app -- the job
+     row's status actions above all -- showing a text/arrow cursor while the anchor
+     sitting next to them in the same toolbar showed a hand. Inconsistent affordance
+     inside one control group is worse than either convention on its own, so the v3
+     rule is restored globally rather than patched per component. `:not(:disabled)`
+     keeps a disabled control from claiming to be clickable (Button also sets
+     `disabled:pointer-events-none`, but raw `<button>`s in feature components do not). */
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
 }
