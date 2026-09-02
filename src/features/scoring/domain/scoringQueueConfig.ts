@@ -1,7 +1,7 @@
 // A job awaiting an AI score for longer than this is considered "stuck"
 // (Phase 1 Task 6) -- surfaced for operator visibility, not auto-dropped.
-// Default of 48h assumes the 2-hourly scrape/score cron (~24 missed
-// attempts) -- override via SCORING_STUCK_THRESHOLD_HOURS.
+// Default of 48h spans ~4 runs of the twice-daily scrape/score cron
+// (AD-70) -- override via SCORING_STUCK_THRESHOLD_HOURS.
 //
 // maxAiRetries is the hard stop that "stuck" visibility never was (AD-52):
 // a failed AI call is the ONLY skip reason that costs real tokens on every

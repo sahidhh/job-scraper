@@ -102,7 +102,7 @@ This is a single-user app with no signup page (frontend.md §1). Create the one 
 
 ## 11. First `workflow_dispatch` Run
 
-The cron `schedule:` in `scrape.yml` is intentionally commented out pending go-live approval (AD-04, U6) — until then, the pipeline only runs on manual dispatch:
+The cron `schedule:` in `scrape.yml` is **live** — twice daily at 06:00 and 14:00 UTC (11:30 / 19:30 IST), see AD-70 for why that cadence. Go-live approval (AD-04, U6) already happened. Before relying on the schedule, prove the pipeline end to end with one manual dispatch:
 
 1. Ensure steps 1–9 are complete (all required secrets set).
 2. Add at least one row to `companies` via `/settings` (Greenhouse/Lever/Ashby + `board_token`), or accept zero ATS coverage initially — RemoteOK still runs with no config (AD-05).
@@ -126,4 +126,4 @@ The cron `schedule:` in `scrape.yml` is intentionally commented out pending go-l
 - [ ] Logged into the deployed app; `/dashboard`, `/roles`, `/resume`, `/settings` all load.
 - [ ] Test PDF uploaded on `/resume` — confirms `resumes` bucket + policy work end-to-end.
 - [ ] `ci.yml` passing on the deployed branch (typecheck, tests, service-role-boundary check).
-- [ ] Cron `schedule:` in `scrape.yml` remains commented out until a human explicitly approves go-live per `agent-workflow.md` Phase 4 (cost/security re-audit gate) — enabling it is a separate, deliberate step, not part of staging.
+- [ ] Cron `schedule:` in `scrape.yml` is `0 6,14 * * *` (AD-70). Go-live per `agent-workflow.md` Phase 4 (cost/security re-audit gate) has happened; changing the cadence again is a deliberate step that re-derives `SOURCE_STALE_HOURS` with it, not a staging detail.

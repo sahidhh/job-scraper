@@ -199,7 +199,7 @@ ships with Next.
 | Pipeline | Trigger | Steps |
 |---|---|---|
 | `ci.yml` | Push / PR to main | `typecheck` → `lint` → `test` → `build`; separate `check:service-role-boundary` job |
-| `scrape.yml` | Cron (every 6h) or `workflow_dispatch` | `scrape.ts` → `score.ts` → `notify.ts` |
+| `scrape.yml` | Cron (twice daily, 06:00/14:00 UTC) or `workflow_dispatch` | `scrape.ts` → `score.ts` → `notify.ts` |
 | `rescore.yml` | `workflow_dispatch` only | `rescore.ts` (clears active scores) → `score.ts` (rebuilds). Shares the `scrape-pipeline` concurrency group so it never overlaps a scheduled scrape. Use after a scoring prompt/constraint change to re-rank the existing corpus (decisions.md AD-50) |
 | `validate-sources.yml` | `workflow_dispatch` only | `validate-sources.ts` — probe ATS boards, exit 1 only on new failures or sub-minimum healthy count |
 | `verify-production.yml` | `workflow_dispatch` only (v1.4, no schedule) | `verify-production.ts` — 24-check operational health report, uploads `verification-reports/` as a build artifact, exit 1 only on a critical-severity failure |
@@ -224,7 +224,7 @@ reads a column its migration never created. This happened between 2026-07-19 and
 why the workflow now alerts on failure. If you see that alert, rotate the token at
 `supabase.com/dashboard/account/tokens`, update the repo secret, and re-run the workflow.
 
-The cron `schedule:` entry in `scrape.yml` is **active** (`0 */6 * * *`, every 6 hours), not commented out — whether this 6h cadence was a deliberate, approved choice is an open question tracked in `TECHNICAL_DEBT.md` #1, not a doc-accuracy issue.
+The cron `schedule:` entry in `scrape.yml` is **active** (`0 6,14 * * *` — twice daily, 06:00/14:00 UTC), not commented out. The cadence was cut from 6-hourly on measured yield (AD-70); `SOURCE_STALE_HOURS` (default 36 = 3x the cadence) is derived from it and must move with it.
 
 ---
 

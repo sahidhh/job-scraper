@@ -10,7 +10,7 @@
 
 | Step | Description |
 |---|---|
-| 🔍 **Scrape** | Pulls fresh postings every 2 hours from Greenhouse, Lever, Ashby, Wellfound, RemoteOK & MyCareersFuture |
+| 🔍 **Scrape** | Pulls fresh postings twice daily (06:00 / 14:00 UTC) from Greenhouse, Lever, Ashby, Wellfound, RemoteOK & MyCareersFuture |
 | 📍 **Filter** | Tags jobs by geography (India / Singapore / UAE / Remote) and drops irrelevant ones |
 | 🎯 **Score** | Runs a two-stage pipeline — cheap keyword match first, then AI scoring via OpenRouter |
 | 🔔 **Notify** | Sends a structured Telegram digest with inline Apply buttons for high-score matches |

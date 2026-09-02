@@ -215,7 +215,7 @@ empty_feed | unknown`. `selector`/`captcha` are extension points -- no current a
 HTML/DOM scraping or hits a CAPTCHA wall. `getSourceHealthReport()` is surfaced on `/analytics`
 (Phase 4 Task 13).
 
-**Stale detection** (`SOURCE_HEALTH_CONFIG.staleAfterHours`, default 6h -- 3x the ~2h scrape
+**Stale detection** (`SOURCE_HEALTH_CONFIG.staleAfterHours`, default 36h -- 3x the twice-daily scrape
 cadence, env `SOURCE_STALE_HOURS`): a source with no run at all in that window is flagged
 `isStale`, a distinct condition from "running and failing" -- covers a source silently dropped
 from `JOB_SOURCES`/the workflow, or a crashed job that skipped it entirely, neither of which

@@ -43,7 +43,7 @@ scrape.ts → score.ts → notify.ts     (GitHub Actions, scrape.yml)
 
 Full diagrams: `design/architecture.md` §3–7. Full data-flow sequence diagrams: `design/technical-design.md` §6.
 
-**⚠️ Current live cadence:** `scrape.yml`'s `schedule:` is **active** (`cron: "0 */6 * * *"`, every 6 hours) alongside `workflow_dispatch`. Several existing docs (`design/limitations.md` §1.3 "2 hours", `docs/deployment.md` §11 "commented out pending approval") describe an earlier, not-yet-live state that no longer matches the actual workflow file — this is flagged in this session's Technical Debt Register (`TECHNICAL_DEBT.md`) as a real doc/reality mismatch, not silently corrected, since whether 6h (vs. the originally-planned 2h) was a deliberate choice is not something this session can verify.
+**Current live cadence:** `scrape.yml`'s `schedule:` is **active** (`cron: "0 6,14 * * *"` — twice daily, 06:00/14:00 UTC = 11:30/19:30 IST) alongside `workflow_dispatch`. The earlier 6-hourly cadence was cut to two runs a day on measured yield (AD-70): every run re-fetched ~950 postings to insert a median of 4 new ones. The doc drift that used to be tracked here and in `TECHNICAL_DEBT.md` #1 ("2 hours" / "commented out pending approval") is resolved — every cadence claim in `design/`, `docs/` and the root markdown now reads 12h. **`SOURCE_STALE_HOURS` (default 36 = 3x cadence) has to be re-derived with any future cadence change.**
 
 ## 4. Supported Sources
 

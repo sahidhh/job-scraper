@@ -44,7 +44,7 @@ Real, scoped, not yet done — ordered roughly by effort:
 Interesting, not scoped, no immediate plan:
 
 - Score confidence bands beyond the existing strong/worth-reviewing split (e.g. a third "weak match" band) surfaced explicitly on the dashboard.
-- A "recently posted" freshness badge in Telegram highlights (deliberately skipped in v1.2 — most notified jobs are already recent given the ~6h scrape cadence, so the signal is low-value; see `docs/decisions.md` AD-25's sibling reasoning).
+- A "recently posted" freshness badge in Telegram highlights (deliberately skipped in v1.2 — most notified jobs are already recent given the twice-daily scrape cadence, so the signal is low-value; see `docs/decisions.md` AD-25's sibling reasoning).
 - Company-level poster-type/seniority-norm learning (e.g. "this company calls 3-years-experience roles 'Senior'") — would need historical data, not a day-one heuristic.
 - Automated source discovery (periodically search Greenhouse/Lever/Ashby for new boards matching industry/region filters) instead of manual `companies` table curation.
 
