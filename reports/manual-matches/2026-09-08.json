@@ -1,0 +1,93 @@
+{
+  "runDate": "2026-09-08",
+  "jobs": [
+    {
+      "id": "jobgether-associate-se-net-csharp-angular-sql-india",
+      "title": "Associate Software Engineer (.NET, C#, Angular, SQL Server)",
+      "company": "Jobgether (partner company)",
+      "location": "Remote - India",
+      "score": 82,
+      "link": "https://jobs.lever.co/jobgether/d8a3285a-d793-413c-94aa-5c87b65e2e28",
+      "standout": "Explicitly framed as an early-career role ('excellent opportunity for an early-career software engineer'), India-based, and the stack lines up closely: Microsoft .NET, C#, Angular, and SQL Server, with exposure to the full SDLC alongside experienced developers and BAs. This is the closest tech + seniority match found this run.",
+      "verify": "Exact years-of-experience band and salary were not stated in the search snippet -- confirm both on click-through. Also confirm whether the SQL Server requirement is a hard blocker given the profile's PostgreSQL/EF Core background (transferable but worth addressing directly in the application).",
+      "requirements": "Microsoft .NET, C#, Angular, Microsoft SQL Server. Full SDLC exposure: design, build, test, maintain enterprise applications. Works with experienced developers, business analysts, and technical stakeholders in an Agile environment."
+    },
+    {
+      "id": "jobgether-associate-se-c-net-angular-dual-tier-india",
+      "title": "Associate Software Engineer / Software Engineer (C# .NET, Angular)",
+      "company": "Jobgether (partner company)",
+      "location": "Remote - India",
+      "score": 76,
+      "link": "https://jobs.lever.co/jobgether/70ceb8d0-4a83-4311-95ec-6aa6150f8e65",
+      "standout": "A dual-tier posting where the Associate tier is explicitly 1-3 years, squarely inside the 0-2.5 year band (the Software Engineer tier at 3+ years should be skipped). Hands-on C#, ASP.NET, .NET, Angular, and SQL.",
+      "verify": "Confirm on click-through that you'd be considered/routed to the Associate tier rather than the Software Engineer tier, and that the role is India-remote (location wasn't independently confirmed beyond the search snippet).",
+      "requirements": "C#, ASP.NET, .NET, Angular, SQL. Associate tier: 1-3 years software engineering experience. Software Engineer tier: 3+ years (does not meet the hard YOE filter -- apply for Associate tier only)."
+    },
+    {
+      "id": "jobgether-application-developer-aspnetcore-angular-india",
+      "title": "Application Developer (ASP.NET Core, Angular)",
+      "company": "Jobgether (partner company)",
+      "location": "Remote - India",
+      "score": 70,
+      "link": "https://jobs.lever.co/jobgether/5b517380-ed32-4ba9-bd0e-8b73d404e186",
+      "standout": "Strong direct stack match: ASP.NET Core 6/7, Angular 13+, C#, OOP, REST/Web API, SQL, Git, with Azure DevOps called out as desirable -- covers most of the core skill list except CQRS/MediatR and PostgreSQL specifically.",
+      "verify": "No explicit years-of-experience figure appeared in the search snippet -- confirm the YOE band on click-through before assuming it fits the 0-2.5 year filter. Location (India-remote) also not independently confirmed.",
+      "requirements": "ASP.NET Core 6/7, the broader .NET ecosystem, C#, OOP, structured software development. Angular 13+. RESTful APIs / Web API. SQL development and database querying. Git; Azure DevOps desirable."
+    },
+    {
+      "id": "swk-as313-angular-developer-remote-india",
+      "title": "Angular Developer (Remote, Full-Time) [AS313]",
+      "company": "Smart Working Solutions",
+      "location": "Remote - India",
+      "score": 65,
+      "link": "https://jobs.lever.co/smart-working-solutions/4bcc9e2b-db86-47a3-a21b-be0dd9d3378e",
+      "standout": "Companion posting (same AS313 req family) to a role already surfaced in a prior run's full-stack listing -- this one is Angular-focused with ASP.NET MVC on the backend side, 2+ years Angular required, which is at the top of the qualifying band rather than a stretch.",
+      "verify": "The posting wants strong AngularJS (legacy 1.x) experience to maintain/rewrite an existing live codebase, not just modern Angular -- confirm you can speak to that gap before applying, same caveat as the sibling full-stack posting from the prior run.",
+      "requirements": "Strong AngularJS experience (read/maintain/rewrite a live codebase). 2+ years shipping Angular 20+ applications. Strong TypeScript. ASP.NET MVC development experience. Git/CI-CD."
+    },
+    {
+      "id": "blackstone-eit-net-developer-dubai-uae",
+      "title": ".NET Developer",
+      "company": "Blackstone eIT",
+      "location": "Dubai, UAE",
+      "score": 60,
+      "link": "https://www.bayt.com/en/uae/jobs/net-73387686/",
+      "standout": "Direct UAE listing (a top-priority location) for a global IT services provider, with C#, ASP.NET, and Web API as the named stack.",
+      "verify": "The 1-3 years experience figure comes from Bayt's aggregate category description for Blackstone eIT .NET roles generally, not confirmed against this specific listing's own text -- verify the exact YOE band, salary (not listed), and whether visa sponsorship is offered on click-through.",
+      "requirements": "Bachelor's in Computer Science. C#, ASP.NET, Web API. Full SDLC: requirement analysis, design, coding, testing, deployment. Problem-solving, communication, teamwork."
+    },
+    {
+      "id": "diatoz-angular-net-developer-chennai-2026",
+      "title": "Angular Developer with .NET",
+      "company": "Diatoz Solutions Pvt Ltd",
+      "location": "Chennai, India",
+      "score": 55,
+      "link": "https://www.naukri.com/job-listings-angular-developer-with-net-diatoz-solutions-pvt-ltd-chennai-2-to-4-years-220726500557",
+      "standout": "On-the-ground Chennai option (top preferred location) combining Angular front end with a .NET back end, at a small/growing local company.",
+      "verify": "Experience band is ambiguous and inconsistent across sources -- the listing URL slug says 2-4 years, but other descriptions of what appears to be the same or a sibling Diatoz posting say 1-3 years and 2-6 years. Confirm the real minimum on click-through; the low end (1-2) would clear the hard filter but the range as posted may skew senior. Stack also mentions MySQL rather than PostgreSQL and doesn't mention CQRS/Clean Architecture -- treat those as gaps, not confirmed matches.",
+      "requirements": "Angular (front end), Microsoft .NET (back end), MySQL. B.E./B.Tech. Full stack web application development."
+    },
+    {
+      "id": "encora-net-angular-aws-fullstack-developer",
+      "title": ".Net + Angular + AWS - Full Stack Developer",
+      "company": "Encora",
+      "location": "Remote (region unconfirmed)",
+      "score": 50,
+      "link": "https://job-boards.greenhouse.io/encora10/jobs/5143231007",
+      "standout": "C# / ASP.NET Core + Angular stack at a large IT services firm (Encora) with many parallel listings, so there may be nearby openings if this one doesn't fit.",
+      "verify": "Could not confirm the years-of-experience band for this specific (non-'Senior') posting -- Encora's clearly-labeled 'Senior' .NET/Angular roles ask for 5+ years, and a 'Mid' .NET role asks for 4+, so this one may skew senior too; treat as unverified until you check YOE on click-through. Also uses AWS rather than Azure for cloud, and location wasn't confirmed as remote-eligible from India.",
+      "requirements": "C#, .NET Core, Angular, AWS. Full stack engineering across frontend and backend. (Years of experience and location not confirmed for this specific posting.)"
+    },
+    {
+      "id": "lumel-product-developer-fresher-chennai-2026",
+      "title": "Product Developer - Fresher (Star Hire Program 2026)",
+      "company": "Lumel",
+      "location": "Chennai, India (Global Infocity)",
+      "score": 40,
+      "link": "https://in.indeed.com/viewjob?jk=753028d46b877cfb",
+      "standout": "Chennai product company campus-hire program; .NET/.NET Core/C# is one of three acceptable tracks (alongside React.js and Rust), so it's a real (if partial) tech match with genuine product-company mentorship framing.",
+      "verify": "Eligibility appears restricted to '2026 graduating' candidates specifically (a campus-hire program), not general 0-2.5 year hires -- confirm you qualify before applying. Also confirm whether the .NET track specifically is open vs. the React/Rust tracks, and that salary/YOE details (not listed) on the actual posting.",
+      "requirements": "Strong coding fundamentals. Hands-on exposure to React.js, .NET/.NET Core/C#, or Rust (one track, not all three). 2026 graduating BE/B.Tech only, per program framing."
+    }
+  ]
+}
