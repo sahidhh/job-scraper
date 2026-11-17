@@ -29,6 +29,7 @@ import {
   type ExportPayload,
   type MatchOrigin,
 } from "./lib/exportTopMatchesFormat";
+import { enrichMatchesWithContacts, loadDefaultVerifiedContacts } from "./enrich-export-contacts";
 import { probeAndEnrichJobs, type JobProbeOutcome } from "./lib/jobLivenessAndEnrich";
 import { computePortfolioFitScore } from "./lib/portfolioFitScorer";
 
@@ -485,9 +486,15 @@ export async function runExportTopMatches(options: ExportTopMatchesOptions): Pro
     };
   });
 
-  scoredLive.sort(comparePortfolioMatches);
+  const enrichedLive = enrichMatchesWithContacts(
+    scoredLive,
+    activeResume.skills,
+    loadDefaultVerifiedContacts(),
+    activeResume.parsedText,
+  );
+  enrichedLive.sort(comparePortfolioMatches);
 
-  const exportedMatches = scoredLive.slice(0, options.limit).map((m, idx) => ({
+  const exportedMatches = enrichedLive.slice(0, options.limit).map((m, idx) => ({
     ...m,
     rank: idx + 1,
   }));

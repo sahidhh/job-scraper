@@ -32,6 +32,7 @@
     "report:matches": "tsx scripts/report-top-matches.ts",
     "export:matches": "tsx scripts/export-top-matches.ts",
     "fetch:matches": "tsx scripts/fetch-matches.ts",
+    "enrich:contacts": "tsx scripts/enrich-export-contacts.ts",
     "discover:career-pages": "tsx scripts/discover-career-pages.ts",
     "import:manual-matches": "tsx scripts/import-manual-matches.ts",
     "print:manual-matches-sql": "tsx scripts/print-manual-matches-sql.ts",

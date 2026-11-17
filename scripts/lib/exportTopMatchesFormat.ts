@@ -121,6 +121,8 @@ const AUTOMATED_EMAIL_PREFIXES = new Set([
   "privacy",
   "mailer-daemon",
   "postmaster",
+  "complaints",
+  "abuse",
 ]);
 
 interface ResumeHookRule {

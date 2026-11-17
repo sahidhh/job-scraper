@@ -1,0 +1,452 @@
+[
+  {
+    "company": "Anglo-Eastern Ship Management",
+    "matchTitleSubstring": "Full Stack Developer",
+    "websiteUrl": "https://www.angloeastern.com/",
+    "careerPageUrl": "https://apply.workable.com/angloeastern/j/5AC24BEC7B/",
+    "emails": [],
+    "directJobUrl": "https://apply.workable.com/angloeastern/j/5AC24BEC7B/",
+    "extraNotes": "Shore/IT careers: https://www.angloeastern.com/our-people/our-teams-ashore/. Apply via Workable (no public shore HR email)."
+  },
+  {
+    "company": "Ebizon",
+    "matchTitleSubstring": "Full Stack Developer",
+    "websiteUrl": "https://www.ebizondigital.com/",
+    "careerPageUrl": "https://ebizon.applytojob.com/apply/LFCSXmxxbo/Full-Stack-Developer",
+    "emails": [
+      {
+        "email": "info@ebizondigital.com",
+        "confidence": "ROLE",
+        "source": "https://www.ebizondigital.com/contact-us/"
+      }
+    ],
+    "directJobUrl": "https://ebizon.applytojob.com/apply/LFCSXmxxbo/Full-Stack-Developer",
+    "extraNotes": "HR request portal (Recruitment option): https://peoplehub.ebizondigital.com/support"
+  },
+  {
+    "company": "Side",
+    "matchTitleSubstring": "Full Stack Developer",
+    "websiteUrl": "https://side.inc/",
+    "careerPageUrl": "https://apply.workable.com/sideinc/j/E640EEB609/",
+    "emails": [],
+    "directJobUrl": "https://apply.workable.com/sideinc/j/E640EEB609/",
+    "extraNotes": "Real company: Side (side.inc / Pole To Win Holdings). Apply via Workable."
+  },
+  {
+    "company": "Trexo Fintech Private Limited",
+    "websiteUrl": "https://trexo.money/",
+    "careerPageUrl": null,
+    "emails": [
+      {
+        "email": "khushal@trexo.money",
+        "confidence": "MEDIUM",
+        "source": "https://play.google.com/store/apps/details?id=com.trexo.money"
+      }
+    ],
+    "extraNotes": "Developer email from official Google Play app page linked on trexo.money."
+  },
+  {
+    "company": "Alpheva AI",
+    "websiteUrl": "https://www.alpheva.com/",
+    "careerPageUrl": "https://www.alpheva.com/careers/",
+    "emails": [
+      {
+        "email": "jobs@alpheva.com",
+        "confidence": "HIGH",
+        "source": "https://www.alpheva.com/careers/"
+      },
+      {
+        "email": "support@alpheva.com",
+        "confidence": "ROLE",
+        "source": "https://www.alpheva.com/contact/"
+      }
+    ]
+  },
+  {
+    "company": "VINOVA PTE. LTD.",
+    "websiteUrl": "https://vinova.sg/",
+    "careerPageUrl": "https://vinova.sg/jobs/",
+    "emails": [
+      {
+        "email": "recruitment@vinova.sg",
+        "confidence": "HIGH",
+        "source": "https://vinova.sg/contact/"
+      },
+      {
+        "email": "hello@vinova.sg",
+        "confidence": "ROLE",
+        "source": "https://vinova.sg/contact/"
+      }
+    ]
+  },
+  {
+    "company": "VISEO ASIA PTE. LTD.",
+    "websiteUrl": "https://asia.viseo.com/",
+    "careerPageUrl": "https://asia.viseo.com/our-job-offers/",
+    "emails": []
+  },
+  {
+    "company": "Procter & Gamble",
+    "matchTitleSubstring": "Full Stack Developer",
+    "websiteUrl": "https://www.pg.com/",
+    "careerPageUrl": "https://www.pgcareers.com/eu/en/job/R000162157/Full-Stack-Developer-Software-Engineer",
+    "emails": [],
+    "directJobUrl": "https://pg.wd5.myworkdayjobs.com/1000/job/HYDERABAD-OFFICE-APAC-PSC-GDOP/Full-Stack-Developer-Software-Engineer_R000162157/apply",
+    "extraNotes": "Apply via Workday portal (pgglobaltalentacq.im@pg.com is strictly for assessment technical issues, not resume applications)."
+  },
+  {
+    "company": "SIMPLIFYNEXT PTE. LTD.",
+    "websiteUrl": "https://www.simplifynext.com/",
+    "careerPageUrl": "https://www.simplifynext.com/career",
+    "emails": [
+      {
+        "email": "contact@simplifynext.com",
+        "confidence": "ROLE",
+        "source": "https://www.simplifynext.com/contact"
+      }
+    ]
+  },
+  {
+    "company": "RESOURCES GLOBAL PROFESSIONALS (SINGAPORE) PTE. LTD.",
+    "websiteUrl": "https://rgp.com/",
+    "careerPageUrl": "https://rgp.com/careers/",
+    "emails": []
+  },
+  {
+    "company": "WEBSPARKS PTE. LTD.",
+    "websiteUrl": "https://www.websparks.sg/",
+    "careerPageUrl": "https://www.websparks.sg/join-us/",
+    "emails": [
+      {
+        "email": "careers@websparks.sg",
+        "confidence": "HIGH",
+        "source": "https://www.websparks.sg/join-us/"
+      },
+      {
+        "email": "hello@websparks.sg",
+        "confidence": "ROLE",
+        "source": "https://www.websparks.sg/contact-us/"
+      }
+    ]
+  },
+  {
+    "company": "FPT ASIA PACIFIC PTE. LTD.",
+    "websiteUrl": "https://fptsoftware.com/fpt-asia-pacific",
+    "careerPageUrl": "https://www.careers-page.com/fpt-asia-pacific-pte-ltd",
+    "emails": [
+      {
+        "email": "recruitment@fpt.com",
+        "confidence": "HIGH",
+        "source": "https://fptsoftware.com/contact-us"
+      },
+      {
+        "email": "support.singapore@fpt.com",
+        "confidence": "ROLE",
+        "source": "https://fptsoftware.com/about-us/global-presence"
+      }
+    ]
+  },
+  {
+    "company": "JOBSTER PRIVATE LTD.",
+    "websiteUrl": "https://www.jobster.com.sg",
+    "careerPageUrl": null,
+    "emails": [
+      {
+        "email": "sales@jobster.com.sg",
+        "confidence": "ROLE",
+        "source": "https://www.jobster.com.sg/contact"
+      }
+    ]
+  },
+  {
+    "company": "UIC ASIAN COMPUTER SERVICES PTE LTD",
+    "websiteUrl": "https://www.uicacs.com/",
+    "careerPageUrl": "https://www.uicacs.com/careers/",
+    "emails": [
+      {
+        "email": "hr.talent@uictech.com.sg",
+        "confidence": "HIGH",
+        "source": "https://www.uicacs.com/careers/"
+      }
+    ]
+  },
+  {
+    "company": "RAPSYS TECHNOLOGIES PTE. LTD.",
+    "websiteUrl": "https://www.rapsystechnologies.com/",
+    "careerPageUrl": "https://www.rapsystechnologies.com/careers",
+    "emails": [
+      {
+        "email": "sales@rapsystechnologies.com",
+        "confidence": "ROLE",
+        "source": "https://www.rapsystechnologies.com/contact"
+      }
+    ]
+  },
+  {
+    "company": "HELIUS TECHNOLOGIES PTE. LTD.",
+    "websiteUrl": "https://www.helius-tech.com/",
+    "careerPageUrl": "https://www.helius-tech.com/careers",
+    "emails": [
+      {
+        "email": "jobs@helius-tech.com",
+        "confidence": "HIGH",
+        "source": "https://www.helius-tech.com/careers"
+      },
+      {
+        "email": "hr@helius-tech.com",
+        "confidence": "HIGH",
+        "source": "https://www.helius-tech.com/faq"
+      },
+      {
+        "email": "info@helius-tech.com",
+        "confidence": "ROLE",
+        "source": "https://www.helius-tech.com/faq"
+      }
+    ]
+  },
+  {
+    "company": "ELLIOTT MOSS CONSULTING PTE. LTD.",
+    "websiteUrl": "https://elliottmoss.com",
+    "careerPageUrl": "https://www.linkedin.com/company/elliott-moss-consulting/jobs/?viewAsMember=true",
+    "emails": [
+      {
+        "email": "info@elliottmoss.com",
+        "confidence": "ROLE",
+        "source": "https://elliottmoss.com"
+      }
+    ]
+  },
+  {
+    "company": "Tachyon Technologies",
+    "matchTitleSubstring": "Full Stack AI",
+    "websiteUrl": "https://www.tachyontech.com/",
+    "careerPageUrl": "https://www.tachyontech.com/jobs/full-stack-ai-engineers/",
+    "emails": [
+      {
+        "email": "tachyondigital@tachyontech.com",
+        "confidence": "ROLE",
+        "source": "https://www.tachyontech.com/privacy-policy/"
+      }
+    ],
+    "directJobUrl": "https://www.tachyontech.com/jobs/full-stack-ai-engineers/",
+    "extraNotes": "Oorwin ATS: https://tachyonind.oorwin.ai/#/careers/index.html/job/614e91283af51d5b982c204f81ff04f2c2dffca2"
+  },
+  {
+    "company": "CYGNVS",
+    "websiteUrl": "https://cygnvs.com/",
+    "careerPageUrl": "https://cygnvs.com/careers/",
+    "emails": [
+      {
+        "email": "mission@cygnvs.com",
+        "confidence": "HIGH",
+        "source": "https://cygnvs.com/careers/"
+      },
+      {
+        "email": "info@cygnvs.com",
+        "confidence": "ROLE",
+        "source": "https://cygnvs.com/legal/dora-addendum/"
+      }
+    ],
+    "extraNotes": "Careers page explicitly states: Please email mission@cygnvs.com. Chennai office."
+  },
+  {
+    "company": "Koantek",
+    "matchTitleSubstring": "Full Stack Developer",
+    "websiteUrl": "https://www.koantek.com/",
+    "careerPageUrl": "https://koantek.zohorecruit.com/jobs/Careers/793183000005640087/Full-Stack-Developer?source=CareerSite",
+    "emails": [
+      {
+        "email": "info@koantek.com",
+        "confidence": "ROLE",
+        "source": "https://www.koantek.com/contact-us"
+      }
+    ],
+    "directJobUrl": "https://koantek.zohorecruit.com/jobs/Careers/793183000005640087/Full-Stack-Developer?source=CareerSite"
+  },
+  {
+    "company": "Underpin Services",
+    "websiteUrl": null,
+    "careerPageUrl": null,
+    "emails": [],
+    "extraNotes": "UNDERPIN SERVICES PRIVATE LIMITED (New Delhi, CIN U72900DL2016PTC305386); legacy domain dead; hires via Naukrigulf/Naukri."
+  },
+  {
+    "company": "DADACONSULTANTS PTE. LTD.",
+    "websiteUrl": "https://www.dadaconsultants.com",
+    "careerPageUrl": "https://dadaconsultants.com/jobs.php",
+    "emails": [
+      {
+        "email": "hr@dadaconsultants.com",
+        "confidence": "HIGH",
+        "source": "https://dadaconsultants.com/contact.php"
+      }
+    ]
+  },
+  {
+    "company": "Tech Aalto",
+    "websiteUrl": "https://www.techaalto.com",
+    "careerPageUrl": "https://www.techaalto.com/careers/",
+    "emails": [
+      {
+        "email": "info@techaalto.com",
+        "confidence": "ROLE",
+        "source": "https://www.techaalto.com/careers/"
+      }
+    ]
+  },
+  {
+    "company": "NEXBRIDGE RECRUITMENT PTE. LTD.",
+    "websiteUrl": "https://nexbridge-recruitment.com",
+    "careerPageUrl": "https://www.mycareersfuture.gov.sg/companies/nexbridge-recruitment-202629945K",
+    "emails": []
+  },
+  {
+    "company": "NOTETECH SOFTWARE",
+    "matchTitleSubstring": "full stack engineer",
+    "websiteUrl": "https://www.notetech.com/",
+    "careerPageUrl": "https://www.notetech.com/career",
+    "emails": [
+      {
+        "email": "careers@notetech.com",
+        "confidence": "HIGH",
+        "source": "https://www.notetech.com/career"
+      },
+      {
+        "email": "info@notetech.com",
+        "confidence": "ROLE",
+        "source": "https://www.notetech.com/privacy"
+      }
+    ],
+    "fullDescription": "Full stack engineers - JavaScript, Node.js & React Job requirements\n- Solid Computer Science fundamentals, excellent problem-solving skills.\n- Expert-level understanding and familiarity with JavaScript, React And Node.js, with a proven track record of shipping successful software products.\n- Good communication skills (written and verbal), proven team player, rolling up the sleeves and getting involved in the nitty gritty.\n- Familiar with Agile Methodology.\n- Bachelor's or Master's degree in Computer Science or related field from a top university.\n- Able to work within the GMT+8 time zone.\nSkills: Javascript, HTML/CSS, PHP, C#, React.js, NodeJS (Node.js) (Cutshort/Adzuna listing; 3-8 yrs, 5-12 LPA, Remote only)."
+  },
+  {
+    "company": "Allegis Group Singapore Pte Ltd",
+    "websiteUrl": "https://www.allegisgroup.com",
+    "careerPageUrl": "https://www.allegisgroup.com/en-au/careers",
+    "emails": [
+      {
+        "email": "info.agsapac@allegisglobalsolutions.com",
+        "confidence": "ROLE",
+        "source": "https://www.allegisglobalsolutions.com/en/about-us/locations/asia-pacific/singapore"
+      }
+    ]
+  },
+  {
+    "company": "NeoGenCode Technologies Pvt Ltd",
+    "websiteUrl": "https://neogencode.com/",
+    "careerPageUrl": null,
+    "emails": [
+      {
+        "email": "info@neogencode.com",
+        "confidence": "ROLE",
+        "source": "https://neogencode.com/privacy-policy"
+      }
+    ]
+  },
+  {
+    "company": "RANDSTAD PTE. LIMITED",
+    "websiteUrl": "https://www.randstad.com.sg",
+    "careerPageUrl": "https://www.randstad.com.sg/jobs/",
+    "emails": [
+      {
+        "email": "cx@randstad.com.sg",
+        "confidence": "ROLE",
+        "source": "https://www.randstad.com.sg/contact-us/"
+      }
+    ]
+  },
+  {
+    "company": "MAVERICKS CONSULTING PTE. LTD.",
+    "websiteUrl": "https://www.mavericks-consulting.com",
+    "careerPageUrl": "https://www.mavericks-consulting.com/job-vacancies",
+    "emails": [
+      {
+        "email": "people@mavericks-consulting.com",
+        "confidence": "HIGH",
+        "source": "https://www.mavericks-consulting.com/job-vacancies"
+      }
+    ]
+  },
+  {
+    "company": "Bosch Group",
+    "matchTitleSubstring": "Full stack Engineer",
+    "websiteUrl": "https://www.bosch.in/",
+    "careerPageUrl": "https://www.bosch.in/careers/",
+    "emails": [
+      {
+        "email": "contact@in.bosch.com",
+        "confidence": "ROLE",
+        "source": "https://www.bosch.in/corporate-information/"
+      }
+    ],
+    "directJobUrl": "https://jobs.smartrecruiters.com/BoschGroup/744000160600719-full-stack-developer"
+  },
+  {
+    "company": "Pacexpert",
+    "websiteUrl": "https://pacexpert.in/",
+    "careerPageUrl": null,
+    "emails": [
+      {
+        "email": "aman.pacexpert@gmail.com",
+        "confidence": "MEDIUM",
+        "source": "https://pacexpert.in/"
+      }
+    ]
+  },
+  {
+    "company": "PathGen",
+    "websiteUrl": "https://pathgen.ai",
+    "careerPageUrl": "https://pathgen.ai/jobs",
+    "emails": [
+      {
+        "email": "connect@pathgen.ai",
+        "confidence": "HIGH",
+        "source": "https://pathgen.ai/jobs"
+      }
+    ]
+  },
+  {
+    "company": "JPMORGAN CHASE BANK, N.A.",
+    "websiteUrl": "https://www.jpmorgan.com/SG/en/about-us",
+    "careerPageUrl": "https://www.jpmorganchase.com/careers",
+    "emails": []
+  },
+  {
+    "company": "VEEP PTE. LTD.",
+    "websiteUrl": "https://veep.sg",
+    "careerPageUrl": null,
+    "emails": [
+      {
+        "email": "sales@veep.sg",
+        "confidence": "ROLE",
+        "source": "https://veep.sg/faq/"
+      }
+    ]
+  },
+  {
+    "company": "Cigna",
+    "matchTitleSubstring": ".NET & Angular",
+    "websiteUrl": "https://nasneuron.com/",
+    "careerPageUrl": "https://cigna.wd5.myworkdayjobs.com/cignacareers/job/UAE-Dubai---Nas-Neuron/Application-Developer_26013682",
+    "emails": [],
+    "directJobUrl": "https://cigna.wd5.myworkdayjobs.com/cignacareers/job/UAE-Dubai---Nas-Neuron/Application-Developer_26013682",
+    "fullDescription": "Title: Application Developer (UA10 HealthBridge Corporate Services FZ / NAS Neuron Health Services LLC - UAE Dubai - Nas Neuron, Full time, Posted 2026-11-04)\n1. JOB PURPOSE\nThe Job holder is responsible to develop and implement software application, software components and unit test. They collaborate with teams to set specifications, write high quality code, conduct testing, and troubleshoot applications.\n2. RESPONSIBILITIES AND DUTIES\n- Developing and implementing software applications, software components and unit tests.\n- Implementing new features based on business requirements.\n- Working closely with other developers, UI/UX designers, business analysts, and QA Team.\n- Developing and maintaining quality & scalable software products, documentations.\n- Test software to ensure responsiveness and efficiency.\n- Gather and evaluate user feedback.\n- Troubleshooting, debugging and upgrading software.\n- Assisting in enhancing existing software components and adding new features.\n- Provide timely updates to the Technical Team Lead and Software development Manager.\n- Regular involvement in the support tickets from the Business Team.\n3. KNOWLEDGE, SKILLS AND EXPERIENCE\n- Graduation/Post Graduation in Software Engineering/Computer Applications/Computer Science/Data Engineering.\n- Minimum 3 years' experience in application development domain.\n- Analytical thinking and problem-solving capability.\n- Excellent understanding of software design and programming principles.\n- In-depth understanding of modern software development technologies like .Net 6, Angular, JQuery, Blazor.\n- Good command in programming languages C# and PL/SQL is a must.\n- Good familiarity with SQL Developer, Toad, SQL Management Studio is preferred.\n- Excellent time management skills and the ability to work towards meeting multiple deadlines simultaneously.\n4. COMMUNICATIONS AND WORKING RELATIONSHIPS\nThe job holder interacts with all Departments within NNHS and other service providers. Must ensure seamless communication between all departments and foster strong internal & external communication standards.\n5. OPERATING ENVIRONMENT\nDesk-based air-conditioned environment; flexible weekly schedule within UAE labor law. NAS Neuron Health Services LLC is an equal opportunity employer.",
+    "extraNotes": "NAS Neuron Health Services LLC (Cigna UAE). Apply on Workday; do NOT email SeeYourselfEMEA@cigna.com (accommodations only)."
+  },
+  {
+    "company": "Joblet-AI",
+    "matchTitleSubstring": "Remote Fullstack Engineer",
+    "websiteUrl": "https://www.micro1.ai/",
+    "careerPageUrl": "https://jobs.micro1.ai/post/912dac5d-2d0b-4c32-a67b-89404bcf195b",
+    "emails": [
+      {
+        "email": "support@micro1.ai",
+        "confidence": "ROLE",
+        "source": "https://jobs.micro1.ai/post/912dac5d-2d0b-4c32-a67b-89404bcf195b"
+      }
+    ],
+    "directJobUrl": "https://jobs.micro1.ai/post/912dac5d-2d0b-4c32-a67b-89404bcf195b",
+    "fullDescription": "Job Title: Software Engineer, Data Platforms at micro1 (Core team, Full-time, Remote; $120,000-$160,000 base / $200K-$280K/yr compensation listed)\nThe Role\nThis is an AI-native fullstack engineering role building micro1's human data platforms. You'll own features end-to-end, from backend services and data pipelines to the frontends our experts use every day. The role sits between traditional fullstack and research engineering. Coding agents are your primary development workflow, and you'll work closely with research engineers, operations, and product to turn requirements into reliable production systems.\nWhat You'll Own\n1. Design and ship fullstack features across backend APIs, data pipelines, and React frontends.\n2. Own client-facing data delivery and platform infrastructure, including exports, access control, and reliability.\n3. Scope work around outcomes, direct coding agents—often in parallel—review changes at the architecture level, and iterate until shipped.\n4. Build and maintain services in Python (FastAPI) and TypeScript.\n5. Contribute to data modeling, schema design, and query performance across relational and document databases.\n6. Partner with research engineering, operations, and product to translate platform needs into production-ready systems.\n7. Improve the frameworks, checks, and evals that make agent-driven development faster without sacrificing quality.\n8. Troubleshoot production issues and build resilient, observable systems.\nWhat We're Looking For\n1. Bachelor's degree in Computer Science, Computer Engineering, Software Engineering, or a related field, or equivalent practical experience.\n2. 0-5 years of software engineering experience, or strong shipped projects as a recent graduate.\n3. Strong fundamentals in Python and TypeScript, with experience building CRUD applications using frameworks such as FastAPI/Flask and React.\n4. Working knowledge of databases such as PostgreSQL, MongoDB, or SQLite and core data modeling principles.\n5. Experience deploying services on a major cloud platform (GCP, AWS, or Azure).\n6. Coding agents such as Claude Code, Cursor, or Codex are your default development workflow, and you can clearly explain how you use them.\n7. Ability to turn outcomes into plans, direct agents, verify results, and identify architectural issues agents may miss.\n8. Understanding of agent loops, MCP, tool/data integrations, permissions, and security.\n9. Familiarity with context management, RAG, and evals for testing agent workflows.\nPreferred\n1. Exposure to RL concepts or environments, including tasks, actions, and rewards.\n2. Experience with coding data pipelines or task-authoring platforms.\n3. Familiarity with CI/CD, deployment pipelines, and DevOps fundamentals.\n4. Experience contributing to team projects, open-source software, or startups.",
+    "extraNotes": "Joblet-AI mirrors micro1's direct posting at https://jobs.micro1.ai/post/912dac5d-2d0b-4c32-a67b-89404bcf195b."
+  }
+]

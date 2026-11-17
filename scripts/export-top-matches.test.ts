@@ -1,5 +1,6 @@
 import JSZip from "jszip";
 import { describe, expect, it } from "vitest";
+import { enrichMatchesWithContacts, loadDefaultVerifiedContacts } from "./enrich-export-contacts";
 import { parseExportArgs } from "./export-top-matches";
 import {
   classifyScoreBand,
@@ -423,5 +424,42 @@ describe("CSV, XLSX, and Markdown export formatters", () => {
     expect(md).toContain("DotNet");
     expect(md).toContain("Acme Corp");
     expect(md).toContain("talent@acme.example");
+  });
+});
+
+describe("enrichMatchesWithContacts", () => {
+  it("loads default verified contacts and enriches matching companies without leaking job-board complaints emails", () => {
+    const defaults = loadDefaultVerifiedContacts();
+    expect(defaults.length).toBeGreaterThan(25);
+
+    const trexo = makeMatch({
+      id: "t1",
+      companyName: "Trexo Fintech Private Limited",
+      title: "Full Stack Developer",
+      contactEmail: "complaints@internshala.com",
+      allExtractedEmails: ["complaints@internshala.com"],
+    });
+    const jobletMicro1 = makeMatch({
+      id: "m1",
+      companyName: "Joblet-AI",
+      title: "Remote Fullstack Engineer",
+      locationRaw: "United Arab Emirates",
+      locationTags: ["uae", "remote"],
+      description: "Short stub",
+      contactEmail: null,
+      allExtractedEmails: [],
+    });
+
+    const [enrichedTrexo, enrichedMicro1] = enrichMatchesWithContacts(
+      [trexo, jobletMicro1],
+      ["Python", "TypeScript", "React", "PostgreSQL"],
+      defaults,
+    );
+
+    expect(enrichedTrexo?.allExtractedEmails).toEqual(["khushal@trexo.money"]);
+    expect(enrichedTrexo?.websiteUrl).toBe("https://trexo.money/");
+    expect(enrichedMicro1?.url).toBe("https://jobs.micro1.ai/post/912dac5d-2d0b-4c32-a67b-89404bcf195b");
+    expect(enrichedMicro1?.description).toContain("FastAPI");
+    expect(enrichedMicro1?.allExtractedEmails).toContain("support@micro1.ai");
   });
 });
