@@ -436,6 +436,8 @@ describe("enrichMatchesWithContacts", () => {
       id: "t1",
       companyName: "Trexo Fintech Private Limited",
       title: "Full Stack Developer",
+      websiteUrl: null,
+      careerPageUrl: null,
       contactEmail: "complaints@internshala.com",
       allExtractedEmails: ["complaints@internshala.com"],
     });
@@ -445,6 +447,8 @@ describe("enrichMatchesWithContacts", () => {
       title: "Remote Fullstack Engineer",
       locationRaw: "United Arab Emirates",
       locationTags: ["uae", "remote"],
+      websiteUrl: null,
+      careerPageUrl: null,
       description: "Short stub",
       contactEmail: null,
       allExtractedEmails: [],
