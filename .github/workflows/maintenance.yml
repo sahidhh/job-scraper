@@ -25,6 +25,7 @@ on:
           - backfill:fingerprints
           - sweep:stranded-resumes
           - report:matches
+          - export:matches
 
 # Backfills issue row-by-row UPDATEs; two concurrent runs of the same script
 # would race on the same rows. Queue rather than overlap. Mirrors the
@@ -55,3 +56,10 @@ jobs:
           # backfills ignore it. Harmless to pass to all of them.
           KEYWORD_THRESHOLD: ${{ vars.KEYWORD_THRESHOLD || '0.25' }}
           MAX_AI_RETRIES: ${{ vars.MAX_AI_RETRIES || '3' }}
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: top-matches-export
+          path: reports/top-matches/
+          if-no-files-found: ignore

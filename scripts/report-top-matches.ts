@@ -6,6 +6,7 @@ import { SCORING_QUEUE_CONFIG } from "@/features/scoring/domain/scoringQueueConf
 import { LOCATION_TAGS, type LocationTag } from "@/shared/domain/enums";
 import { optionalEnv } from "@/shared/infrastructure/env";
 import { createSupabaseServiceClient } from "@/shared/infrastructure/supabaseClient";
+import { runExportTopMatches } from "./export-top-matches";
 
 // Read-only report: the top-N scored jobs for the active role selection +
 // active resume version, ranked by overall_score desc -- the same ranking
@@ -28,12 +29,16 @@ function pct(score: number | null): string {
 
 interface ParsedArgs {
   limit: number;
+  hasExplicitLimit: boolean;
+  exportMatches: boolean;
   filters: JobFilters;
   label: string;
 }
 
 function parseArgs(argv: readonly string[]): ParsedArgs {
   let limit = DEFAULT_LIMIT;
+  let hasExplicitLimit = false;
+  let exportMatches = false;
   // minAiScore: 0 -> scored jobs only (unscored have no rank to report).
   const filters: JobFilters = { minAiScore: 0 };
   const labels: string[] = [];
@@ -52,6 +57,8 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
     } else if (token === "--remote") {
       filters.remoteOnly = true;
       labels.push("remote");
+    } else if (token === "--export") {
+      exportMatches = true;
     } else if (token === "--sponsoring") {
       // AD-51 removed the filter this flag was built on: it required an
       // explicit "visa sponsorship" phrase in the posting (null for nearly
@@ -67,17 +74,18 @@ function parseArgs(argv: readonly string[]): ParsedArgs {
       process.exit(1);
     } else if (/^\d+$/.test(token)) {
       limit = Number(token);
+      hasExplicitLimit = true;
     } else {
       console.error(`Unknown argument: "${token}"`);
       process.exit(1);
     }
   }
 
-  return { limit, filters, label: labels.length > 0 ? ` [${labels.join(", ")}]` : "" };
+  return { limit, hasExplicitLimit, exportMatches, filters, label: labels.length > 0 ? ` [${labels.join(", ")}]` : "" };
 }
 
 async function main(): Promise<void> {
-  const { limit, filters, label } = parseArgs(process.argv.slice(2));
+  const { limit, hasExplicitLimit, exportMatches, filters, label } = parseArgs(process.argv.slice(2));
 
   const client = createSupabaseServiceClient();
   const roleRepository = new SupabaseRoleRepository(client);
@@ -112,16 +120,26 @@ async function main(): Promise<void> {
 
   if (jobs.length === 0) {
     console.log(`(no scored jobs match${label} — try widening the filter, or run \`npm run score\`)`);
-    return;
+  } else {
+    jobs.forEach((job, i) => {
+      console.log(
+        `${pad(String(i + 1), 3)} ${pad(pct(job.overallScore), 6)} ${pad(pct(job.aiScore), 5)} ` +
+          `${pad(job.companyName || "—", 26)} ${pad(job.title, 34)} ${pad(job.locationTags.join(",") || "—", 9)} ${job.source}`,
+      );
+    });
+    console.log("");
   }
 
-  jobs.forEach((job, i) => {
-    console.log(
-      `${pad(String(i + 1), 3)} ${pad(pct(job.overallScore), 6)} ${pad(pct(job.aiScore), 5)} ` +
-        `${pad(job.companyName || "—", 26)} ${pad(job.title, 34)} ${pad(job.locationTags.join(",") || "—", 9)} ${job.source}`,
-    );
-  });
-  console.log("");
+  if (exportMatches || process.env.GITHUB_ACTIONS === "true") {
+    const exportLimit = hasExplicitLimit ? limit : 50;
+    await runExportTopMatches({
+      limit: exportLimit,
+      outDir: "reports/top-matches",
+      locationTags: filters.locationTags,
+      remoteOnly: filters.remoteOnly,
+      origin: "all",
+    });
+  }
 }
 
 main().catch((err) => {

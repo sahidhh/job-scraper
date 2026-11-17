@@ -6,6 +6,7 @@ node_modules/
 *.tsbuildinfo
 coverage/
 verification-reports/
+reports/top-matches/
 supabase/.temp
 supabase/.temp/*
 .claude/settings.local.json
