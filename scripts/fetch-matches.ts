@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdirSync } from "node:fs";
+import { mkdirSync, rmSync } from "node:fs";
 import { setTimeout as delay } from "node:timers/promises";
 import { parseExportArgs, runExportTopMatches } from "./export-top-matches";
 
@@ -128,6 +128,7 @@ async function fetchViaGitHubActions(
     throw new Error("Timed out waiting for maintenance.yml run to complete.");
   }
 
+  rmSync(outDir, { recursive: true, force: true });
   mkdirSync(outDir, { recursive: true });
   console.log(`[fetch-matches] Downloading "${ARTIFACT_NAME}" from run ${targetRun.databaseId} into ${outDir}/...`);
   runCommand("gh", [
