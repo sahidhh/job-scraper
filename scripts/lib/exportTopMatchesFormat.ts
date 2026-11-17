@@ -3,6 +3,7 @@ import { extractContactEmail } from "@/features/jobs/domain/extractContactEmail"
 import { AI_SCORE_SHRUG, AI_SCORE_STRONG } from "@/features/scoring/domain/scoreBands";
 import { SKILLS_DICTIONARY } from "@/shared/config/skills-dictionary";
 import { extractSkills } from "@/shared/domain/skills";
+import type { ResumeVariant } from "./portfolioFitScorer";
 
 export type ScoreBand = "strong" | "moderate" | "shrug" | "unscored";
 export type OutreachPath = "direct_email" | "career_page" | "ats_board";
@@ -24,6 +25,10 @@ export interface ExportedJobMatch {
   companyName: string;
   canonicalCompanyName: string;
   title: string;
+  portfolioFitScore: number;
+  portfolioFitBreakdown: string;
+  recommendedResumeVariant: ResumeVariant;
+  recommendedPortfolioLinks: string[];
   effectiveScore: number | null;
   overallScore: number | null;
   aiScore: number | null;
@@ -63,6 +68,13 @@ export interface ExportedJobMatch {
   description: string;
 }
 
+export interface LivenessSummary {
+  totalProbed: number;
+  liveCount: number;
+  closedPrunedCount: number;
+  dbEnrichedCount: number;
+}
+
 export interface ExportPayload {
   generatedAt: string;
   roleSelection: {
@@ -75,6 +87,7 @@ export interface ExportPayload {
     version: number;
     skills: string[];
   };
+  liveness?: LivenessSummary;
   totalCandidatesEvaluated: number;
   exportedCount: number;
   matches: ExportedJobMatch[];
@@ -187,6 +200,13 @@ export function compareMatchCandidates<T extends RawCandidateScores>(a: T, b: T)
   return pa < pb ? 1 : pa > pb ? -1 : 0;
 }
 
+export function comparePortfolioMatches(a: ExportedJobMatch, b: ExportedJobMatch): number {
+  if (a.portfolioFitScore !== b.portfolioFitScore) {
+    return b.portfolioFitScore - a.portfolioFitScore;
+  }
+  return compareMatchCandidates(a, b);
+}
+
 export function extractAllContactEmails(text: string, knownContactEmail: string | null): string[] {
   const seen = new Set<string>();
   const ordered: string[] = [];
@@ -295,6 +315,10 @@ export function deriveResumeHooks(jobText: string, matchedSkills: readonly strin
 
 const CSV_COLUMNS = [
   "rank",
+  "portfolio_fit_score",
+  "recommended_resume_variant",
+  "portfolio_fit_breakdown",
+  "recommended_portfolio_links",
   "score_pct",
   "score_band",
   "origin",
@@ -348,6 +372,10 @@ function matchToCsvRecord(match: ExportedJobMatch): Record<(typeof CSV_COLUMNS)[
   const draftSummary = match.existingDrafts.map((d) => `${d.kind}:${d.status}`).join(", ");
   return {
     rank: String(match.rank),
+    portfolio_fit_score: String(match.portfolioFitScore),
+    recommended_resume_variant: match.recommendedResumeVariant,
+    portfolio_fit_breakdown: match.portfolioFitBreakdown,
+    recommended_portfolio_links: match.recommendedPortfolioLinks.join("; "),
     score_pct: formatScorePct(match.effectiveScore),
     score_band: match.scoreBand,
     origin: match.origin,
@@ -482,6 +510,8 @@ export async function toXlsxBuffer(matches: readonly ExportedJobMatch[]): Promis
 
   const sheet1Cols: readonly SheetColumnSpec[] = [
     { header: "Rank", width: 7 },
+    { header: "Portfolio Fit", width: 12 },
+    { header: "Resume Variant", width: 15 },
     { header: "Score %", width: 10 },
     { header: "Band", width: 11 },
     { header: "Origin", width: 15 },
@@ -513,6 +543,8 @@ export async function toXlsxBuffer(matches: readonly ExportedJobMatch[]): Promis
 
   const sheet1Rows = matches.map((m) => [
     m.rank,
+    m.portfolioFitScore,
+    m.recommendedResumeVariant,
     m.effectiveScore === null ? null : Math.round(m.effectiveScore * 100),
     m.scoreBand,
     m.origin,
@@ -544,11 +576,14 @@ export async function toXlsxBuffer(matches: readonly ExportedJobMatch[]): Promis
 
   const sheet2Cols: readonly SheetColumnSpec[] = [
     { header: "Rank", width: 7 },
-    { header: "Score %", width: 10 },
+    { header: "Portfolio Fit", width: 12 },
+    { header: "Resume Variant", width: 15 },
+    { header: "Fit Breakdown", width: 48 },
     { header: "Company", width: 26 },
     { header: "Role Title", width: 36 },
     { header: "Contact Email", width: 30 },
     { header: "Apply / Career URL", width: 45 },
+    { header: "Portfolio Case Studies", width: 45 },
     { header: "Matched Skills", width: 36 },
     { header: "Missing Skills", width: 32 },
     { header: "Recommended Resume Hooks", width: 65 },
@@ -559,11 +594,14 @@ export async function toXlsxBuffer(matches: readonly ExportedJobMatch[]): Promis
 
   const sheet2Rows = matches.map((m) => [
     m.rank,
-    m.effectiveScore === null ? null : Math.round(m.effectiveScore * 100),
+    m.portfolioFitScore,
+    m.recommendedResumeVariant,
+    m.portfolioFitBreakdown,
     m.companyName,
     m.title,
     m.allExtractedEmails.join("; ") || m.contactEmail,
     m.careerPageUrl ?? m.url,
+    m.recommendedPortfolioLinks.join("\n"),
     m.matchedSkills.join(", "),
     m.missingSkills.join(", "),
     m.recommendedResumeHooks.join("\n"),
@@ -650,26 +688,35 @@ export function toMarkdownSummary(payload: ExportPayload): string {
   const careerPageCount = payload.matches.filter((m) => m.outreachPath === "career_page").length;
   const manualCount = payload.matches.filter((m) => m.origin === "claude_routine").length;
 
+  const livenessLines = payload.liveness
+    ? [
+        `- Liveness probe: ${payload.liveness.liveCount} live, ${payload.liveness.closedPrunedCount} closed/expired pruned in DB, ${payload.liveness.dbEnrichedCount} live rows enriched in DB`,
+      ]
+    : [];
+
   const lines: string[] = [
-    `# Top ${payload.exportedCount} Job Matches`,
+    `# Top ${payload.exportedCount} Live Job Matches (Portfolio-Ranked)`,
     "",
     `- Generated: ${payload.generatedAt}`,
     `- Active role: ${payload.roleSelection.primaryRole} (${payload.roleSelection.expandedRoles.length} expanded roles)`,
     `- Active resume: v${payload.resume.version} (${payload.resume.skills.length} extracted skills)`,
+    ...livenessLines,
     `- Candidates evaluated: ${payload.totalCandidatesEvaluated}`,
     `- Breakdown: ${strongCount} strong (>=75%), ${moderateCount} moderate (>40%), ${shrugCount} shrug/low (<=40%)`,
     `- Origins: ${payload.exportedCount - manualCount} automated scraper, ${manualCount} claude_routine`,
     `- Outreach paths: ${directEmailCount} direct email, ${careerPageCount} career page, ${payload.exportedCount - directEmailCount - careerPageCount} ATS/apply URL only`,
     "",
-    "| # | Score | Band | Company | Role | Location | Outreach | Email / Target | Matched Skills |",
-    "|---|---|---|---|---|---|---|---|---|",
+    "| # | Fit | Variant | DB Score | Company | Role | Location | Outreach | Email / Target | Matched Skills |",
+    "|---|---|---|---|---|---|---|---|---|---|",
   ];
 
   for (const m of payload.matches) {
     const score = formatScorePct(m.effectiveScore) || "—";
-    const target = m.allExtractedEmails[0] ?? m.careerPageUrl ?? m.url;
+    const kwPct = m.keywordScore !== null ? `kw:${Math.round(m.keywordScore * 100)}%` : "";
+    const dbScore = score !== "—" ? score : kwPct || "—";
+    const target = m.allExtractedEmails[0] ?? m.careerPageUrl ?? m.websiteUrl ?? m.url;
     lines.push(
-      `| ${m.rank} | ${score} | ${m.scoreBand} | ${escapeMdCell(m.companyName)} | ${escapeMdCell(m.title)} | ${escapeMdCell(m.locationRaw || m.locationTags.join(","))} | ${m.outreachPath} | ${escapeMdCell(target)} | ${escapeMdCell(m.matchedSkills.slice(0, 6).join(", "))} |`,
+      `| ${m.rank} | ${m.portfolioFitScore}/100 | ${m.recommendedResumeVariant} | ${dbScore} | ${escapeMdCell(m.companyName)} | ${escapeMdCell(m.title)} | ${escapeMdCell(m.locationRaw || m.locationTags.join(","))} | ${m.outreachPath} | ${escapeMdCell(target)} | ${escapeMdCell(m.matchedSkills.slice(0, 6).join(", "))} |`,
     );
   }
 

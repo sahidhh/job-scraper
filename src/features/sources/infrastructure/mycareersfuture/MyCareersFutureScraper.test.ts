@@ -144,4 +144,30 @@ describe("myCareersFutureScraper", () => {
     expect(result).toHaveLength(1);
     expect(result[0]?.sourceJobId).toBe("MCF-2026-abc123");
   });
+
+  it("extracts companyName from hiringCompany or postedCompany when company is absent", async () => {
+    const withPosted = {
+      uuid: "MCF-2026-posted",
+      title: "Software Engineer",
+      postedCompany: { name: "Posted Co Pte Ltd" },
+      metadata: { createdAt: "2026-06-10T08:00:00Z" },
+      description: "<p>Build systems.</p>",
+    };
+    const withHiring = {
+      uuid: "MCF-2026-hiring",
+      title: "Software Engineer",
+      postedCompany: { name: "Agency Co" },
+      hiringCompany: { name: "Actual Client Pte Ltd" },
+      metadata: { createdAt: "2026-06-10T08:00:00Z" },
+      description: "<p>Build systems.</p>",
+    };
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(mcfResponse([withPosted, withHiring])));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await myCareersFutureScraper.fetchJobs([], ["Software Engineer"]);
+
+    expect(result).toHaveLength(2);
+    expect(result[0]?.companyName).toBe("Posted Co Pte Ltd");
+    expect(result[1]?.companyName).toBe("Actual Client Pte Ltd");
+  });
 });

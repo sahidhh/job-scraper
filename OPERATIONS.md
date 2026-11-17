@@ -47,7 +47,7 @@ Neither is wired into any scheduled workflow — run manually, once, after the r
 | `npm run analytics` (= `source-analytics.ts`) | Deciding whether a source is worth keeping — 30-day keep-rate/low-performer report |
 | `npm run report:sources` | Just the recent-run/failure view, without the funnel analysis |
 | `npm run report:matches` | Terminal summary of top N scored matches (passes `--export` automatically in GitHub Actions) |
-| `npm run export:matches` | Exports top 50 matches (full JD, emails, career URLs, skill diffs, resume hooks) to `reports/top-matches/*.{json,csv,xlsx,md}` |
+| `npm run export:matches` | Probes active eligible matches (incl. awaiting-AI), marks closed/expired jobs inactive in Supabase, ranks live matches by portfolio fit, and exports `all-live-*`, `top-50-*`, and `latest.*` to `reports/top-matches/` |
 | `npm run fetch:matches` | One-command local fetcher: runs `export:matches` if Supabase service env vars are set, or dispatches `maintenance.yml` and downloads the `top-matches-export` artifact |
 | `npm run diagnostics` | A single console-only run of the full production verification framework (see §4 above) — a superset health check, not a source-specific diagnostic like the others in this table |
 

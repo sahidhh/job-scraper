@@ -131,7 +131,7 @@ async function main(): Promise<void> {
   }
 
   if (exportMatches || process.env.GITHUB_ACTIONS === "true") {
-    const exportLimit = hasExplicitLimit ? limit : 50;
+    const exportLimit = hasExplicitLimit ? limit : 500;
     await runExportTopMatches({
       limit: exportLimit,
       outDir: "reports/top-matches",

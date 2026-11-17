@@ -1,5 +1,8 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { normalizeCompanyName } from "@/features/companies/domain/normalizeCompanyName";
+import { computeFingerprint } from "@/features/jobs/application/computeFingerprint";
+import { extractContactEmail } from "@/features/jobs/domain/extractContactEmail";
 import type { JobFilters, JobWithScore } from "@/features/jobs/domain/types";
 import { SupabaseJobRepository } from "@/features/jobs/infrastructure/SupabaseJobRepository";
 import { SupabaseResumeRepository } from "@/features/resume/infrastructure/SupabaseResumeRepository";
@@ -11,7 +14,7 @@ import { createSupabaseServiceClient, type TypedSupabaseClient } from "@/shared/
 import type { Database } from "../supabase/database.types";
 import {
   classifyScoreBand,
-  compareMatchCandidates,
+  comparePortfolioMatches,
   computeEffectiveScore,
   deriveResumeHooks,
   deriveSkillDiff,
@@ -26,8 +29,12 @@ import {
   type ExportPayload,
   type MatchOrigin,
 } from "./lib/exportTopMatchesFormat";
+import { probeAndEnrichJobs, type JobProbeOutcome } from "./lib/jobLivenessAndEnrich";
+import { computePortfolioFitScore } from "./lib/portfolioFitScorer";
 
 type JobRow = Database["public"]["Tables"]["jobs"]["Row"];
+type JobUpdateRow = Database["public"]["Tables"]["jobs"]["Update"];
+type CompanyRow = Database["public"]["Tables"]["companies"]["Row"];
 type CareerPageRow = Database["public"]["Tables"]["company_career_pages"]["Row"];
 type ApplicationRow = Database["public"]["Tables"]["applications"]["Row"];
 
@@ -39,11 +46,12 @@ export interface ExportTopMatchesOptions {
   locationTags?: LocationTag[];
   remoteOnly?: boolean;
   origin: OriginScope;
+  skipProbe?: boolean;
 }
 
-const DEFAULT_LIMIT = 50;
+const DEFAULT_LIMIT = 500;
 const DEFAULT_OUT_DIR = "reports/top-matches";
-const QUERY_CANDIDATE_CAP = 200;
+const QUERY_CANDIDATE_CAP = 1000;
 const DB_CHUNK_SIZE = 100;
 
 export function parseExportArgs(argv: readonly string[]): ExportTopMatchesOptions {
@@ -52,6 +60,7 @@ export function parseExportArgs(argv: readonly string[]): ExportTopMatchesOption
   let locationTags: LocationTag[] | undefined;
   let remoteOnly: boolean | undefined;
   let origin: OriginScope = "all";
+  let skipProbe = false;
 
   const rest = argv.slice();
   let token: string | undefined;
@@ -70,6 +79,8 @@ export function parseExportArgs(argv: readonly string[]): ExportTopMatchesOption
       locationTags = [tag as LocationTag];
     } else if (token === "--remote") {
       remoteOnly = true;
+    } else if (token === "--skip-probe") {
+      skipProbe = true;
     } else if (token === "--origin") {
       const val = (rest.shift() ?? "").toLowerCase();
       if (val !== "all" && val !== "scraper" && val !== "claude_routine") {
@@ -86,17 +97,12 @@ export function parseExportArgs(argv: readonly string[]): ExportTopMatchesOption
     }
   }
 
-  return { limit, outDir, locationTags, remoteOnly, origin };
+  return { limit, outDir, locationTags, remoteOnly, origin, skipProbe };
 }
 
 interface TaggedCandidate {
   origin: MatchOrigin;
   job: JobWithScore;
-  overallScore: number | null;
-  aiScore: number | null;
-  keywordScore: number | null;
-  manualScore: number | null;
-  postedAt: string | null;
 }
 
 async function fetchJobsByIds(client: TypedSupabaseClient, ids: readonly string[]): Promise<Map<string, JobRow>> {
@@ -110,6 +116,14 @@ async function fetchJobsByIds(client: TypedSupabaseClient, ids: readonly string[
     }
   }
   return result;
+}
+
+async function fetchCompanies(
+  client: TypedSupabaseClient,
+): Promise<Pick<CompanyRow, "id" | "source" | "board_token" | "active">[]> {
+  const { data, error } = await client.from("companies").select("id, source, board_token, active");
+  if (error) throw error;
+  return (data ?? []) as Pick<CompanyRow, "id" | "source" | "board_token" | "active">[];
 }
 
 async function fetchCareerPagesByCanonicalNames(
@@ -162,6 +176,102 @@ async function fetchApplicationsByJobIds(
   return result;
 }
 
+async function persistProbeUpdates(
+  client: TypedSupabaseClient,
+  fullJobsMap: Map<string, JobRow>,
+  outcomes: Map<string, JobProbeOutcome>,
+): Promise<{ closedPrunedCount: number; dbEnrichedCount: number }> {
+  const now = new Date().toISOString();
+  const closedIds: string[] = [];
+  const enrichedRows: { id: string; patch: JobUpdateRow }[] = [];
+
+  for (const [jobId, outcome] of outcomes) {
+    const row = fullJobsMap.get(jobId);
+    if (!row) continue;
+
+    if (!outcome.isLive) {
+      closedIds.push(jobId);
+      continue;
+    }
+
+    const patch: JobUpdateRow = {};
+    let changed = false;
+
+    if (outcome.enrichedCompanyName && outcome.enrichedCompanyName !== row.company_name) {
+      patch.company_name = outcome.enrichedCompanyName;
+      patch.canonical_company_name = normalizeCompanyName(outcome.enrichedCompanyName);
+      patch.fingerprint = computeFingerprint({
+        title: row.title,
+        companyName: outcome.enrichedCompanyName,
+        locationTags: row.location_tags,
+      });
+      row.company_name = patch.company_name;
+      row.canonical_company_name = patch.canonical_company_name;
+      changed = true;
+    }
+
+    if (outcome.enrichedDescription && outcome.enrichedDescription.length > row.description.length) {
+      patch.description = outcome.enrichedDescription;
+      row.description = outcome.enrichedDescription;
+      changed = true;
+    }
+
+    if (outcome.enrichedUrl && outcome.enrichedUrl !== row.url) {
+      patch.url = outcome.enrichedUrl;
+      row.url = outcome.enrichedUrl;
+      changed = true;
+    }
+
+    if (!row.contact_email && outcome.discoveredEmails.length > 0) {
+      const extracted = extractContactEmail(outcome.discoveredEmails.join("\n"));
+      if (extracted) {
+        patch.contact_email = extracted.email;
+        patch.contact_email_category = extracted.category;
+        patch.contact_email_confidence = extracted.confidence;
+        row.contact_email = extracted.email;
+        row.contact_email_category = extracted.category;
+        row.contact_email_confidence = extracted.confidence;
+        changed = true;
+      }
+    }
+
+    if (changed) {
+      patch.updated_at = now;
+      enrichedRows.push({ id: jobId, patch });
+    }
+  }
+
+  for (let i = 0; i < closedIds.length; i += DB_CHUNK_SIZE) {
+    const chunk = closedIds.slice(i, i + DB_CHUNK_SIZE);
+    const { error } = await client
+      .from("jobs")
+      .update({ is_active: false, inactive_reason: "expired", updated_at: now })
+      .in("id", chunk);
+    if (error) throw error;
+  }
+
+  for (const item of enrichedRows) {
+    const { error } = await client.from("jobs").update(item.patch).eq("id", item.id);
+    if (error) {
+      console.warn(`[export-top-matches] failed to persist enrichment for job ${item.id}: ${error.message}`);
+    }
+  }
+
+  return { closedPrunedCount: closedIds.length, dbEnrichedCount: enrichedRows.length };
+}
+
+async function writeBundle(outDir: string, prefix: string, payload: ExportPayload): Promise<void> {
+  const jsonContent = `${JSON.stringify(payload, null, 2)}\n`;
+  const csvContent = toCsvWithBom(payload.matches);
+  const xlsxBuffer = await toXlsxBuffer(payload.matches);
+  const mdContent = toMarkdownSummary(payload);
+
+  writeFileSync(join(outDir, `${prefix}-matches.json`), jsonContent, "utf8");
+  writeFileSync(join(outDir, `${prefix}-matches.csv`), csvContent, "utf8");
+  writeFileSync(join(outDir, `${prefix}-matches.xlsx`), xlsxBuffer);
+  writeFileSync(join(outDir, `${prefix}-summary.md`), mdContent, "utf8");
+}
+
 export async function runExportTopMatches(options: ExportTopMatchesOptions): Promise<ExportPayload> {
   const client = createSupabaseServiceClient();
   const roleRepository = new SupabaseRoleRepository(client);
@@ -179,42 +289,37 @@ export async function runExportTopMatches(options: ExportTopMatchesOptions): Pro
   }
 
   const keywordThreshold = Number(optionalEnv("KEYWORD_THRESHOLD", "0.25"));
-  const candidatePoolSize = Math.max(options.limit * 4, QUERY_CANDIDATE_CAP);
+  const candidatePoolSize = Math.max(options.limit, QUERY_CANDIDATE_CAP);
 
   const baseFilters: JobFilters = {
     locationTags: options.locationTags,
     remoteOnly: options.remoteOnly,
     includeWeakMatch: true,
+    includeLowMatch: false,
   };
 
   const candidatesById = new Map<string, TaggedCandidate>();
 
   if (options.origin === "all" || options.origin === "scraper") {
+    // Omit minAiScore so the LEFT JOIN keeps all 278 keyword-qualified
+    // jobs stuck at ai_score=null alongside the AI-scored rows.
     const scraperPage = await jobRepository.findForDashboard(
       roleSelection.id,
-      { ...baseFilters, origin: "scraper", minAiScore: 0 },
+      { ...baseFilters, origin: "scraper" },
       candidatePoolSize,
       activeResume.version,
       keywordThreshold,
       SCORING_QUEUE_CONFIG.maxAiRetries,
     );
     for (const job of scraperPage.jobs) {
-      candidatesById.set(job.id, {
-        origin: "scraper",
-        job,
-        overallScore: job.overallScore,
-        aiScore: job.aiScore,
-        keywordScore: job.keywordScore,
-        manualScore: job.manualScore,
-        postedAt: job.postedAt,
-      });
+      candidatesById.set(job.id, { origin: "scraper", job });
     }
   }
 
   if (options.origin === "all" || options.origin === "claude_routine") {
     const manualPage = await jobRepository.findForDashboard(
       roleSelection.id,
-      { ...baseFilters, origin: "claude_routine" },
+      { ...baseFilters, origin: "claude_routine", includeLowMatch: true },
       candidatePoolSize,
       activeResume.version,
       keywordThreshold,
@@ -222,63 +327,116 @@ export async function runExportTopMatches(options: ExportTopMatchesOptions): Pro
     );
     for (const job of manualPage.jobs) {
       if (!candidatesById.has(job.id)) {
-        candidatesById.set(job.id, {
-          origin: "claude_routine",
-          job,
-          overallScore: job.overallScore,
-          aiScore: job.aiScore,
-          keywordScore: job.keywordScore,
-          manualScore: job.manualScore,
-          postedAt: job.postedAt,
-        });
+        candidatesById.set(job.id, { origin: "claude_routine", job });
       }
     }
   }
 
-  const allCandidates = [...candidatesById.values()].sort(compareMatchCandidates);
-  const topCandidates = allCandidates.slice(0, options.limit);
-  const topIds = topCandidates.map((c) => c.job.id);
+  const allCandidates = [...candidatesById.values()];
+  const candidateIds = allCandidates.map((c) => c.job.id);
 
-  const fullJobsMap = await fetchJobsByIds(client, topIds);
-  const canonicalNames = [...fullJobsMap.values()].map((r) => r.canonical_company_name);
-  const [careerPagesMap, draftsMap] = await Promise.all([
-    fetchCareerPagesByCanonicalNames(client, canonicalNames),
-    fetchApplicationsByJobIds(client, topIds),
+  const [fullJobsMap, companies] = await Promise.all([
+    fetchJobsByIds(client, candidateIds),
+    fetchCompanies(client),
   ]);
 
-  const matches: ExportedJobMatch[] = topCandidates.map((candidate, index) => {
+  let outcomes = new Map<string, JobProbeOutcome>();
+  let closedPrunedCount = 0;
+  let dbEnrichedCount = 0;
+
+  if (!options.skipProbe) {
+    const allRows = [...fullJobsMap.values()];
+    const probeResult = await probeAndEnrichJobs(allRows, companies);
+    outcomes = probeResult.outcomes;
+    console.log(
+      `[export-top-matches] Liveness probe: ${probeResult.stats.liveCount} live, ` +
+        `${probeResult.stats.closedCount} closed/expired, ` +
+        `${probeResult.stats.enrichedCompanyCount} company names resolved, ` +
+        `${probeResult.stats.enrichedDescriptionCount} descriptions expanded`,
+    );
+
+    const persisted = await persistProbeUpdates(client, fullJobsMap, outcomes);
+    closedPrunedCount = persisted.closedPrunedCount;
+    dbEnrichedCount = persisted.dbEnrichedCount;
+    console.log(
+      `[export-top-matches] Supabase updated: ${closedPrunedCount} marked expired, ${dbEnrichedCount} live rows enriched`,
+    );
+  }
+
+  const liveCandidates = allCandidates.filter((c) => {
+    const outcome = outcomes.get(c.job.id);
+    return outcome ? outcome.isLive : true;
+  });
+
+  const liveIds = liveCandidates.map((c) => c.job.id);
+  const canonicalNames = liveIds
+    .map((id) => fullJobsMap.get(id)?.canonical_company_name ?? "")
+    .filter(Boolean);
+
+  const [careerPagesMap, draftsMap] = await Promise.all([
+    fetchCareerPagesByCanonicalNames(client, canonicalNames),
+    fetchApplicationsByJobIds(client, liveIds),
+  ]);
+
+  const scoredLive: ExportedJobMatch[] = liveCandidates.map((candidate) => {
     const { job } = candidate;
     const fullRow = fullJobsMap.get(job.id);
+    const probe = outcomes.get(job.id);
+
     const description =
       (fullRow?.description && fullRow.description.trim().length > 0
         ? fullRow.description
         : fullRow?.manual_requirements) ?? "";
     const title = fullRow?.title ?? job.title;
-    const companyName = fullRow?.company_name ?? job.companyName;
-    const canonicalCompanyName = fullRow?.canonical_company_name ?? companyName;
+    const companyName = fullRow?.company_name || job.companyName;
+    const canonicalCompanyName = fullRow?.canonical_company_name || normalizeCompanyName(companyName);
     const jobText = `${title}\n${description}`;
 
     const knownEmail = fullRow?.contact_email ?? null;
-    const allExtractedEmails = extractAllContactEmails(jobText, knownEmail);
+    const allExtractedEmails = [...new Set([...(probe?.discoveredEmails ?? []), ...extractAllContactEmails(jobText, knownEmail)])];
+    const primaryEmail = knownEmail ?? allExtractedEmails[0] ?? null;
+
     const careerPage = careerPagesMap.get(canonicalCompanyName);
     const careerPageUrl = careerPage?.career_page_url ?? null;
-    const websiteUrl = careerPage?.website_url ?? null;
-    const outreachPath = determineOutreachPath(knownEmail, allExtractedEmails, careerPageUrl);
+    const websiteUrl = careerPage?.website_url ?? probe?.enrichedWebsiteUrl ?? null;
+    const outreachPath = determineOutreachPath(primaryEmail, allExtractedEmails, careerPageUrl);
 
     const { matchedSkills, missingSkills } = deriveSkillDiff(jobText, activeResume.skills, activeResume.parsedText);
     const recommendedResumeHooks = deriveResumeHooks(jobText, matchedSkills);
 
-    const effectiveScore = computeEffectiveScore(candidate);
+    const effectiveScore = computeEffectiveScore({
+      origin: candidate.origin,
+      overallScore: job.overallScore,
+      aiScore: job.aiScore,
+      manualScore: fullRow?.manual_score ?? job.manualScore,
+    });
     const scoreBand = classifyScoreBand(effectiveScore);
 
+    const portfolioFit = computePortfolioFitScore({
+      title,
+      description,
+      locationRaw: fullRow?.location_raw ?? job.locationRaw,
+      locationTags: fullRow?.location_tags ?? job.locationTags,
+      minYears: fullRow?.min_years ?? job.minYears,
+      visaSponsorship: fullRow?.visa_sponsorship ?? null,
+      hasDirectEmail: Boolean(primaryEmail),
+      aiScore: job.aiScore,
+      keywordScore: job.keywordScore,
+      manualScore: fullRow?.manual_score ?? job.manualScore,
+    });
+
     return {
-      rank: index + 1,
+      rank: 0,
       id: job.id,
       origin: candidate.origin,
       source: fullRow?.source ?? job.source,
       companyName,
       canonicalCompanyName,
       title,
+      portfolioFitScore: portfolioFit.portfolioFitScore,
+      portfolioFitBreakdown: portfolioFit.portfolioFitBreakdown,
+      recommendedResumeVariant: portfolioFit.recommendedResumeVariant,
+      recommendedPortfolioLinks: portfolioFit.recommendedPortfolioLinks,
       effectiveScore,
       overallScore: job.overallScore,
       aiScore: job.aiScore,
@@ -314,7 +472,7 @@ export async function runExportTopMatches(options: ExportTopMatchesOptions): Pro
       url: fullRow?.url ?? job.url,
       careerPageUrl,
       websiteUrl,
-      contactEmail: knownEmail,
+      contactEmail: primaryEmail,
       contactEmailCategory: fullRow?.contact_email_category ?? null,
       contactEmailConfidence: fullRow?.contact_email_confidence ?? null,
       allExtractedEmails,
@@ -326,6 +484,13 @@ export async function runExportTopMatches(options: ExportTopMatchesOptions): Pro
       description,
     };
   });
+
+  scoredLive.sort(comparePortfolioMatches);
+
+  const exportedMatches = scoredLive.slice(0, options.limit).map((m, idx) => ({
+    ...m,
+    rank: idx + 1,
+  }));
 
   const payload: ExportPayload = {
     generatedAt: new Date().toISOString(),
@@ -339,38 +504,48 @@ export async function runExportTopMatches(options: ExportTopMatchesOptions): Pro
       version: activeResume.version,
       skills: activeResume.skills,
     },
+    liveness: options.skipProbe
+      ? undefined
+      : {
+          totalProbed: outcomes.size,
+          liveCount: liveCandidates.length,
+          closedPrunedCount,
+          dbEnrichedCount,
+        },
     totalCandidatesEvaluated: allCandidates.length,
-    exportedCount: matches.length,
-    matches,
+    exportedCount: exportedMatches.length,
+    matches: exportedMatches,
   };
 
   mkdirSync(options.outDir, { recursive: true });
 
-  const jsonContent = `${JSON.stringify(payload, null, 2)}\n`;
-  const csvContent = toCsvWithBom(matches);
-  const xlsxBuffer = await toXlsxBuffer(matches);
-  const mdContent = toMarkdownSummary(payload);
+  await writeBundle(options.outDir, "all-live", payload);
 
-  const prefix = `top-${options.limit}`;
-  writeFileSync(join(options.outDir, `${prefix}-matches.json`), jsonContent, "utf8");
-  writeFileSync(join(options.outDir, `${prefix}-matches.csv`), csvContent, "utf8");
-  writeFileSync(join(options.outDir, `${prefix}-matches.xlsx`), xlsxBuffer);
-  writeFileSync(join(options.outDir, `${prefix}-summary.md`), mdContent, "utf8");
+  const top50Payload: ExportPayload = {
+    ...payload,
+    exportedCount: Math.min(50, exportedMatches.length),
+    matches: exportedMatches.slice(0, 50),
+  };
+  await writeBundle(options.outDir, "top-50", top50Payload);
 
-  writeFileSync(join(options.outDir, "latest.json"), jsonContent, "utf8");
-  writeFileSync(join(options.outDir, "latest.csv"), csvContent, "utf8");
-  writeFileSync(join(options.outDir, "latest.xlsx"), xlsxBuffer);
-  writeFileSync(join(options.outDir, "latest.md"), mdContent, "utf8");
+  // Also mirror `all-live` to `latest.*` for downstream tooling.
+  const latestJson = `${JSON.stringify(payload, null, 2)}\n`;
+  writeFileSync(join(options.outDir, "latest.json"), latestJson, "utf8");
+  writeFileSync(join(options.outDir, "latest.csv"), toCsvWithBom(payload.matches), "utf8");
+  writeFileSync(join(options.outDir, "latest.xlsx"), await toXlsxBuffer(payload.matches));
+  writeFileSync(join(options.outDir, "latest.md"), toMarkdownSummary(payload), "utf8");
 
   console.log(
-    `[export-top-matches] Exported ${matches.length} of ${allCandidates.length} candidates to ${options.outDir}/ ` +
-      `(role="${roleSelection.primaryRole}", resume=v${activeResume.version})`,
+    `[export-top-matches] Exported ${exportedMatches.length} live portfolio-ranked matches ` +
+      `(from ${allCandidates.length} candidates, ${closedPrunedCount} closed pruned) to ${options.outDir}/`,
   );
 
-  for (const m of matches.slice(0, 15)) {
-    const scorePct = m.effectiveScore === null ? "—" : `${Math.round(m.effectiveScore * 100)}%`;
-    const target = m.allExtractedEmails[0] ?? m.careerPageUrl ?? m.url;
-    console.log(`  #${String(m.rank).padStart(2)} [${scorePct.padStart(4)} ${m.scoreBand.padEnd(8)}] ${m.companyName} — ${m.title} (${target})`);
+  for (const m of exportedMatches.slice(0, 20)) {
+    const target = m.allExtractedEmails[0] ?? m.careerPageUrl ?? m.websiteUrl ?? m.url;
+    console.log(
+      `  #${String(m.rank).padStart(2)} [Fit ${String(m.portfolioFitScore).padStart(3)}/100 · ${m.recommendedResumeVariant.padEnd(9)}] ` +
+        `${m.companyName || "—"} — ${m.title} (${target})`,
+    );
   }
 
   return payload;

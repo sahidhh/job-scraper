@@ -4,6 +4,7 @@ import { parseExportArgs } from "./export-top-matches";
 import {
   classifyScoreBand,
   compareMatchCandidates,
+  comparePortfolioMatches,
   computeEffectiveScore,
   deriveResumeHooks,
   deriveSkillDiff,
@@ -16,6 +17,15 @@ import {
   type ExportedJobMatch,
   type ExportPayload,
 } from "./lib/exportTopMatchesFormat";
+import {
+  extractAdzunaFullDescription,
+  isExplicitlyClosedHtml,
+  probeAndEnrichJobs,
+} from "./lib/jobLivenessAndEnrich";
+import { computePortfolioFitScore } from "./lib/portfolioFitScorer";
+import type { Database } from "../supabase/database.types";
+
+type JobRow = Database["public"]["Tables"]["jobs"]["Row"];
 
 function makeMatch(overrides: Partial<ExportedJobMatch> = {}): ExportedJobMatch {
   return {
@@ -26,6 +36,10 @@ function makeMatch(overrides: Partial<ExportedJobMatch> = {}): ExportedJobMatch 
     companyName: "Acme Corp",
     canonicalCompanyName: "acme",
     title: "Backend .NET Engineer",
+    portfolioFitScore: 86,
+    portfolioFitBreakdown: "Stack 38/45 (DotNet) · YOE 25/25 (2y) · Loc 15/15 (Remote India) · Signal 11/15",
+    recommendedResumeVariant: "DotNet",
+    recommendedPortfolioLinks: ["https://sahidhh.github.io/portfolio/projects/pdf-diff.html"],
     effectiveScore: 0.85,
     overallScore: 0.85,
     aiScore: 0.82,
@@ -69,25 +83,222 @@ function makeMatch(overrides: Partial<ExportedJobMatch> = {}): ExportedJobMatch 
   };
 }
 
+function makeJobRow(overrides: Partial<JobRow> = {}): JobRow {
+  return {
+    id: "job-row-1",
+    source: "mycareersfuture",
+    source_job_id: "mcf-uuid-1",
+    company_id: null,
+    company_name: "",
+    canonical_company_name: "",
+    title: "Full Stack Developer",
+    location_raw: "Singapore",
+    location_tags: ["singapore"],
+    description: "Short description",
+    url: "https://www.mycareersfuture.gov.sg/job/mcf-uuid-1",
+    posted_at: "2026-11-10T00:00:00Z",
+    first_seen_at: "2026-11-10T00:00:00Z",
+    last_seen_at: "2026-11-17T00:00:00Z",
+    updated_at: "2026-11-17T00:00:00Z",
+    min_years: 2,
+    is_active: true,
+    inactive_reason: null,
+    fingerprint: "fp-1",
+    contact_email: null,
+    contact_email_category: null,
+    contact_email_confidence: null,
+    salary_currency: null,
+    salary_min: null,
+    salary_max: null,
+    salary_period: null,
+    salary_confidence: null,
+    employment_type: null,
+    seniority: null,
+    work_arrangement: null,
+    visa_sponsorship: null,
+    relocation_assistance: null,
+    security_clearance: false,
+    urgent_hiring: false,
+    ineligible_reason: null,
+    manual_score: null,
+    manual_standout: null,
+    manual_verify: null,
+    manual_requirements: null,
+    ...overrides,
+  };
+}
+
 describe("parseExportArgs", () => {
   it("parses default options", () => {
     expect(parseExportArgs([])).toEqual({
-      limit: 50,
+      limit: 500,
       outDir: "reports/top-matches",
       locationTags: undefined,
       remoteOnly: undefined,
       origin: "all",
+      skipProbe: false,
     });
   });
 
-  it("parses custom limit, location, remote, origin, and out-dir", () => {
-    expect(parseExportArgs(["25", "--location", "uae", "--remote", "--origin", "claude_routine", "--out-dir", "tmp/out"])).toEqual({
+  it("parses custom limit, location, remote, origin, skip-probe, and out-dir", () => {
+    expect(
+      parseExportArgs(["25", "--location", "uae", "--remote", "--origin", "claude_routine", "--skip-probe", "--out-dir", "tmp/out"]),
+    ).toEqual({
       limit: 25,
       outDir: "tmp/out",
       locationTags: ["uae"],
       remoteOnly: true,
       origin: "claude_routine",
+      skipProbe: true,
     });
+  });
+});
+
+describe("portfolioFitScorer", () => {
+  it("ranks .NET + PostgreSQL + Angular 2 YOE India/Remote role high and selects DotNet variant", () => {
+    const fit = computePortfolioFitScore({
+      title: "Full Stack Software Engineer (.NET / Angular)",
+      description:
+        "Build C# .NET 8 ASP.NET Core Web APIs with EF Core, CQRS, MediatR, PostgreSQL, Azure Blob Storage, and Angular TypeScript UI.",
+      locationRaw: "Chennai, India (Remote)",
+      locationTags: ["india", "remote"],
+      minYears: 2,
+      visaSponsorship: null,
+      hasDirectEmail: false,
+      aiScore: null,
+      keywordScore: 0.65,
+      manualScore: null,
+    });
+
+    expect(fit.portfolioFitScore).toBeGreaterThanOrEqual(85);
+    expect(fit.recommendedResumeVariant).toBe("DotNet");
+    expect(fit.recommendedPortfolioLinks.length).toBeGreaterThan(0);
+  });
+
+  it("penalizes off-stack Staff Go/Rust/C++ roles below direct 2 YOE stack fits", () => {
+    const goodFit = computePortfolioFitScore({
+      title: "Full Stack Engineer (React / TypeScript / Node.js)",
+      description: "React, TypeScript, Next.js, Node.js, PostgreSQL, Docker, REST APIs.",
+      locationRaw: "Bengaluru, India",
+      locationTags: ["india"],
+      minYears: 2,
+      visaSponsorship: null,
+      hasDirectEmail: true,
+      aiScore: null,
+      keywordScore: 0.55,
+      manualScore: null,
+    });
+
+    const offStackStaff = computePortfolioFitScore({
+      title: "Staff Backend Engineer (Golang / Distributed Systems)",
+      description: "8+ years Go, Kubernetes, Terraform, distributed storage.",
+      locationRaw: "Singapore",
+      locationTags: ["singapore"],
+      minYears: 8,
+      visaSponsorship: null,
+      hasDirectEmail: false,
+      aiScore: 0.35,
+      keywordScore: 0.3,
+      manualScore: null,
+    });
+
+    expect(goodFit.recommendedResumeVariant).toBe("FullStack");
+    expect(goodFit.portfolioFitScore).toBeGreaterThan(offStackStaff.portfolioFitScore + 30);
+  });
+
+  it("selects AI-Python variant for Python FastAPI LLM roles", () => {
+    const fit = computePortfolioFitScore({
+      title: "Backend Python / LLM Engineer",
+      description: "Python, FastAPI, LLM document extraction, PDF OCR pipelines, Docker, GitHub Actions.",
+      locationRaw: "Remote",
+      locationTags: ["remote"],
+      minYears: 2,
+      visaSponsorship: null,
+      hasDirectEmail: false,
+      aiScore: null,
+      keywordScore: 0.5,
+      manualScore: null,
+    });
+
+    expect(fit.recommendedResumeVariant).toBe("AI-Python");
+    expect(fit.recommendedPortfolioLinks).toContain("https://sahidhh.github.io/portfolio/projects/pdf-diff.html");
+  });
+});
+
+describe("jobLivenessAndEnrich", () => {
+  it("detects closed HTML pages without triggering on script bundle 404 strings", () => {
+    const liveHtmlWithScript = `<html><head><title>Stripe Careers | Engineer</title><script>var err="404";</script></head><body><p>Apply now to join our backend team.</p></body></html>`;
+    const closedHtml = `<html><head><title>Software Engineer - Closed</title></head><body><div>This job is no longer accepting applications.</div></body></html>`;
+
+    expect(isExplicitlyClosedHtml(liveHtmlWithScript)).toBeNull();
+    expect(isExplicitlyClosedHtml(closedHtml)).toBe("closed_page_banner");
+  });
+
+  it("extracts full Adzuna description from adp-body section", () => {
+    const html = `<section class="adp-body"><p>Build .NET 8 and React apps.</p><ul><li>PostgreSQL</li></ul></section>`;
+    expect(extractAdzunaFullDescription(html)).toBe("Build .NET 8 and React apps.\nPostgreSQL");
+  });
+
+  it("probes MCF closed vs live jobs, enriches company/url/description, and checks ATS board live IDs", async () => {
+    const mcfClosed = makeJobRow({ id: "mcf-1", source: "mycareersfuture", source_job_id: "uuid-closed" });
+    const mcfLive = makeJobRow({ id: "mcf-2", source: "mycareersfuture", source_job_id: "uuid-live" });
+    const ghClosed = makeJobRow({
+      id: "gh-1",
+      source: "greenhouse",
+      source_job_id: "999",
+      company_id: "co-1",
+      company_name: "Okta",
+      url: "https://okta.com/999",
+    });
+    const ghLive = makeJobRow({
+      id: "gh-2",
+      source: "greenhouse",
+      source_job_id: "111",
+      company_id: "co-1",
+      company_name: "Okta",
+      url: "https://okta.com/111",
+    });
+
+    const mockFetch: typeof fetch = async (input) => {
+      const url = typeof input === "string" ? input : input.toString();
+      if (url.includes("boards-api.greenhouse.io/v1/boards/okta/jobs")) {
+        return new Response(JSON.stringify({ jobs: [{ id: 111 }] }), { status: 200 });
+      }
+      if (url.includes("uuid-closed")) {
+        return new Response(JSON.stringify({ status: { jobStatus: "Closed" }, metadata: { expiryDate: "2026-08-01" } }), {
+          status: 200,
+        });
+      }
+      if (url.includes("uuid-live")) {
+        return new Response(
+          JSON.stringify({
+            status: { jobStatus: "Open" },
+            metadata: { expiryDate: "2027-01-15" },
+            postedCompany: { name: "LIVE CO PTE LTD", companyUrl: "www.liveco.sg" },
+            description: "<p>Full description with contact hr@liveco.sg</p>",
+          }),
+          { status: 200 },
+        );
+      }
+      return new Response("Not found", { status: 404 });
+    };
+
+    const { outcomes, stats } = await probeAndEnrichJobs(
+      [mcfClosed, mcfLive, ghClosed, ghLive],
+      [{ id: "co-1", source: "greenhouse", board_token: "okta", active: true }],
+      mockFetch,
+    );
+
+    expect(stats.liveCount).toBe(2);
+    expect(stats.closedCount).toBe(2);
+    expect(outcomes.get("mcf-1")?.isLive).toBe(false);
+    expect(outcomes.get("gh-1")?.isLive).toBe(false);
+    expect(outcomes.get("gh-1")?.closedReason).toBe("not_on_ats_board");
+    expect(outcomes.get("gh-2")?.isLive).toBe(true);
+    expect(outcomes.get("mcf-2")?.isLive).toBe(true);
+    expect(outcomes.get("mcf-2")?.enrichedCompanyName).toBe("LIVE CO PTE LTD");
+    expect(outcomes.get("mcf-2")?.enrichedWebsiteUrl).toBe("https://www.liveco.sg");
+    expect(outcomes.get("mcf-2")?.discoveredEmails).toContain("hr@liveco.sg");
   });
 });
 
@@ -108,7 +319,16 @@ describe("scoring and ranking helpers", () => {
     expect(classifyScoreBand(null)).toBe("unscored");
   });
 
-  it("sorts strong > moderate > shrug > unscored and breaks ties by keywordScore and postedAt", () => {
+  it("sorts matches best-to-worst by portfolioFitScore first, then effectiveScore", () => {
+    const lowFit = makeMatch({ id: "low", portfolioFitScore: 42, effectiveScore: 0.8 });
+    const highFit = makeMatch({ id: "high", portfolioFitScore: 91, effectiveScore: null });
+    const midFit = makeMatch({ id: "mid", portfolioFitScore: 74, effectiveScore: 0.7 });
+
+    const sorted = [lowFit, midFit, highFit].sort(comparePortfolioMatches).map((m) => m.id);
+    expect(sorted).toEqual(["high", "mid", "low"]);
+  });
+
+  it("sorts DB candidates by effectiveScore > keywordScore > postedAt", () => {
     const items = [
       { id: "shrug", origin: "scraper" as const, overallScore: 0.4, aiScore: 0.4, keywordScore: 0.9, manualScore: null, postedAt: "2026-11-16T00:00:00Z" },
       { id: "unscored", origin: "scraper" as const, overallScore: null, aiScore: null, keywordScore: 0.8, manualScore: null, postedAt: "2026-11-17T00:00:00Z" },
@@ -168,7 +388,7 @@ describe("CSV, XLSX, and Markdown export formatters", () => {
       description: 'Line 1, with comma\nLine 2 "quoted"',
     });
     const csv = toCsvWithBom([match]);
-    expect(csv.startsWith("\uFEFFrank,score_pct")).toBe(true);
+    expect(csv.startsWith("\uFEFFrank,portfolio_fit_score")).toBe(true);
     expect(csv).toContain('"Engineer, ""Backend"" Lead"');
     expect(csv).toContain('"Line 1, with comma\nLine 2 ""quoted"""');
   });
@@ -187,17 +407,20 @@ describe("CSV, XLSX, and Markdown export formatters", () => {
     expect(sheet1Xml).not.toContain("\u0001");
   });
 
-  it("builds markdown summary with counts and table", () => {
+  it("builds markdown summary with counts and portfolio fit columns", () => {
     const payload: ExportPayload = {
       generatedAt: "2026-11-17T00:00:00Z",
       roleSelection: { id: "r1", primaryRole: "Full Stack Developer", expandedRoles: ["Backend Engineer"] },
       resume: { id: "res1", version: 3, skills: ["C#", ".NET", "PostgreSQL"] },
+      liveness: { totalProbed: 10, liveCount: 6, closedPrunedCount: 4, dbEnrichedCount: 2 },
       totalCandidatesEvaluated: 120,
       exportedCount: 1,
       matches: [makeMatch()],
     };
     const md = toMarkdownSummary(payload);
-    expect(md).toContain("# Top 1 Job Matches");
+    expect(md).toContain("# Top 1 Live Job Matches (Portfolio-Ranked)");
+    expect(md).toContain("86/100");
+    expect(md).toContain("DotNet");
     expect(md).toContain("Acme Corp");
     expect(md).toContain("talent@acme.example");
   });

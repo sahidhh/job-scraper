@@ -31,6 +31,8 @@ interface MCFJob {
   uuid: string;
   title?: string;
   company?: MCFCompany;
+  postedCompany?: MCFCompany;
+  hiringCompany?: MCFCompany;
   metadata?: MCFMetadata;
   description?: string;
   externalJobUrl?: string;
@@ -46,11 +48,12 @@ function isMCFResponse(body: unknown): body is MCFResponse {
 }
 
 function toRawJob(entry: MCFJob): RawJob {
+  const companyName = entry.hiringCompany?.name ?? entry.postedCompany?.name ?? entry.company?.name ?? "";
   return {
     source: "mycareersfuture",
     sourceJobId: entry.uuid,
     companyId: null,
-    companyName: normalizeWhitespace(entry.company?.name ?? ""),
+    companyName: normalizeWhitespace(companyName),
     title: normalizeWhitespace(entry.title ?? ""),
     locationRaw: "Singapore",
     description: stripHtml(entry.description ?? ""),
