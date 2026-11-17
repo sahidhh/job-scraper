@@ -50,6 +50,12 @@ Neither is wired into any scheduled workflow — run manually, once, after the r
 | `npm run export:matches` | Probes active eligible matches (incl. awaiting-AI), marks closed/expired jobs inactive in Supabase, ranks live matches by portfolio fit, and exports `all-live-*`, `top-50-*`, and `latest.*` to `reports/top-matches/` |
 | `npm run fetch:matches` | One-command local fetcher: runs `export:matches` if Supabase service env vars are set, or dispatches `maintenance.yml` and downloads the `top-matches-export` artifact |
 | `npm run enrich:contacts` | Merges verified company URLs, recruiting emails, and fuller JDs into exported `reports/top-matches/` bundles and re-ranks portfolio fit |
+| `npm run outreach:prepare` | Reuses cached 1-page PDFs, skips `send-ledger.json` sent emails, and writes up to `--count N` (default 36) unsent targets into `input-group-{1,2,3}.json` |
+| `npm run outreach:compile` | Lints one batch (`-- --group N`) or all batches against plain-text/humanizer rules and builds `outreach-ready.{json,md,csv}` |
+| `npm run outreach:dry-run` | Verifies `.env.outreach`, OAuth2/App-Password status, 36 compiled drafts, and 3 PDF attachments locally |
+| `npm run outreach:oauth` | Authorizes Gmail (`gmail.compose`) via browser OAuth2 into gitignored `.oauth-token.json` |
+| `npm run outreach:draft` | Saves compiled emails + PDF attachments into Gmail Drafts via OAuth2 Gmail API or IMAP |
+| `npm run outreach:send` | Sends direct-email applications via OAuth2 Gmail API or SMTP (`smtp.gmail.com:587`) and tracks sent IDs in `send-ledger.json` |
 | `npm run diagnostics` | A single console-only run of the full production verification framework (see §4 above) — a superset health check, not a source-specific diagnostic like the others in this table |
 
 ## 6. Recovery Procedures

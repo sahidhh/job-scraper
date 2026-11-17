@@ -1,7 +1,12 @@
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import JSZip from "jszip";
 import { describe, expect, it } from "vitest";
 import { enrichMatchesWithContacts, loadDefaultVerifiedContacts } from "./enrich-export-contacts";
 import { parseExportArgs } from "./export-top-matches";
+import { lintOutreachDraft, type DraftEmailItem } from "./outreach/compile-and-lint-drafts";
+import { deduplicateDirectTargets } from "./outreach/prepare-outreach-groups";
 import {
   classifyScoreBand,
   compareMatchCandidates,
@@ -12,6 +17,7 @@ import {
   determineOutreachPath,
   extractAllContactEmails,
   formatSalarySummary,
+  isNonHiringEmail,
   toCsvWithBom,
   toMarkdownSummary,
   toXlsxBuffer,
@@ -465,5 +471,96 @@ describe("enrichMatchesWithContacts", () => {
     expect(enrichedMicro1?.url).toBe("https://jobs.micro1.ai/post/912dac5d-2d0b-4c32-a67b-89404bcf195b");
     expect(enrichedMicro1?.description).toContain("FastAPI");
     expect(enrichedMicro1?.allExtractedEmails).toContain("support@micro1.ai");
+  });
+});
+
+describe("isNonHiringEmail and lintOutreachDraft", () => {
+  it("filters privacy, dpo, and accommodation mailboxes from hiring emails", () => {
+    expect(isNonHiringEmail("accessibleinterviewing@samsara.com")).toBe(true);
+    expect(isNonHiringEmail("disability-accomodations@qualcomm.com")).toBe(true);
+    expect(isNonHiringEmail("atsg.dataprotection@persolapac.com")).toBe(true);
+    expect(isNonHiringEmail("dpo@acme.com")).toBe(true);
+    expect(isNonHiringEmail("careers@acme.com")).toBe(false);
+    expect(isNonHiringEmail("kelvin.chong@acme.sg")).toBe(false);
+
+    expect(
+      extractAllContactEmails(
+        "Email disability-accomodations@qualcomm.com or careers@qualcomm.com for engineering.",
+        "disability-accomodations@qualcomm.com",
+      ),
+    ).toEqual(["careers@qualcomm.com"]);
+  });
+
+  it("validates plain-text humanizer rules in outreach drafts", () => {
+    const dir = mkdtempSync(join(tmpdir(), "outreach-lint-"));
+    try {
+      const pdfName = "resume.pdf";
+      writeFileSync(join(dir, pdfName), "%PDF-1.4\n", "utf8");
+
+      const validDraft: DraftEmailItem = {
+        draftId: "g1-01",
+        group: 1,
+        rank: 1,
+        companyName: "Acme Tech",
+        title: "Full Stack Engineer",
+        recipientEmail: "hiring@acme.dev",
+        emailConfidence: "high",
+        resumeVariant: "FullStack",
+        attachmentPath: pdfName,
+        subject: "Full Stack Engineer at Acme Tech - Sahidhullah H",
+        matchedSkills: ["C#", ".NET", "TypeScript"],
+        portfolioLinkUsed: "https://sahidhh.github.io/portfolio/projects/pdf-diff.html",
+        body: [
+          "Hi Acme Tech team,",
+          "",
+          "Saw your Full Stack Engineer post for the .NET 8 and TypeScript API rebuild. I've shipped C#/.NET Core and Angular modules for the last two years at Propel.",
+          "",
+          "Earlier this year I moved up to L2 there after tuning slow reporting endpoints and shipping an Azure PDF diff pipeline. Wrote up how the pipeline works here: https://sahidhh.github.io/portfolio/projects/pdf-diff.html.",
+          "",
+          "I've attached my resume, and I'm in Chennai ready to start right away. Open to a brief call or a small test ticket this week?",
+          "",
+          "Sahidhullah H",
+          "sahidhullah@gmail.com | https://sahidhh.github.io/portfolio/",
+        ].join("\n"),
+      };
+
+      expect(lintOutreachDraft(validDraft, dir).errors).toEqual([]);
+
+      const templateDraft: DraftEmailItem = {
+        ...validDraft,
+        draftId: "g1-02",
+        subject: "Excited to leverage tailored synergy!",
+        body: [
+          "Hi team,",
+          "",
+          "Great engineering depends on scalability, reliability, and maintainability.",
+          "",
+          "At Propel (SDE L2, Aug 2024 to Sep 2026), I would love to apply and delve into systems that handle everything seamlessly across 4 years.",
+          "",
+          "My tailored Full-Stack PDF resume is attached for review.",
+        ].join("\n"),
+      };
+
+      const templateResult = lintOutreachDraft(templateDraft, dir);
+      expect(templateResult.errors.some((e) => e.includes("tailored"))).toBe(true);
+      expect(templateResult.errors.some((e) => e.includes("parenthetical"))).toBe(true);
+      expect(templateResult.errors.some((e) => e.includes("brochure"))).toBe(true);
+      expect(templateResult.errors.some((e) => e.includes("abstract noun triad"))).toBe(true);
+      expect(templateResult.errors.some((e) => e.includes("contractions"))).toBe(true);
+      expect(templateResult.errors.length).toBeGreaterThanOrEqual(8);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("excludes already-sent emails in deduplicateDirectTargets", () => {
+    const sentMatch = makeMatch({ id: "j-sent", rank: 1, contactEmail: "sent@acme.dev" });
+    const freshMatch = makeMatch({ id: "j-fresh", rank: 2, contactEmail: "fresh@acme.dev" });
+    const dupFresh = makeMatch({ id: "j-fresh-2", rank: 3, contactEmail: "FRESH@acme.dev", title: "API Engineer" });
+
+    const targets = deduplicateDirectTargets([sentMatch, freshMatch, dupFresh], new Set(["sent@acme.dev"]));
+    expect(targets).toHaveLength(1);
+    expect(targets[0]?.primary.id).toBe("j-fresh");
+    expect(targets[0]?.additionalRoles.map((r) => r.title)).toEqual(["API Engineer"]);
   });
 });

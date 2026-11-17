@@ -7,6 +7,11 @@ node_modules/
 coverage/
 verification-reports/
 reports/top-matches/
+reports/outreach/
+.oauth-token.json
+oauth-client.json
+__pycache__/
+*.pyc
 supabase/.temp
 supabase/.temp/*
 .claude/settings.local.json

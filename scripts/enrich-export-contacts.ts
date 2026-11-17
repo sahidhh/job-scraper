@@ -8,6 +8,7 @@ import {
   deriveResumeHooks,
   deriveSkillDiff,
   determineOutreachPath,
+  isNonHiringEmail,
   toCsvWithBom,
   toMarkdownSummary,
   toXlsxBuffer,
@@ -80,9 +81,7 @@ export function enrichMatchesWithContacts(
             match.title.toLowerCase().includes(c.matchTitleSubstring.toLowerCase())),
       ) ?? candidates.find((c) => c.rank === undefined && c.matchTitleSubstring === undefined) ?? candidates[0];
 
-    const cleanedExistingEmails = match.allExtractedEmails.filter(
-      (e) => !/^(complaints|abuse|noreply|no-reply)@/i.test(e),
-    );
+    const cleanedExistingEmails = match.allExtractedEmails.filter((e) => !isNonHiringEmail(e));
 
     if (!rec) {
       return {
@@ -106,7 +105,9 @@ export function enrichMatchesWithContacts(
     const mergedEmails = [
       ...new Set([
         ...cleanedExistingEmails,
-        ...rec.emails.map((e) => e.email.trim()).filter(Boolean),
+        ...rec.emails
+          .map((e) => e.email.trim())
+          .filter((e) => Boolean(e) && !isNonHiringEmail(e)),
       ]),
     ];
 

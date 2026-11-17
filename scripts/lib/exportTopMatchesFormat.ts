@@ -4,6 +4,7 @@ import { AI_SCORE_SHRUG, AI_SCORE_STRONG } from "@/features/scoring/domain/score
 import { SKILLS_DICTIONARY } from "@/shared/config/skills-dictionary";
 import { extractSkills } from "@/shared/domain/skills";
 import type { ResumeVariant } from "./portfolioFitScorer";
+export type { ResumeVariant };
 
 export type ScoreBand = "strong" | "moderate" | "shrug" | "unscored";
 export type OutreachPath = "direct_email" | "career_page" | "ats_board";
@@ -119,11 +120,23 @@ const AUTOMATED_EMAIL_PREFIXES = new Set([
   "do-not-reply",
   "unsubscribe",
   "privacy",
+  "dpo",
   "mailer-daemon",
   "postmaster",
   "complaints",
   "abuse",
 ]);
+
+const NON_HIRING_EMAIL_PATTERN =
+  /(accommodat|accomodat|accessible|accessibility|disability|dataprotection)/i;
+
+/** Return true when an email address belongs to an automated, privacy, or accommodation mailbox rather than hiring. */
+export function isNonHiringEmail(email: string): boolean {
+  const localPart = email.trim().split("@")[0] ?? "";
+  const localBase = (localPart.split("+")[0] ?? "").toLowerCase();
+  if (!localBase) return true;
+  return AUTOMATED_EMAIL_PREFIXES.has(localBase) || NON_HIRING_EMAIL_PATTERN.test(localBase);
+}
 
 interface ResumeHookRule {
   keywords: readonly string[];
@@ -219,9 +232,7 @@ export function extractAllContactEmails(text: string, knownContactEmail: string 
     if (!trimmed) return;
     const lower = trimmed.toLowerCase();
     if (seen.has(lower)) return;
-    const localPart = trimmed.split("@")[0] ?? "";
-    const localBase = (localPart.split("+")[0] ?? "").toLowerCase();
-    if (AUTOMATED_EMAIL_PREFIXES.has(localBase)) return;
+    if (isNonHiringEmail(trimmed)) return;
     seen.add(lower);
     ordered.push(trimmed);
   };
