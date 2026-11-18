@@ -45,7 +45,12 @@ interface DashboardJobRow extends Omit<JobRow, "description"> {
     retry_count: number | null;
     role_selection_id: string;
   }[];
-  job_state: { status_id: string | null; job_statuses: { id: string; label: string; color: string } | null }[];
+  // PostgREST returns a single object (or null) for 1-to-1 FK/PK joins,
+  // while older test fixtures pass a 1-element array.
+  job_state:
+    | { status_id: string | null; job_statuses: { id: string; label: string; color: string } | null }
+    | { status_id: string | null; job_statuses: { id: string; label: string; color: string } | null }[]
+    | null;
 }
 
 // Columns selected in findForDashboard; mirrors DashboardJobRow but without
@@ -136,7 +141,8 @@ function byManualScoreDescThenPostedAt(a: JobWithScore, b: JobWithScore): number
 
 function toDashboardJob(row: DashboardJobRow): JobWithScore {
   const score = row.job_scores[0] as DashboardJobRow["job_scores"][number] | undefined;
-  const status = row.job_state?.[0]?.job_statuses ?? null;
+  const jobState = Array.isArray(row.job_state) ? row.job_state[0] : row.job_state;
+  const status = jobState?.job_statuses ?? null;
   return {
     id: row.id,
     source: row.source,

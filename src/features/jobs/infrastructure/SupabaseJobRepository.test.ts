@@ -718,6 +718,26 @@ describe("SupabaseJobRepository", () => {
       expect(mainBuilder.not).toHaveBeenCalledWith("id", "in", "(job-9)");
     });
 
+    it("maps job_state when PostgREST returns a single 1-to-1 object instead of an array", async () => {
+      const { client } = mockSupabaseClient({
+        data: [
+          {
+            ...jobRow,
+            job_scores: [{ keyword_score: 0.5, ai_score: 0.8, ai_reasoning: "x" }],
+            job_state: { status_id: "s1", job_statuses: { id: "s1", label: "Applied", color: "#DCFCE7" } },
+          },
+        ],
+        error: null,
+      });
+      const repo = new SupabaseJobRepository(client);
+
+      const result = await repo.findForDashboard("role-selection-1", { includeArchived: true }, 50, 1, 0.25, 3);
+
+      expect(result.jobs).toEqual([
+        expect.objectContaining({ id: "job-1", statusId: "s1", statusLabel: "Applied", statusColor: "#DCFCE7" }),
+      ]);
+    });
+
     it("restricts to jobs in the requested statuses when statusIds is given", async () => {
       const { client, builders } = queuedSupabaseClient([
         { data: [{ job_id: "job-1" }], error: null }, // job ids in status s1

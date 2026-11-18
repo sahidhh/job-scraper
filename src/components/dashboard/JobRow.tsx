@@ -63,7 +63,7 @@ function ScoreBadge({
   // since both rendered as outlined pills (docs/decisions.md AD-56).
   if (aiScore === null) {
     return (
-      <Badge variant="outline" className="font-normal text-muted-foreground">
+      <Badge variant="outline" className="max-w-full truncate font-normal text-muted-foreground">
         {pendingScoreLabel(keywordScore)}
       </Badge>
     );
@@ -200,8 +200,8 @@ export function JobRow({
             <StatusBadge status={currentStatus} />
           )}
         </TableCell>
-        <TableCell>
-          <div className="flex flex-col gap-0.5">
+        <TableCell className="overflow-hidden">
+          <div className="flex min-w-0 flex-col gap-0.5">
             <ScoreBadge
               source={job.source}
               aiScore={job.aiScore}
@@ -214,7 +214,7 @@ export function JobRow({
             )}
           </div>
         </TableCell>
-        <TableCell className="min-w-60">
+        <TableCell className="min-w-56">
             <div className={cn("flex flex-wrap items-center gap-1", isPending && "opacity-60")}>
               <Button
                 variant="ghost"
