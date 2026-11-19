@@ -28,7 +28,7 @@ Included: `SourceAuthExpiredError` / `SourceBlockedError`, `classifyScrapeFailur
 Excluded: Modifying `scripts/scrape.ts` (T007) or cookie refresh CLI scripts (T008).
 
 # Implementation guidance
-1. **Blocker check:** Confirm exact Naukri and NaukriGulf search endpoint URLs, required headers (e.g., `AppId`, `SystemId`, `nkparam`, `User-Agent`), and JSON/HTML response shape from a live session or captured fixture before writing parsers.
+1. **Search endpoint:** Naukri uses `GET https://www.naukri.com/jobapi/v3/search` with headers `appid: "109"`, `systemid: "109"`, `clientid: "d3skt0p"`, `accept: "application/json"`, `User-Agent`, plus session cookies / `nkparam` (initialized from HTML search page). Verify NaukriGulf search endpoint & response shape from a live session/fixture before writing its parser.
 2. Create `SourceAuthExpiredError` and `SourceBlockedError` (carrying `source`, `statusCode`, `reason`) in `src/features/sources/domain/errors.ts` and recognize them directly in `classifyScrapeFailure.ts`.
 3. Create a shared cookie store helper (`src/features/sources/infrastructure/cookieStore.ts`) reading from `NAUKRI_COOKIE_FILE` / `NAUKRIGULF_COOKIE_FILE` (or `COOKIES_DIR`, defaulting to a gitignored `.cookies/` path), supporting `Cookie` header string or JSON cookie array (`name`/`value` pairs). Throw `SourceAuthExpiredError` if missing/empty.
 4. Implement `NaukriScraper` (`source: "naukri"`, `requiresCompanyConfig: false`) and `NaukriGulfScraper` (`source: "naukrigulf"`, `requiresCompanyConfig: false`):

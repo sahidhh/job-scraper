@@ -1,9 +1,9 @@
 # Execution Plan: Naukri & NaukriGulf Box Pipeline + Role/Telegram Redesign
 
-- **Plan Version:** `1.0.0`
+- **Plan Version:** `1.1.0`
 - **Source Spec:** [`docs/features/naukri-box-pipeline/spec.md`](../docs/features/naukri-box-pipeline/spec.md)
 - **Target Repo:** `C:\Users\sahid\repos\GitHub\job-scraper`
-- **Status:** Pending approval / T001 ready
+- **Status:** Locked 12-step plan (`S1`–`S12`), blockers 1 & 2 resolved, `T012` moved to `S11` before `S12`
 
 ## 1. Objective
 
@@ -46,10 +46,10 @@ Move daily job scraping to a **08:30 IST DietPi box cron** (residential IP) with
 - `app_settings` is the existing key-value table referenced as "the `settings` table" in the spec.
 - `job_statuses` in production matches `supabase/seed.sql` (`New`, `Viewed`, `Interested`, `Applied`, `Not Interested`, `Archived`).
 
-### Blockers / Confirmations Needed Before Execution
-1. **`st:skipped` status mapping (T011):** `supabase/seed.sql` has `Not Interested` and `Archived`, but no `Skipped` label. Confirm whether `st:skipped:<jobId>` should map to `Not Interested` (recommended), `Archived`, or seed a new `Skipped` status.
-2. **Naukri / NaukriGulf API endpoints & fixtures (T006):** Confirm/capture exact search endpoint URLs, required headers (e.g., `nkparam`/`AppId`), and sample JSON/HTML payloads from a logged-in session before implementing T006 parsers.
-3. **Production DB cleanup approval (T012, Gate G4):** Running `scripts/cleanup-bloat.ts --execute` against production requires explicit human approval after reviewing `--dry-run` counts.
+### Resolved Confirmations & Remaining Gate
+1. **`st:skipped` status mapping (resolved):** Maps to `Not Interested` (confirmed in `20260810000001_status_dropdown_quick_actions.sql`).
+2. **Naukri / NaukriGulf API endpoints (Naukri set; NaukriGulf verify on first run):** Naukri uses `GET https://www.naukri.com/jobapi/v3/search` with headers `appid: "109"`, `systemid: "109"`, `clientid: "d3skt0p"`, `accept: "application/json"`, `User-Agent`, plus session cookies / `nkparam` from HTML search page. Verify NaukriGulf search endpoint from a live session in `S5` (`T006`).
+3. **Production DB cleanup approval (`S11` / `T012`, Gate G4):** Moved to `S11` (last step before `S12` final verification/deploy); requires explicit human approval after reviewing `--dry-run` counts.
 
 ## 4. Strategy
 
@@ -88,8 +88,19 @@ flowchart TD
   T013 --> T014
 ```
 
-### Deterministic Execution Order
-`T001 → T002 → T003 → T004 → T005 → T006 → T007 → T008 → T009 → T010 → T011 → T012 → T013 → T014`
+### Locked 12-Step Execution Order (`taskhub`-compatible)
+- S1 - DB migration (`T001`: enum rename/add, `enabled_sources`, deterministic `set_active_role_selection`)
+- S2 - Enums & role reuse (`T002` + `T003`: `enums.ts`, `FilterBar`, `routine_agent` rename, `SupabaseRoleRepository` selection reuse)
+- S3 - Title-only match & pre-DB drop (`T004`: `roleMatch`/`roleFilter`, `minYears > 3` drop in `ingestJobs`)
+- S4 - `enabled_sources` settings & UI (`T005`: repository, actions, `/settings` card)
+- S5 - Naukri & NaukriGulf scrapers (`T006`: auth/block errors, cookie store, `NaukriScraper`, `NaukriGulfScraper`, registry)
+- S6 - Scrape orchestration & alerts (`T007`: `scripts/scrape.ts` `enabled_sources` filter + instant Telegram alerts)
+- S7 - Cookie refresh utilities (`T008`: laptop Chrome/SCP sync + phone Termux/SSH shortcut)
+- S8 - Freshness boost & 8-card notifier (`T009` + `T010`: `< 24h` boost + 8-card Telegram HTML notifier)
+- S9 - Telegram webhook status handler (`T011`: `st:applied`/`st:skipped` → `Not Interested`/`st:closed` + card edit)
+- S10 - DietPi 08:30 IST cron & disable GHA (`T013`: systemd timer/cron + disable `scrape.yml` schedule)
+- S11 - Bloat cleanup script (`T012`: `--dry-run` / `--execute`, Gate G4 human approval before deploy)
+- S12 - Full repo verification (`T014`: `typecheck`, `lint`, `test`, `build`)
 
 ## 6. Agent, Tier & Gate Table
 

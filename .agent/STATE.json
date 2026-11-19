@@ -1,23 +1,21 @@
 {
-  "plan_version": "1.0.0",
+  "plan_version": "1.1.0",
   "source_spec": "docs/features/naukri-box-pipeline/spec.md",
   "phase": "planned",
   "current_task": null,
-  "pending_tasks": [
-    "T001",
-    "T002",
-    "T003",
-    "T004",
-    "T005",
-    "T006",
-    "T007",
-    "T008",
-    "T009",
-    "T010",
-    "T011",
-    "T012",
-    "T013",
-    "T014"
+  "pending_steps": [
+    "S1 (T001)",
+    "S2 (T002+T003)",
+    "S3 (T004)",
+    "S4 (T005)",
+    "S5 (T006)",
+    "S6 (T007)",
+    "S7 (T008)",
+    "S8 (T009+T010)",
+    "S9 (T011)",
+    "S10 (T013)",
+    "S11 (T012)",
+    "S12 (T014)"
   ],
   "accepted_tasks": [],
   "failed_or_blocked_tasks": [],
@@ -25,9 +23,9 @@
   "decisions_and_assumptions": [
     "Use existing app_settings table for enabled_sources key (not a new settings table).",
     "Use ALTER TYPE job_source RENAME VALUE 'claude_routine' TO 'routine_agent' in Supabase migration.",
-    "BLOCKER-1 (T011): Confirm st:skipped mapping to job_statuses ('Not Interested' vs 'Archived' vs new 'Skipped').",
-    "BLOCKER-2 (T006): Confirm/capture Naukri & NaukriGulf API/HTML search endpoints and cookie header requirements.",
-    "BLOCKER-3 (T012): Human approval required before running scripts/cleanup-bloat.ts --execute (Gate G4)."
+    "RESOLVED (S9/T011): st:skipped maps to 'Not Interested' (20260810000001_status_dropdown_quick_actions.sql).",
+    "RESOLVED (S5/T006): Naukri uses GET https://www.naukri.com/jobapi/v3/search with appid=109, systemid=109, clientid=d3skt0p + cookies/nkparam; verify NaukriGulf on live session.",
+    "MOVED (S11/T012): Bloat cleanup moved to S11 before S12; requires human approval before --execute (Gate G4)."
   ],
-  "last_checkpoint": "2026-11-19T10:10:00Z"
+  "last_checkpoint": "2026-11-19T21:44:00Z"
 }
