@@ -1,0 +1,33 @@
+{
+  "plan_version": "1.0.0",
+  "source_spec": "docs/features/naukri-box-pipeline/spec.md",
+  "phase": "planned",
+  "current_task": null,
+  "pending_tasks": [
+    "T001",
+    "T002",
+    "T003",
+    "T004",
+    "T005",
+    "T006",
+    "T007",
+    "T008",
+    "T009",
+    "T010",
+    "T011",
+    "T012",
+    "T013",
+    "T014"
+  ],
+  "accepted_tasks": [],
+  "failed_or_blocked_tasks": [],
+  "verified_artifacts": [],
+  "decisions_and_assumptions": [
+    "Use existing app_settings table for enabled_sources key (not a new settings table).",
+    "Use ALTER TYPE job_source RENAME VALUE 'claude_routine' TO 'routine_agent' in Supabase migration.",
+    "BLOCKER-1 (T011): Confirm st:skipped mapping to job_statuses ('Not Interested' vs 'Archived' vs new 'Skipped').",
+    "BLOCKER-2 (T006): Confirm/capture Naukri & NaukriGulf API/HTML search endpoints and cookie header requirements.",
+    "BLOCKER-3 (T012): Human approval required before running scripts/cleanup-bloat.ts --execute (Gate G4)."
+  ],
+  "last_checkpoint": "2026-11-19T10:10:00Z"
+}
