@@ -7,7 +7,7 @@ describe("hasRoleFilter", () => {
   });
 
   it("returns false when every role sanitizes to an empty string", () => {
-    expect(hasRoleFilter(["", "   ", ".,()%*"])).toBe(false);
+    expect(hasRoleFilter(["", "   ", ",()%*"])).toBe(false);
   });
 
   it("returns true when at least one role has a usable term", () => {
@@ -17,11 +17,11 @@ describe("hasRoleFilter", () => {
 
 describe("jobMatchesRoles", () => {
   const job = {
-    title: "Senior Backend Engineer",
+    title: "Backend Engineer",
     description: "Build APIs with Node.js and Postgres.",
   };
 
-  it("returns true (no filter) when roles is empty", () => {
+  it("returns true (no filter) when roles is empty and title is not denylisted", () => {
     expect(jobMatchesRoles(job, [])).toBe(true);
   });
 
@@ -29,12 +29,22 @@ describe("jobMatchesRoles", () => {
     expect(jobMatchesRoles(job, ["backend engineer"])).toBe(true);
   });
 
-  it("returns true when a role term matches the description but not the title", () => {
-    expect(jobMatchesRoles(job, ["Postgres"])).toBe(true);
+  it("returns false when a role term matches only the description and not title or allowlist", () => {
+    expect(
+      jobMatchesRoles(
+        { title: "Product Designer", description: "Build APIs with Postgres and Software Engineer." },
+        ["Postgres"],
+      ),
+    ).toBe(false);
   });
 
-  it("returns false when no role term matches title or description", () => {
-    expect(jobMatchesRoles(job, ["Sales Representative", "Office Manager"])).toBe(false);
+  it("returns false when no role term or allowlist matches title", () => {
+    expect(
+      jobMatchesRoles(
+        { title: "Office Coordinator", description: "Manage office." },
+        ["Sales Representative", "Office Manager"],
+      ),
+    ).toBe(false);
   });
 
   it("matches if any one of multiple roles matches", () => {
@@ -46,8 +56,37 @@ describe("jobMatchesRoles", () => {
     expect(jobMatchesRoles(job, ["Backend Engineer*"])).toBe(true);
   });
 
-  it("treats a role that sanitizes to empty as no-op for that term", () => {
-    expect(jobMatchesRoles(job, ["...", "Backend Engineer"])).toBe(true);
-    expect(jobMatchesRoles({ title: "Unrelated Title", description: "Unrelated description." }, ["...", ""])).toBe(true);
+  it("preserves dots in .net so it does not false-match Kubernetes or Network", () => {
+    expect(
+      jobMatchesRoles({ title: "Kubernetes Platform", description: "" }, [".net"]),
+    ).toBe(false);
+    expect(
+      jobMatchesRoles({ title: ".NET Developer", description: "" }, [".net"]),
+    ).toBe(true);
+  });
+
+  it("rejects denylisted titles even when description contains Software Engineer", () => {
+    for (const title of [
+      "Senior Software Engineer",
+      "Sr. Software Engineer",
+      "Staff Software Engineer",
+      "Lead Backend Engineer",
+      "Sales Engineer",
+      "QA Engineer",
+      "Java Developer",
+    ]) {
+      expect(
+        jobMatchesRoles({ title, description: "Software Engineer" }, ["Software Engineer"]),
+      ).toBe(false);
+    }
+  });
+
+  it("does not false-block JavaScript for java or Aqua for qa", () => {
+    expect(
+      jobMatchesRoles({ title: "JavaScript Developer", description: "" }, ["Developer"]),
+    ).toBe(true);
+    expect(
+      jobMatchesRoles({ title: "Aqua Software Engineer", description: "" }, ["Software Engineer"]),
+    ).toBe(true);
   });
 });

@@ -63,7 +63,7 @@ async function main(): Promise<void> {
       const rawJobs = await scraper.fetchJobs(companies, roles);
 
       const filtered = tagLocations(rawJobs).filter((job) => hasAllowedLocation(job.locationTags));
-      const result = await ingestJobs(filtered, { jobRepository, skipUnsponsoredForeignJobs });
+      const result = await ingestJobs(filtered, { jobRepository, skipUnsponsoredForeignJobs, roles });
 
       const completedAt = new Date();
       const durationMs = completedAt.getTime() - startedAt.getTime();

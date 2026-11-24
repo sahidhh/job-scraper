@@ -9,6 +9,7 @@ import { validateNormalizedJob } from "@/features/jobs/domain/validation";
 // consumer, scoreJob.ts) but the verdict is now a job attribute computed
 // once here at ingest rather than recomputed per scoring run (AD-51).
 import { classifyEligibility } from "@/features/scoring/domain/classifyEligibility";
+import { jobMatchesRoles } from "@/features/sources/domain/roleMatch";
 import { dedupeJobs } from "./dedupeJobs";
 import { parseMinYears } from "./parseMinYears";
 
@@ -20,6 +21,10 @@ export interface IngestJobsDeps {
    * `skip_unsponsored_foreign_jobs`). Off by default.
    */
   skipUnsponsoredForeignJobs?: boolean;
+  /**
+   * Optional role terms for title-only pre-DB filtering.
+   */
+  roles?: readonly string[];
 }
 
 /**
@@ -80,8 +85,17 @@ export async function ingestJobs(
   // Optional ingest-time filter (settings). Distinct from the eligibility
   // verdict above: ineligible jobs are still stored (so they can be shown on
   // request and counted), whereas these are never persisted at all.
-  const kept = deps.skipUnsponsoredForeignJobs ? enriched.filter((job) => !isUnsponsoredForeignOnsite(job)) : enriched;
-  const skippedUnsponsored = enriched.length - kept.length;
+  const afterUnsponsored = deps.skipUnsponsoredForeignJobs
+    ? enriched.filter((job) => !isUnsponsoredForeignOnsite(job))
+    : enriched;
+  const skippedUnsponsored = enriched.length - afterUnsponsored.length;
+
+  // Pre-DB hard-drop: drop jobs requiring > 3 years of experience or
+  // failing title-only role/denylist matching before upsertMany.
+  const roles = deps.roles ?? [];
+  const kept = afterUnsponsored.filter(
+    (job) => (job.minYears === null || job.minYears <= 3) && jobMatchesRoles(job, roles),
+  );
 
   if (kept.length === 0) {
     return { inserted: 0, updated: 0, duplicates: 0, skippedUnsponsored };

@@ -234,4 +234,31 @@ describe("ingestJobs", () => {
       expect(result).toEqual({ inserted: 0, updated: 0, duplicates: 0, skippedUnsponsored: 1 });
     });
   });
+
+  describe("pre-DB hard-drop (minYears > 3 and title-only role/denylist)", () => {
+    it("drops jobs with minYears > 3 before upsertMany", async () => {
+      const jobRepository = makeRepository();
+      const tooSenior = makeJob({ sourceJobId: "1", description: "5+ years of experience required." });
+      const ok = makeJob({ sourceJobId: "2", description: "2+ years of experience required." });
+
+      await ingestJobs([tooSenior, ok], { jobRepository });
+
+      const passed = vi.mocked(jobRepository.upsertMany).mock.calls[0]?.[0];
+      expect(passed).toHaveLength(1);
+      expect(passed?.[0]?.sourceJobId).toBe("2");
+    });
+
+    it("drops denylisted or non-matching titles before upsertMany", async () => {
+      const jobRepository = makeRepository();
+      const senior = makeJob({ sourceJobId: "1", title: "Senior Software Engineer" });
+      const mismatch = makeJob({ sourceJobId: "2", title: "Account Executive", description: "Software Engineer" });
+      const ok = makeJob({ sourceJobId: "3", title: "Software Engineer" });
+
+      await ingestJobs([senior, mismatch, ok], { jobRepository, roles: ["Software Engineer"] });
+
+      const passed = vi.mocked(jobRepository.upsertMany).mock.calls[0]?.[0];
+      expect(passed).toHaveLength(1);
+      expect(passed?.[0]?.sourceJobId).toBe("3");
+    });
+  });
 });

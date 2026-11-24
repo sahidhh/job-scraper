@@ -24,6 +24,36 @@ export const CANDIDATE_CONSTRAINTS = {
   targetRoles: ["backend", "full-stack", "AI-tooling"],
 } as const;
 
+export const TITLE_ALLOWLIST: readonly string[] = [
+  "software engineer",
+  "sde",
+  "full stack",
+  "full-stack",
+  "fullstack",
+  ".net",
+  "c#",
+  "backend",
+  "developer",
+];
+
+export const TITLE_DENYLIST: readonly string[] = [
+  "senior",
+  "sr.",
+  "sr",
+  "staff",
+  "principal",
+  "lead",
+  "manager",
+  "architect",
+  "intern",
+  "qa",
+  "tester",
+  "sales",
+  "support",
+  "devops",
+  "java",
+];
+
 // Eligibility pre-filter (scoreJob.ts, classifyEligibility.ts): the
 // candidate needs visa sponsorship for ANY onsite role and is not
 // region-restricted out of remote roles open to India. Phrases are matched
