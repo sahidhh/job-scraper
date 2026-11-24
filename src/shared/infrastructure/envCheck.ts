@@ -12,12 +12,23 @@ export interface EnvCheckResult {
   detail: string;
 }
 
-export function checkRequiredVar(name: string): EnvCheckResult {
-  const value = process.env[name];
-  if (value === undefined || value.trim().length === 0) {
-    return { status: "fail", label: name, detail: "missing (required)" };
+export function checkRequiredVar(...names: [string, ...string[]]): EnvCheckResult {
+  const primary = names[0];
+  for (const name of names) {
+    const value = process.env[name];
+    if (value !== undefined && value.trim().length > 0) {
+      return {
+        status: "pass",
+        label: primary,
+        detail: name === primary ? "set" : `set via ${name} (legacy)`,
+      };
+    }
   }
-  return { status: "pass", label: name, detail: "set" };
+  const detail =
+    names.length === 1
+      ? "missing (required)"
+      : `missing (required; legacy ${names.slice(1).join("/")} also unset)`;
+  return { status: "fail", label: primary, detail };
 }
 
 export function checkOptionalVar(name: string, fallbackDescription: string): EnvCheckResult {

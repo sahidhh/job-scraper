@@ -14,7 +14,7 @@ GitHub Actions scheduled scraping in `.github/workflows/scrape.yml` is disabled 
    ```
 3. Create `/opt/job-scraper/.env` with the required environment variables:
    - `SUPABASE_URL`
-   - `SUPABASE_SERVICE_ROLE_KEY`
+   - `SUPABASE_SECRET_KEY` (or legacy `SUPABASE_SERVICE_ROLE_KEY`)
    - `TELEGRAM_BOT_TOKEN`
    - `TELEGRAM_CHAT_ID`
    - Any enabled source credentials/cookies (e.g., Naukri / NaukriGulf cookies)

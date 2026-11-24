@@ -6,19 +6,26 @@ export interface OptionalVarSpec {
   fallback: string;
 }
 
+export type RequiredVarSpec = string | readonly [string, ...string[]];
+
 // The concrete variable names (design/tech-stack.md §3) are supplied by the
 // composition root (scripts/verify-production.ts) rather than hardcoded
 // here -- keeps this generic-framework file free of the service-role
 // secret's env var name, which check:service-role-boundary (AD-12)
 // restricts to scripts/** and supabaseClient.ts.
-export function envVarsCheck(requiredVars: readonly string[], optionalVars: readonly OptionalVarSpec[]): Check {
+export function envVarsCheck(
+  requiredVars: readonly RequiredVarSpec[],
+  optionalVars: readonly OptionalVarSpec[],
+): Check {
   return {
     id: "infra.env-vars",
     name: "Environment variables",
     category: "infrastructure",
     severity: "critical",
     async run(): Promise<CheckOutcome> {
-      const required = requiredVars.map(checkRequiredVar);
+      const required = requiredVars.map((spec) =>
+        typeof spec === "string" ? checkRequiredVar(spec) : checkRequiredVar(...spec),
+      );
       const optional = optionalVars.map((v) => checkOptionalVar(v.name, v.fallback));
       const missing = required.filter((r) => r.status === "fail");
       const missingOptional = optional.filter((r) => r.status === "warning");

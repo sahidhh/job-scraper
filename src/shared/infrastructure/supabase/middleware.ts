@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { requireEnv } from "@/shared/infrastructure/env";
+import { requireSupabasePublishableKey } from "@/shared/infrastructure/supabase/env";
 import type { Database } from "../../../../supabase/database.types";
 
 const PUBLIC_PATHS = ["/login", "/auth"];
@@ -12,7 +13,7 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
 
   const supabase = createServerClient<Database>(
     requireEnv("NEXT_PUBLIC_SUPABASE_URL"),
-    requireEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
+    requireSupabasePublishableKey(),
     {
       cookies: {
         getAll() {

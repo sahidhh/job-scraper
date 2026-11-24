@@ -1,4 +1,6 @@
-import { createSupabaseServiceClient } from "@/shared/infrastructure/supabaseClient";
+import { createSupabaseServiceClient, SUPABASE_SECRET_KEY_ENV_VARS } from "@/shared/infrastructure/supabaseClient";
+import { SUPABASE_PUBLISHABLE_KEY_ENV_VARS } from "@/shared/infrastructure/supabase/env";
+import { hasAnyEnv } from "@/shared/infrastructure/env";
 import { checkRequiredVar, checkOptionalVar, type EnvCheckResult } from "@/shared/infrastructure/envCheck";
 import { checkSupabaseConnectivity, checkTelegramToken } from "@/shared/infrastructure/connectivityCheck";
 
@@ -22,7 +24,7 @@ async function main(): Promise<void> {
 
   const cronRequired = [
     checkRequiredVar("SUPABASE_URL"),
-    checkRequiredVar("SUPABASE_SERVICE_ROLE_KEY"),
+    checkRequiredVar(...SUPABASE_SECRET_KEY_ENV_VARS),
     checkRequiredVar("OPENROUTER_API_KEY"),
     checkRequiredVar("OPENROUTER_MODEL"),
     checkRequiredVar("TELEGRAM_BOT_TOKEN"),
@@ -30,7 +32,10 @@ async function main(): Promise<void> {
   ];
   printResults("Cron pipeline (scrape/score/notify) — required", cronRequired);
 
-  const webRequired = [checkRequiredVar("NEXT_PUBLIC_SUPABASE_URL"), checkRequiredVar("NEXT_PUBLIC_SUPABASE_ANON_KEY")];
+  const webRequired = [
+    checkRequiredVar("NEXT_PUBLIC_SUPABASE_URL"),
+    checkRequiredVar(...SUPABASE_PUBLISHABLE_KEY_ENV_VARS),
+  ];
   printResults("Web app — required", webRequired);
 
   const optional = [
@@ -43,7 +48,7 @@ async function main(): Promise<void> {
   printResults("Optional (deliberate defaults exist)", optional);
 
   const connectivity: EnvCheckResult[] = [];
-  if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  if (hasAnyEnv("SUPABASE_URL") && hasAnyEnv(...SUPABASE_SECRET_KEY_ENV_VARS)) {
     connectivity.push(await checkSupabaseConnectivity(createSupabaseServiceClient()));
   } else {
     connectivity.push({ status: "warning", label: "Supabase connectivity", detail: "skipped — required vars missing above" });

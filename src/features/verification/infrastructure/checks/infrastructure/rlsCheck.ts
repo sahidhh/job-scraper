@@ -1,9 +1,10 @@
 import { createSupabaseAnonClient } from "@/shared/infrastructure/supabaseClient";
+import { hasSupabasePublishableKey } from "@/shared/infrastructure/supabase/env";
 import type { Check, CheckOutcome } from "@/features/verification/domain/types";
 
 /**
  * Confirms RLS actually blocks unauthenticated reads (design/security.md
- * §2) by querying `jobs` with a fresh anon-key client that has no session.
+ * §2) by querying `jobs` with a fresh publishable/anon-key client that has no session.
  * A PostgREST error or zero rows is the healthy outcome; any row coming
  * back means RLS is disabled or misconfigured.
  */
@@ -14,11 +15,11 @@ export function rlsCheck(): Check {
     category: "infrastructure",
     severity: "critical",
     async run(): Promise<CheckOutcome> {
-      if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+      if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !hasSupabasePublishableKey()) {
         // Already a critical fail on infra.env-vars -- don't double-count it here.
         return {
           status: "warning",
-          summary: "Skipped — NEXT_PUBLIC_SUPABASE_URL/NEXT_PUBLIC_SUPABASE_ANON_KEY not set",
+          summary: "Skipped — NEXT_PUBLIC_SUPABASE_URL / publishable key not set",
           suggestedFix: "See the \"Environment variables\" check for the underlying cause.",
           affectedSubsystem: "Web app authentication/RLS",
           severityOverride: "low",
@@ -49,7 +50,7 @@ export function rlsCheck(): Check {
           status: "warning",
           summary: `Could not verify RLS: ${err instanceof Error ? err.message : String(err)}`,
           probableCause: "The anon-key client failed to construct or the probe query threw an unexpected network/auth error.",
-          suggestedFix: "Re-run this check; if it persists, verify NEXT_PUBLIC_SUPABASE_URL/NEXT_PUBLIC_SUPABASE_ANON_KEY are valid.",
+          suggestedFix: "Re-run this check; if it persists, verify NEXT_PUBLIC_SUPABASE_URL and the publishable/anon key are valid.",
           affectedSubsystem: "Web app authentication/RLS",
         };
       }

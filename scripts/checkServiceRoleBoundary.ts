@@ -1,12 +1,12 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 
-// security-audit.md #3 / post-merge-audit.md P3 -- SUPABASE_SERVICE_ROLE_KEY
-// and createSupabaseServiceClient() bypass RLS (AD-12) and must stay out of
-// client-reachable code. Run via `npm run check:service-role-boundary`.
+// security-audit.md #3 / post-merge-audit.md P3 -- SUPABASE_SECRET_KEY /
+// SUPABASE_SERVICE_ROLE_KEY and createSupabaseServiceClient() bypass RLS (AD-12)
+// and must stay out of client-reachable code. Run via `npm run check:service-role-boundary`.
 const ROOT = process.cwd();
 const SCAN_DIRS = ["src", "scripts"];
-const PATTERNS = ["SUPABASE_SERVICE_ROLE_KEY", "createSupabaseServiceClient"];
+const PATTERNS = ["SUPABASE_SECRET_KEY", "SUPABASE_SERVICE_ROLE_KEY", "createSupabaseServiceClient"];
 const ALLOWED_FILES = new Set([
   "src/shared/infrastructure/supabaseClient.ts",
   // Telegram webhook is server-only (Next.js Route Handler, never runs client-side).
@@ -53,7 +53,7 @@ if (violations.length > 0) {
   console.error("[check-service-role-boundary] violation(s) found:");
   for (const violation of violations) console.error(`  - ${violation}`);
   console.error(
-    '\n"SUPABASE_SERVICE_ROLE_KEY" and "createSupabaseServiceClient" may only appear under scripts/** or src/shared/infrastructure/supabaseClient.ts.',
+    '\n"SUPABASE_SECRET_KEY", "SUPABASE_SERVICE_ROLE_KEY", and "createSupabaseServiceClient" may only appear under scripts/** or src/shared/infrastructure/supabaseClient.ts.',
   );
   process.exit(1);
 }

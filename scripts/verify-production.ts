@@ -8,7 +8,7 @@ import { formatMarkdownReport } from "@/features/verification/application/format
 import { formatJsonReport } from "@/features/verification/application/formatJsonReport";
 import type { Check } from "@/features/verification/domain/types";
 
-import { envVarsCheck } from "@/features/verification/infrastructure/checks/infrastructure/envVarsCheck";
+import { envVarsCheck, type RequiredVarSpec } from "@/features/verification/infrastructure/checks/infrastructure/envVarsCheck";
 import { supabaseConnectivityCheck } from "@/features/verification/infrastructure/checks/infrastructure/supabaseConnectivityCheck";
 import { migrationsCheck } from "@/features/verification/infrastructure/checks/infrastructure/migrationsCheck";
 import { rlsCheck } from "@/features/verification/infrastructure/checks/infrastructure/rlsCheck";
@@ -37,7 +37,8 @@ import { inconsistentAiScoresCheck } from "@/features/verification/infrastructur
 import { staleJobsCheck } from "@/features/verification/infrastructure/checks/dataQuality/staleJobsCheck";
 import { queueIntegrityCheck } from "@/features/verification/infrastructure/checks/dataQuality/queueIntegrityCheck";
 
-import { createSupabaseServiceClient, type TypedSupabaseClient } from "@/shared/infrastructure/supabaseClient";
+import { createSupabaseServiceClient, SUPABASE_SECRET_KEY_ENV_VARS, type TypedSupabaseClient } from "@/shared/infrastructure/supabaseClient";
+import { SUPABASE_PUBLISHABLE_KEY_ENV_VARS } from "@/shared/infrastructure/supabase/env";
 import { optionalEnv } from "@/shared/infrastructure/env";
 import { SupabaseScrapeRunRepository } from "@/features/sources/infrastructure/SupabaseScrapeRunRepository";
 import { SupabaseScoreRepository } from "@/features/scoring/infrastructure/SupabaseScoreRepository";
@@ -111,15 +112,15 @@ function buildQueueFetcher(client: TypedSupabaseClient | null): () => Promise<Sc
 // Kept in scripts/ (allowlisted by check:service-role-boundary, AD-12)
 // rather than inside src/features/verification, which must stay free of
 // the literal secret-name strings.
-const REQUIRED_ENV_VARS = [
+const REQUIRED_ENV_VARS: readonly RequiredVarSpec[] = [
   "SUPABASE_URL",
-  "SUPABASE_SERVICE_ROLE_KEY",
+  SUPABASE_SECRET_KEY_ENV_VARS,
   "OPENROUTER_API_KEY",
   "OPENROUTER_MODEL",
   "TELEGRAM_BOT_TOKEN",
   "TELEGRAM_CHAT_ID",
   "NEXT_PUBLIC_SUPABASE_URL",
-  "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+  SUPABASE_PUBLISHABLE_KEY_ENV_VARS,
 ];
 
 const OPTIONAL_ENV_VARS = [
@@ -130,7 +131,7 @@ const OPTIONAL_ENV_VARS = [
   { name: "WELLFOUND_FEED_URL", fallback: "Wellfound adapter auto-disables" },
 ];
 
-const REQUIRED_SCRAPE_WORKFLOW_SECRETS = ["SUPABASE_SERVICE_ROLE_KEY", "OPENROUTER_API_KEY", "TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID"];
+const REQUIRED_SCRAPE_WORKFLOW_SECRETS = ["SUPABASE_SECRET_KEY", "OPENROUTER_API_KEY", "TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID"];
 
 function buildChecks(client: TypedSupabaseClient | null): Check[] {
   const checks: Check[] = [

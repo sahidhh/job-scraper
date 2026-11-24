@@ -1,6 +1,8 @@
 import { execFileSync } from "node:child_process";
 import { mkdirSync, rmSync } from "node:fs";
 import { setTimeout as delay } from "node:timers/promises";
+import { hasAnyEnv } from "@/shared/infrastructure/env";
+import { SUPABASE_SECRET_KEY_ENV_VARS } from "@/shared/infrastructure/supabaseClient";
 import { parseExportArgs, runExportTopMatches } from "./export-top-matches";
 
 // Reusable one-command match fetcher (local SUPABASE_URL + service key if
@@ -148,7 +150,7 @@ async function main(): Promise<void> {
   const exportOptions = parseExportArgs(exportArgs);
 
   const hasLocalServiceCreds =
-    Boolean(process.env.SUPABASE_URL?.trim()) && Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY?.trim());
+    hasAnyEnv("SUPABASE_URL") && hasAnyEnv(...SUPABASE_SECRET_KEY_ENV_VARS);
 
   if (hasLocalServiceCreds) {
     console.log("[fetch-matches] Local Supabase credentials detected; running export directly...");

@@ -50,7 +50,7 @@ jobs:
       - run: npm run ${{ inputs.script }}
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY || secrets.SUPABASE_SERVICE_ROLE_KEY }}
           # report:matches ranks by overall_score and needs the same gate
           # value score.ts uses so its stats line isn't misleading; the
           # backfills ignore it. Harmless to pass to all of them.
