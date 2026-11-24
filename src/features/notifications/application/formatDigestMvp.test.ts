@@ -12,6 +12,8 @@ function makeMatch(overrides: Partial<JobMatch> = {}): JobMatch {
     source: "greenhouse",
     url: "https://boards.greenhouse.io/stripe/jobs/1",
     aiScore: 0.92,
+    overallScore: null,
+    postedAt: null,
     aiReasoning: "Strong match.",
     description: "Build systems at scale.",
     minYears: 3,

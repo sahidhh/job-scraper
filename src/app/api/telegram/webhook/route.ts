@@ -86,7 +86,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   if (cq?.data?.startsWith("st:")) {
     const match = STATUS_CALLBACK_RE.exec(cq.data);
-    if (!match) {
+    const rawAction = match?.[1];
+    const jobId = match?.[2];
+    if (!rawAction || !jobId) {
       try {
         await answerCallbackQuery(cq.id, "Invalid action");
       } catch (err) {
@@ -95,8 +97,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       return new NextResponse("OK", { status: 200 });
     }
 
-    const action = match[1].toLowerCase() as "applied" | "skipped" | "closed";
-    const jobId = match[2];
+    const action = rawAction.toLowerCase() as "applied" | "skipped" | "closed";
 
     try {
       await answerCallbackQuery(cq.id, "Updating...");
@@ -116,7 +117,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         const { data: statusRow, error: statusErr } = await client
           .from("job_statuses")
           .select("id")
-          .eq("name", targetLabel)
+          .eq("label", targetLabel)
           .single();
 
         if (statusErr || !statusRow) {

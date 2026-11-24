@@ -14,6 +14,8 @@ function makeMatch(overrides: Partial<JobMatch> = {}): JobMatch {
     source: "greenhouse",
     url: "https://example.com/jobs/123",
     aiScore: 0.87,
+    overallScore: null,
+    postedAt: null,
     aiReasoning: "Strong match on React and Node.js experience.",
     description: "We are looking for a Senior React Developer.",
     minYears: 3,

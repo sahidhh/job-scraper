@@ -14,7 +14,7 @@ import { TelegramBotSender } from "@/features/notifications/infrastructure/Teleg
 import { classifyScrapeFailure } from "@/features/sources/domain/classifyScrapeFailure";
 import { SourceAuthExpiredError, SourceBlockedError } from "@/features/sources/domain/errors";
 import type { ScrapeRunRepository } from "@/features/sources/domain/ScrapeRunRepository";
-import type { SourceScraper } from "@/features/sources/domain/SourceScraper";
+import type { JobSourceScraper } from "@/features/sources/domain/JobSourceScraper";
 import { sourceScrapers } from "@/features/sources/infrastructure/registry";
 import { SupabaseScrapeRunRepository } from "@/features/sources/infrastructure/SupabaseScrapeRunRepository";
 import type { SettingsRepository } from "@/features/settings/domain/SettingsRepository";
@@ -25,7 +25,7 @@ import { optionalEnv } from "@/shared/infrastructure/env";
 const DEFAULT_EXPIRATION_DAYS = 7;
 
 export interface ScrapePipelineDeps {
-  scrapers: SourceScraper[];
+  scrapers: readonly JobSourceScraper[];
   companyRepository: Pick<CompanyRepository, "listActiveHealthy">;
   jobRepository: JobRepository;
   roleRepository: Pick<RoleRepository, "getActiveSelection">;

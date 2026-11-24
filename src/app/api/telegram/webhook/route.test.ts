@@ -91,7 +91,7 @@ describe("POST /api/telegram/webhook", () => {
 
     expect(res.status).toBe(200);
     expect(mockAnswerCallbackQuery).toHaveBeenCalledWith("cq-app", "Updating...");
-    expect(eqStatusMock).toHaveBeenCalledWith("name", "Applied");
+    expect(eqStatusMock).toHaveBeenCalledWith("label", "Applied");
     expect(upsertMock).toHaveBeenCalledWith(
       expect.objectContaining({ job_id: JOB_ID, status_id: "status-applied-id" }),
       { onConflict: "job_id" },
@@ -122,7 +122,7 @@ describe("POST /api/telegram/webhook", () => {
     );
 
     expect(res.status).toBe(200);
-    expect(eqStatusMock).toHaveBeenCalledWith("name", "Not Interested");
+    expect(eqStatusMock).toHaveBeenCalledWith("label", "Not Interested");
     expect(upsertMock).toHaveBeenCalledWith(
       expect.objectContaining({ job_id: JOB_ID, status_id: "status-not-interested-id" }),
       { onConflict: "job_id" },

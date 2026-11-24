@@ -11,6 +11,8 @@ function makeMatch(overrides: Partial<JobMatch> = {}): JobMatch {
     source: "greenhouse",
     url: "https://example.com/jobs/1",
     aiScore: 0.90,
+    overallScore: null,
+    postedAt: null,
     aiReasoning: null,
     description: "",
     minYears: null,

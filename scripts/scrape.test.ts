@@ -1,20 +1,20 @@
 import { describe, expect, it, vi } from "vitest";
 import type { JobRepository } from "@/features/jobs/domain/JobRepository";
 import { SourceAuthExpiredError, SourceBlockedError } from "@/features/sources/domain/errors";
-import type { SourceScraper } from "@/features/sources/domain/SourceScraper";
-import type { RawJob } from "@/shared/domain/types";
+import type { JobSourceScraper } from "@/features/sources/domain/JobSourceScraper";
+import type { RawJob } from "@/features/sources/domain/types";
 import { runScrapePipeline, type ScrapePipelineDeps } from "./scrape";
 
 function makeRawJob(overrides: Partial<RawJob> = {}): RawJob {
   return {
     source: "naukri",
-    sourceId: "job-1",
-    title: "Senior Product Manager",
+    sourceJobId: "job-1",
+    companyId: null,
+    title: "Backend Engineer",
     companyName: "Acme Corp",
     locationRaw: "Bengaluru, India",
-    remoteFlag: false,
     description: "Build great products.",
-    applyUrl: "https://example.com/jobs/1",
+    url: "https://example.com/jobs/1",
     postedAt: new Date("2026-11-24T00:00:00Z").toISOString(),
     ...overrides,
   };
@@ -22,7 +22,7 @@ function makeRawJob(overrides: Partial<RawJob> = {}): RawJob {
 
 function makeDeps(overrides: Partial<ScrapePipelineDeps> = {}): ScrapePipelineDeps {
   const jobRepository = {
-    upsertJobs: vi.fn().mockResolvedValue({ inserted: 1, updated: 0, duplicates: 0 }),
+    upsertMany: vi.fn().mockResolvedValue({ inserted: 1, updated: 0, duplicates: 0 }),
     markExpiredJobs: vi.fn().mockResolvedValue(0),
   } as unknown as JobRepository;
 
@@ -35,9 +35,10 @@ function makeDeps(overrides: Partial<ScrapePipelineDeps> = {}): ScrapePipelineDe
     roleRepository: {
       getActiveSelection: vi.fn().mockResolvedValue({
         id: "sel-1",
-        selectedRole: "Product Manager",
-        expandedRoles: ["Product Manager", "Senior Product Manager"],
+        primaryRole: "Backend Engineer",
+        expandedRoles: ["Backend Engineer", "Software Engineer"],
         createdAt: new Date().toISOString(),
+        isActive: true,
       }),
     },
     scrapeRunRepository: {
@@ -56,12 +57,12 @@ function makeDeps(overrides: Partial<ScrapePipelineDeps> = {}): ScrapePipelineDe
 
 describe("runScrapePipeline", () => {
   it("skips disabled sources and never calls fetchJobs on them", async () => {
-    const naukriScraper: SourceScraper = {
+    const naukriScraper: JobSourceScraper = {
       source: "naukri",
       requiresCompanyConfig: false,
       fetchJobs: vi.fn().mockResolvedValue([makeRawJob({ source: "naukri" })]),
     };
-    const remotiveScraper: SourceScraper = {
+    const remotiveScraper: JobSourceScraper = {
       source: "remotive",
       requiresCompanyConfig: false,
       fetchJobs: vi.fn().mockResolvedValue([makeRawJob({ source: "remotive" })]),
@@ -84,12 +85,12 @@ describe("runScrapePipeline", () => {
   });
 
   it("sends an operational Telegram alert on SourceAuthExpiredError and SourceBlockedError and continues", async () => {
-    const naukriScraper: SourceScraper = {
+    const naukriScraper: JobSourceScraper = {
       source: "naukri",
       requiresCompanyConfig: false,
       fetchJobs: vi.fn().mockRejectedValue(new SourceAuthExpiredError("naukri", 401, "cookie expired")),
     };
-    const naukrigulfScraper: SourceScraper = {
+    const naukrigulfScraper: JobSourceScraper = {
       source: "naukrigulf",
       requiresCompanyConfig: false,
       fetchJobs: vi.fn().mockRejectedValue(new SourceBlockedError("naukrigulf", 403, "cloudflare")),
@@ -107,7 +108,7 @@ describe("runScrapePipeline", () => {
       expect.objectContaining({
         source: "naukri",
         status: "failed",
-        failureCategory: "auth",
+        failureCategory: "authentication",
       }),
     );
     expect(deps.scrapeRunRepository.recordRun).toHaveBeenNthCalledWith(
@@ -131,7 +132,7 @@ describe("runScrapePipeline", () => {
   });
 
   it("records empty_feed and sends an operational Telegram alert when 0 jobs are returned", async () => {
-    const naukriScraper: SourceScraper = {
+    const naukriScraper: JobSourceScraper = {
       source: "naukri",
       requiresCompanyConfig: false,
       fetchJobs: vi.fn().mockResolvedValue([]),
@@ -162,12 +163,12 @@ describe("runScrapePipeline", () => {
 
   it("logs and continues when Telegram alert sending fails", async () => {
     const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    const naukriScraper: SourceScraper = {
+    const naukriScraper: JobSourceScraper = {
       source: "naukri",
       requiresCompanyConfig: false,
       fetchJobs: vi.fn().mockRejectedValue(new SourceAuthExpiredError("naukri", 401, "expired")),
     };
-    const naukrigulfScraper: SourceScraper = {
+    const naukrigulfScraper: JobSourceScraper = {
       source: "naukrigulf",
       requiresCompanyConfig: false,
       fetchJobs: vi.fn().mockResolvedValue([makeRawJob({ source: "naukrigulf" })]),

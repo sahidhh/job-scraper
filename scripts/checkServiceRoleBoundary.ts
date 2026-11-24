@@ -13,6 +13,7 @@ const ALLOWED_FILES = new Set([
   // Access is gated by X-Telegram-Bot-Api-Secret-Token header validation before any
   // DB call — service role is needed to read jobs/scores across RLS boundaries.
   "src/app/api/telegram/webhook/route.ts",
+  "src/app/api/telegram/webhook/route.test.ts",
 ]);
 const ALLOWED_PREFIX = "scripts/";
 const EXTENSIONS = new Set([".ts", ".tsx"]);

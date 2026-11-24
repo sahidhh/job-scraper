@@ -1,3 +1,4 @@
+import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { SupabaseRoleRepository } from "@/features/roles/infrastructure/SupabaseRoleRepository";
 import { jobMatchesRoles } from "@/features/sources/domain/roleMatch";
@@ -165,7 +166,7 @@ async function main(): Promise<void> {
 
   const supabase = createSupabaseServiceClient();
   const roleRepo = new SupabaseRoleRepository(supabase);
-  const activeRole = await roleRepo.getActive();
+  const activeRole = await roleRepo.getActiveSelection();
   const roles = activeRole?.expandedRoles ?? [];
 
   const [jobStateIds, applicationIds, notificationIds, jobs] = await Promise.all([
@@ -221,8 +222,10 @@ async function main(): Promise<void> {
 
 const isEntrypoint =
   typeof process !== "undefined" &&
-  Boolean(process.argv[1]) &&
-  import.meta.url === pathToFileURL(process.argv[1]).href;
+  Array.isArray(process.argv) &&
+  process.argv[1] !== undefined &&
+  process.argv[1].length > 0 &&
+  import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href;
 
 if (isEntrypoint) {
   main().catch((err) => {

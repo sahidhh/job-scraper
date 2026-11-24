@@ -1,4 +1,3 @@
-import type { Company } from "@/features/companies/domain/types";
 import { SourceBlockedError } from "@/features/sources/domain/errors";
 import type { JobSourceScraper } from "@/features/sources/domain/JobSourceScraper";
 import type { RawJob } from "@/features/sources/domain/types";
@@ -9,7 +8,7 @@ export const naukriGulfScraper: JobSourceScraper = {
   source: "naukrigulf",
   requiresCompanyConfig: false,
 
-  async fetchJobs(_companies: Company[], _roles: readonly string[]): Promise<RawJob[]> {
+  async fetchJobs(): Promise<RawJob[]> {
     throw new SourceBlockedError(
       "naukrigulf",
       undefined,

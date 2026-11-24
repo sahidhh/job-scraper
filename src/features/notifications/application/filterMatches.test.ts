@@ -11,6 +11,8 @@ function makeMatch(overrides: Partial<JobMatch> = {}): JobMatch {
     source: "greenhouse",
     url: "https://example.com/jobs/1",
     aiScore: 0.88,
+    overallScore: null,
+    postedAt: null,
     aiReasoning: "Strong ASP.NET background.",
     description: "We are looking for a Backend Engineer with ASP.NET and C# experience.",
     minYears: 3,
