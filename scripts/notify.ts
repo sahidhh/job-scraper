@@ -1,5 +1,6 @@
 import { notifyPendingDrafts } from "@/features/applications/application/notifyPendingDrafts";
 import { SupabaseApplicationRepository } from "@/features/applications/infrastructure/SupabaseApplicationRepository";
+import { sendDailyCards } from "@/features/notifications/application/sendDailyCards";
 import { sendDigest } from "@/features/notifications/application/sendDigest";
 import { sendDigestMvp } from "@/features/notifications/application/sendDigestMvp";
 import { sendNotification } from "@/features/notifications/application/sendNotification";
@@ -39,8 +40,9 @@ async function main(): Promise<void> {
   }
 
   const notifyThreshold = Number(optionalEnv("NOTIFY_THRESHOLD", "0.75"));
-  const rawMode = optionalEnv("NOTIFY_MODE", "individual");
-  const notifyMode: NotifyMode = rawMode === "digest" ? "digest" : "individual";
+  const rawMode = optionalEnv("NOTIFY_MODE", "cards");
+  const notifyMode: NotifyMode =
+    rawMode === "digest" ? "digest" : rawMode === "individual" ? "individual" : "cards";
   const preferences = await preferencesRepository.getPreferences();
 
   if (preferences) {
@@ -66,6 +68,9 @@ async function main(): Promise<void> {
   } else if (rawMode === "digest_legacy") {
     const count = await sendDigest(roleSelection.id, deps);
     console.log(`[notify] legacy digest sent for ${count} job(s) (role selection ${roleSelection.id})`);
+  } else if (notifyMode === "cards") {
+    const sent = await sendDailyCards(roleSelection.id, deps);
+    console.log(`[notify] sent ${sent} card(s) for role selection ${roleSelection.id}`);
   } else {
     const sent = await sendNotification(roleSelection.id, deps);
     console.log(`[notify] sent ${sent} notification(s) for role selection ${roleSelection.id}`);

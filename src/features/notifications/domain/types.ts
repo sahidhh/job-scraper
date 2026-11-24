@@ -2,9 +2,9 @@ import type { EmploymentType } from "@/features/jobs/domain/extractJobAttributes
 import type { SalaryPeriod } from "@/features/jobs/domain/extractSalary";
 import type { JobSource, LocationTag } from "@/shared/domain/enums";
 
-// Controls whether the cron sends one message per job (individual) or a
+// Controls whether the cron sends 8-card HTML messages (cards), one message per job (individual), or a
 // single grouped digest (digest). Mirrors the NOTIFY_MODE env var.
-export type NotifyMode = "individual" | "digest";
+export type NotifyMode = "cards" | "individual" | "digest";
 
 // Score thresholds for the MVP digest banding.
 // Strong Match: aiScore >= STRONG_MATCH_THRESHOLD
@@ -42,6 +42,8 @@ export interface JobMatch {
   source: JobSource;
   url: string;
   aiScore: number; // [0,1], guaranteed non-null by the query (scoring.md §4)
+  overallScore: number | null;
+  postedAt: string | null;
   aiReasoning: string | null;
   description: string;     // used for skill-based filtering
   minYears: number | null; // used for experience-based filtering

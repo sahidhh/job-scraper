@@ -1,3 +1,4 @@
+import { computeFreshnessBoost } from "@/features/scoring/application/computeOverallScore";
 import type { JobSource, LocationTag } from "@/shared/domain/enums";
 import type { NotificationRepository } from "@/features/notifications/domain/NotificationRepository";
 import type { JobMatch, NotificationLogItem } from "@/features/notifications/domain/types";
@@ -23,7 +24,8 @@ interface UnnotifiedMatchRow {
   salary_min: number | null;
   salary_max: number | null;
   salary_period: string | null;
-  job_scores: { ai_score: number | null; ai_reasoning: string | null }[];
+  posted_at: string | null;
+  job_scores: { ai_score: number | null; overall_score: number | null; ai_reasoning: string | null }[];
   notifications_log: { id: string }[] | null;
 }
 
@@ -40,12 +42,18 @@ interface NotificationLogRow {
 export class SupabaseNotificationRepository implements NotificationRepository {
   constructor(private readonly client: TypedSupabaseClient) {}
 
-  async findUnnotifiedMatches(roleSelectionId: string, threshold: number, resumeVersion: number): Promise<JobMatch[]> {
+  async findUnnotifiedMatches(
+    roleSelectionId: string,
+    threshold: number,
+    resumeVersion: number,
+    now: Date = new Date(),
+  ): Promise<JobMatch[]> {
     const { data, error } = await this.client
       .from("jobs")
       .select(
-        "id, title, company_name, location_tags, source, url, description, min_years, employment_type, urgent_hiring, salary_currency, salary_min, salary_max, salary_period, job_scores!inner(ai_score, ai_reasoning), notifications_log(id)",
+        "id, title, company_name, location_tags, source, url, description, min_years, employment_type, urgent_hiring, salary_currency, salary_min, salary_max, salary_period, posted_at, job_scores!inner(ai_score, overall_score, ai_reasoning), notifications_log(id)",
       )
+      .eq("is_active", true)
       .eq("job_scores.role_selection_id", roleSelectionId)
       .eq("job_scores.resume_version", resumeVersion)
       .gte("job_scores.ai_score", threshold)
@@ -66,6 +74,8 @@ export class SupabaseNotificationRepository implements NotificationRepository {
           source: row.source,
           url: row.url,
           aiScore: score.ai_score!, // non-null: filtered by the gte("job_scores.ai_score", threshold) clause
+          overallScore: score.overall_score ?? null,
+          postedAt: row.posted_at ?? null,
           aiReasoning: score.ai_reasoning,
           description: row.description,
           minYears: row.min_years,
@@ -76,6 +86,11 @@ export class SupabaseNotificationRepository implements NotificationRepository {
           salaryMax: row.salary_max,
           salaryPeriod: row.salary_period as JobMatch["salaryPeriod"],
         };
+      })
+      .sort((a, b) => {
+        const scoreA = (a.overallScore ?? a.aiScore) + computeFreshnessBoost(a.postedAt, now);
+        const scoreB = (b.overallScore ?? b.aiScore) + computeFreshnessBoost(b.postedAt, now);
+        return scoreB - scoreA;
       });
   }
 

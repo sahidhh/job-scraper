@@ -11,8 +11,28 @@ const DEFAULT_COMPANY_BONUS = 0.05;
 const DEFAULT_REMOTE_BONUS = 0.03;
 const DEFAULT_SALARY_BONUS = 0.02;
 const DEFAULT_SPONSORSHIP_BONUS = 0.04;
+export const FRESHNESS_BOOST = 0.06;
+const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
 
-type RankableJob = Pick<Job, "canonicalCompanyName" | "locationTags" | "salaryMin" | "salaryMax" | "visaSponsorship">;
+type RankableJob = Pick<
+  Job,
+  "canonicalCompanyName" | "locationTags" | "salaryMin" | "salaryMax" | "visaSponsorship"
+> & {
+  postedAt?: string | Date | null;
+};
+
+/**
+ * Dynamic `< 24h` freshness boost for notification ranking. Kept separate
+ * from persisted `job_scores.overall_score` so old jobs do not stay
+ * permanently boosted on `/dashboard`.
+ */
+export function computeFreshnessBoost(postedAt: string | Date | null | undefined, now: Date = new Date()): number {
+  if (!postedAt) return 0;
+  const postedMs = postedAt instanceof Date ? postedAt.getTime() : Date.parse(postedAt);
+  if (Number.isNaN(postedMs)) return 0;
+  const ageMs = now.getTime() - postedMs;
+  return ageMs < TWENTY_FOUR_HOURS_MS ? FRESHNESS_BOOST : 0;
+}
 
 /**
  * Deterministic composite ranking score for a single personal user's
@@ -32,6 +52,7 @@ export function computeOverallScore(
   job: RankableJob,
   aiScore: number,
   preferences: RankingPreferences,
+  now: Date = new Date(),
 ): OverallScoreResult {
   let score = aiScore;
   const reasons: string[] = [];
@@ -59,6 +80,12 @@ export function computeOverallScore(
   if (job.salaryMin !== null || job.salaryMax !== null) {
     score += preferences.salaryBonus ?? DEFAULT_SALARY_BONUS;
     reasons.push("salary disclosed");
+  }
+
+  const freshnessBoost = computeFreshnessBoost(job.postedAt, now);
+  if (freshnessBoost > 0) {
+    score += freshnessBoost;
+    reasons.push("posted within 24h");
   }
 
   return { overallScore: Math.min(1, score), reasons };

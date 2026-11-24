@@ -94,4 +94,22 @@ describe("computeOverallScore", () => {
     const result = computeOverallScore(makeJob(), 0.7, { preferredCompanies: ["", "   "] });
     expect(result.reasons).toEqual([]);
   });
+
+  it("applies the < 24h freshness boost when postedAt is within 24 hours of now", () => {
+    const now = new Date("2026-04-17T12:00:00Z");
+    const fresh = new Date("2026-04-17T00:00:00Z").toISOString();
+    const stale = new Date("2026-04-16T11:59:59Z").toISOString();
+
+    const freshResult = computeOverallScore(makeJob({ postedAt: fresh }), 0.7, {}, now);
+    expect(freshResult.overallScore).toBeCloseTo(0.76, 5);
+    expect(freshResult.reasons).toEqual(["posted within 24h"]);
+
+    const staleResult = computeOverallScore(makeJob({ postedAt: stale }), 0.7, {}, now);
+    expect(staleResult.overallScore).toBe(0.7);
+    expect(staleResult.reasons).toEqual([]);
+
+    const nullResult = computeOverallScore(makeJob({ postedAt: null }), 0.7, {}, now);
+    expect(nullResult.overallScore).toBe(0.7);
+    expect(nullResult.reasons).toEqual([]);
+  });
 });
