@@ -89,8 +89,8 @@ function parseFilters(params: DashboardSearchParams): JobFilters {
   if (params.weak === "1") {
     filters.includeWeakMatch = true;
   }
-  if (params.origin === "claude_routine") {
-    filters.origin = "claude_routine";
+  if (params.origin === "routine_agent") {
+    filters.origin = "routine_agent";
   }
 
   return filters;

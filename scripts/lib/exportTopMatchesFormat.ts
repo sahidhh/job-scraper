@@ -8,7 +8,7 @@ export type { ResumeVariant };
 
 export type ScoreBand = "strong" | "moderate" | "shrug" | "unscored";
 export type OutreachPath = "direct_email" | "career_page" | "ats_board";
-export type MatchOrigin = "scraper" | "claude_routine";
+export type MatchOrigin = "scraper" | "routine_agent";
 
 export interface ExistingDraftSummary {
   kind: string;
@@ -175,7 +175,7 @@ const RESUME_HOOK_RULES: readonly ResumeHookRule[] = [
 ];
 
 export function computeEffectiveScore(candidate: Pick<RawCandidateScores, "origin" | "overallScore" | "aiScore" | "manualScore">): number | null {
-  if (candidate.origin === "claude_routine") {
+  if (candidate.origin === "routine_agent") {
     return candidate.manualScore === null ? null : candidate.manualScore / 100;
   }
   return candidate.overallScore ?? candidate.aiScore ?? null;
@@ -699,7 +699,7 @@ export function toMarkdownSummary(payload: ExportPayload): string {
   const shrugCount = payload.matches.filter((m) => m.scoreBand === "shrug").length;
   const directEmailCount = payload.matches.filter((m) => m.outreachPath === "direct_email").length;
   const careerPageCount = payload.matches.filter((m) => m.outreachPath === "career_page").length;
-  const manualCount = payload.matches.filter((m) => m.origin === "claude_routine").length;
+  const manualCount = payload.matches.filter((m) => m.origin === "routine_agent").length;
 
   const livenessLines = payload.liveness
     ? [
@@ -716,7 +716,7 @@ export function toMarkdownSummary(payload: ExportPayload): string {
     ...livenessLines,
     `- Candidates evaluated: ${payload.totalCandidatesEvaluated}`,
     `- Breakdown: ${strongCount} strong (>=75%), ${moderateCount} moderate (>40%), ${shrugCount} shrug/low (<=40%)`,
-    `- Origins: ${payload.exportedCount - manualCount} automated scraper, ${manualCount} claude_routine`,
+    `- Origins: ${payload.exportedCount - manualCount} automated scraper, ${manualCount} routine_agent`,
     `- Outreach paths: ${directEmailCount} direct email, ${careerPageCount} career page, ${payload.exportedCount - directEmailCount - careerPageCount} ATS/apply URL only`,
     "",
     "| # | Fit | Variant | DB Score | Company | Role | Location | Outreach | Email / Target | Matched Skills |",

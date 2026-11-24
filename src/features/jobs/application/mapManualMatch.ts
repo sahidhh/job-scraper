@@ -27,7 +27,7 @@ export function mapManualMatch(entry: ManualMatchEntry): NormalizedJob {
   }
 
   const rawJob: RawJob = {
-    source: "claude_routine",
+    source: "routine_agent",
     sourceJobId: entry.id,
     companyId: null,
     companyName: entry.company,

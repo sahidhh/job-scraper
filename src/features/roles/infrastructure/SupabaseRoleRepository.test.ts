@@ -92,4 +92,49 @@ describe("SupabaseRoleRepository", () => {
       "set_active_role_selection returned no row",
     );
   });
+
+  it("setActiveSelection normalizes primaryRole and expandedRoles before calling RPC", async () => {
+    const { client } = mockSupabaseClient({ data: [selectionRow], error: null });
+    const repo = new SupabaseRoleRepository(client);
+
+    await repo.setActiveSelection("  Software Engineer  ", ["  Backend Engineer ", "", "Platform Engineer  "]);
+
+    expect(vi.mocked(client.rpc)).toHaveBeenCalledWith("set_active_role_selection", {
+      p_primary_role: "Software Engineer",
+      p_expanded_roles: ["Backend Engineer", "Platform Engineer"],
+    });
+  });
+
+  it("setActiveSelection reuses Pack A's id when switching Pack A -> Pack B -> Pack A", async () => {
+    const packARow: RoleSelectionRow = {
+      id: "pack-a-uuid",
+      primary_role: "Pack A",
+      expanded_roles: ["Role A1", "Role A2"],
+      created_at: "2026-01-01T00:00:00Z",
+      is_active: true,
+    };
+    const packBRow: RoleSelectionRow = {
+      id: "pack-b-uuid",
+      primary_role: "Pack B",
+      expanded_roles: ["Role B1"],
+      created_at: "2026-01-02T00:00:00Z",
+      is_active: true,
+    };
+
+    const { client } = mockSupabaseClient({ data: [packARow], error: null });
+    vi.mocked(client.rpc)
+      .mockResolvedValueOnce({ data: [packARow], error: null } as never)
+      .mockResolvedValueOnce({ data: [packBRow], error: null } as never)
+      .mockResolvedValueOnce({ data: [packARow], error: null } as never);
+
+    const repo = new SupabaseRoleRepository(client);
+
+    const firstA = await repo.setActiveSelection("Pack A", ["Role A1", "Role A2"]);
+    const secondB = await repo.setActiveSelection("Pack B", ["Role B1"]);
+    const backToA = await repo.setActiveSelection("Pack A", ["Role A1", "Role A2"]);
+
+    expect(firstA.id).toBe("pack-a-uuid");
+    expect(secondB.id).toBe("pack-b-uuid");
+    expect(backToA.id).toBe("pack-a-uuid");
+  });
 });

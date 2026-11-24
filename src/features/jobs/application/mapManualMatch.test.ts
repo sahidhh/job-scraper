@@ -20,7 +20,7 @@ describe("mapManualMatch", () => {
     const result = mapManualMatch(entry);
 
     expect(result).toEqual({
-      source: "claude_routine",
+      source: "routine_agent",
       sourceJobId: "job-1",
       companyId: null,
       companyName: "Acme",

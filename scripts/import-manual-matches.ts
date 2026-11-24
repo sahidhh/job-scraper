@@ -7,7 +7,7 @@ import { createSupabaseServiceClient } from "@/shared/infrastructure/supabaseCli
 // job-matches.md), not part of the scrape/score/notify cron -- same
 // category as scripts/discover-career-pages.ts. Reads a state.json-shaped
 // file (job-match-tracker's own format) and upserts its jobs[] as
-// source='claude_routine' rows. Safe to re-run -- upserts on
+// source='routine_agent' rows. Safe to re-run -- upserts on
 // (source, sourceJobId), same as every other source.
 async function main(): Promise<void> {
   const filePath = process.argv[2];

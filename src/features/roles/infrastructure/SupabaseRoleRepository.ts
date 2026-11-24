@@ -49,12 +49,15 @@ export class SupabaseRoleRepository implements RoleRepository {
     return data ? toRoleSelection(data) : null;
   }
 
-  // Atomic deactivate-previous + insert-new via set_active_role_selection RPC
+  // Atomic deactivate-previous + reactivate-or-insert via set_active_role_selection RPC
   // (decisions.md AD-09).
   async setActiveSelection(primaryRole: string, expandedRoles: string[]): Promise<RoleSelection> {
+    const normalizedPrimary = primaryRole.trim();
+    const normalizedExpanded = expandedRoles.map((r) => r.trim()).filter((r) => r.length > 0);
+
     const { data, error } = await this.client.rpc("set_active_role_selection", {
-      p_primary_role: primaryRole,
-      p_expanded_roles: expandedRoles,
+      p_primary_role: normalizedPrimary,
+      p_expanded_roles: normalizedExpanded,
     });
 
     if (error) throw toAppError(error);

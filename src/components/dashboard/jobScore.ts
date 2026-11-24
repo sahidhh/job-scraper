@@ -27,7 +27,7 @@ export function scoreBadgeVariant(aiScore: number): BadgeVariant {
 }
 
 /**
- * claude_routine jobs carry their own 0-100 `manual_score` and never get a
+ * routine_agent jobs carry their own 0-100 `manual_score` and never get a
  * job_scores row (by design -- AD-67), so they must never render through the
  * AI "Pending" path. `manualScore` is the truth for these rows; reuse the
  * same band thresholds by normalizing to the 0-1 scale `scoreBadgeVariant`

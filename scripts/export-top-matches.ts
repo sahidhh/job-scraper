@@ -84,8 +84,8 @@ export function parseExportArgs(argv: readonly string[]): ExportTopMatchesOption
       skipProbe = true;
     } else if (token === "--origin") {
       const val = (rest.shift() ?? "").toLowerCase();
-      if (val !== "all" && val !== "scraper" && val !== "claude_routine") {
-        throw new Error("--origin must be one of: all, scraper, claude_routine");
+      if (val !== "all" && val !== "scraper" && val !== "routine_agent") {
+        throw new Error("--origin must be one of: all, scraper, routine_agent");
       }
       origin = val;
     } else if (/^\d+$/.test(token)) {
@@ -317,10 +317,10 @@ export async function runExportTopMatches(options: ExportTopMatchesOptions): Pro
     }
   }
 
-  if (options.origin === "all" || options.origin === "claude_routine") {
+  if (options.origin === "all" || options.origin === "routine_agent") {
     const manualPage = await jobRepository.findForDashboard(
       roleSelection.id,
-      { ...baseFilters, origin: "claude_routine", includeLowMatch: true },
+      { ...baseFilters, origin: "routine_agent", includeLowMatch: true },
       candidatePoolSize,
       activeResume.version,
       keywordThreshold,
@@ -328,7 +328,7 @@ export async function runExportTopMatches(options: ExportTopMatchesOptions): Pro
     );
     for (const job of manualPage.jobs) {
       if (!candidatesById.has(job.id)) {
-        candidatesById.set(job.id, { origin: "claude_routine", job });
+        candidatesById.set(job.id, { origin: "routine_agent", job });
       }
     }
   }

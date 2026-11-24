@@ -24,9 +24,9 @@ function ScorePill({
   manualScore: number | null;
   keywordScore: number | null;
 }) {
-  // claude_routine rows never enter the AI queue (AD-67) -- manual_score is
+  // routine_agent rows never enter the AI queue (AD-67) -- manual_score is
   // the truth for them, not "Pending".
-  if (source === "claude_routine") {
+  if (source === "routine_agent") {
     return manualScore === null ? (
       <Badge variant="outline" className="text-xs font-normal text-muted-foreground">—</Badge>
     ) : (
@@ -156,7 +156,7 @@ export function JobCard({
       {expanded && (
         <div className="border-t px-4 py-3 space-y-1">
           <p className="text-sm text-muted-foreground">
-            {job.source === "claude_routine"
+            {job.source === "routine_agent"
               ? job.manualStandout ?? "No standout notes from the Claude routine for this match."
               : job.aiReasoning ?? `AI review pending — keyword match: ${formatScore(job.keywordScore)}`}
           </p>

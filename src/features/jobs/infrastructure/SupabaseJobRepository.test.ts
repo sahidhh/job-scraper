@@ -338,8 +338,8 @@ describe("SupabaseJobRepository", () => {
       expect(candidatesBuilder.is).toHaveBeenCalledWith("ineligible_reason", null);
     });
 
-    it("excludes claude_routine jobs so the manual routine's matches are never AI-scored (AD-66/67)", async () => {
-      // claude_routine rows never get a job_scores row (mapManualMatch.ts
+    it("excludes routine_agent jobs so the manual routine's matches are never AI-scored (AD-66/67)", async () => {
+      // routine_agent rows never get a job_scores row (mapManualMatch.ts
       // never writes one), so without this filter they'd never land in the
       // "done" set and would be re-fetched/AI-scored every run forever.
       const { client, builders } = queuedSupabaseClient([
@@ -352,7 +352,7 @@ describe("SupabaseJobRepository", () => {
       await repo.findUnscored("role-selection-1", ["React Developer"], 1, 0.25, 3);
 
       const candidatesBuilder = builders[1] as Record<string, ReturnType<typeof vi.fn>>;
-      expect(candidatesBuilder.neq).toHaveBeenCalledWith("source", "claude_routine");
+      expect(candidatesBuilder.neq).toHaveBeenCalledWith("source", "routine_agent");
     });
 
     it("returns an empty array without querying when there are no expanded roles", async () => {
@@ -548,22 +548,22 @@ describe("SupabaseJobRepository", () => {
       expect(result.jobs.map((j) => j.id)).toEqual(["newer", "older"]);
     });
 
-    it("excludes claude_routine rows by default (origin absent) -- regression guard", async () => {
+    it("excludes routine_agent rows by default (origin absent) -- regression guard", async () => {
       const { client, builder } = mockSupabaseClient({ data: [{ ...jobRow, job_scores: [] }], error: null });
       const repo = new SupabaseJobRepository(client);
 
       await repo.findForDashboard("role-selection-1", {}, 50, 1, 0.25, 3);
 
-      expect(builder.neq).toHaveBeenCalledWith("source", "claude_routine");
-      expect(builder.eq).not.toHaveBeenCalledWith("source", "claude_routine");
+      expect(builder.neq).toHaveBeenCalledWith("source", "routine_agent");
+      expect(builder.eq).not.toHaveBeenCalledWith("source", "routine_agent");
     });
 
-    it("restricts to claude_routine rows and sorts by manual_score desc when origin='claude_routine'", async () => {
+    it("restricts to routine_agent rows and sorts by manual_score desc when origin='routine_agent'", async () => {
       const { client, builder } = mockSupabaseClient({
         data: [
-          { ...jobRow, id: "low", source: "claude_routine", manual_score: 40, job_scores: [] },
-          { ...jobRow, id: "top", source: "claude_routine", manual_score: 90, job_scores: [] },
-          { ...jobRow, id: "unscored", source: "claude_routine", manual_score: null, job_scores: [] },
+          { ...jobRow, id: "low", source: "routine_agent", manual_score: 40, job_scores: [] },
+          { ...jobRow, id: "top", source: "routine_agent", manual_score: 90, job_scores: [] },
+          { ...jobRow, id: "unscored", source: "routine_agent", manual_score: null, job_scores: [] },
         ],
         error: null,
       });
@@ -573,15 +573,15 @@ describe("SupabaseJobRepository", () => {
       // is a manual_score of 40, exactly the shrug value once normalised.
       const result = await repo.findForDashboard(
         "role-selection-1",
-        { origin: "claude_routine", includeWeakMatch: true },
+        { origin: "routine_agent", includeWeakMatch: true },
         50,
         1,
         0.25,
         3,
       );
 
-      expect(builder.eq).toHaveBeenCalledWith("source", "claude_routine");
-      expect(builder.neq).not.toHaveBeenCalledWith("source", "claude_routine");
+      expect(builder.eq).toHaveBeenCalledWith("source", "routine_agent");
+      expect(builder.neq).not.toHaveBeenCalledWith("source", "routine_agent");
       // manual_score desc, nulls last -- overall_score (always null here) is not used.
       expect(result.jobs.map((j) => j.id)).toEqual(["top", "low", "unscored"]);
     });
@@ -905,17 +905,17 @@ describe("SupabaseJobRepository", () => {
       expect(result.stats.weakMatchCount).toBe(0);
     });
 
-    it("applies the weak cut to claude_routine rows via manual_score, which carry no ai_score", async () => {
+    it("applies the weak cut to routine_agent rows via manual_score, which carry no ai_score", async () => {
       const { client } = mockSupabaseClient({
         data: [
-          { ...jobRow, id: "strong", source: "claude_routine", manual_score: 80, job_scores: [] },
-          { ...jobRow, id: "weak", source: "claude_routine", manual_score: 40, job_scores: [] },
+          { ...jobRow, id: "strong", source: "routine_agent", manual_score: 80, job_scores: [] },
+          { ...jobRow, id: "weak", source: "routine_agent", manual_score: 40, job_scores: [] },
         ],
         error: null,
       });
       const repo = new SupabaseJobRepository(client);
 
-      const result = await repo.findForDashboard("role-selection-1", { origin: "claude_routine" }, 50, 1, 0.25, 3);
+      const result = await repo.findForDashboard("role-selection-1", { origin: "routine_agent" }, 50, 1, 0.25, 3);
 
       expect(result.jobs.map((j) => j.id)).toEqual(["strong"]);
       expect(result.stats.weakMatchCount).toBe(1);

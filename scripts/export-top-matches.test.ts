@@ -149,13 +149,13 @@ describe("parseExportArgs", () => {
 
   it("parses custom limit, location, remote, origin, skip-probe, and out-dir", () => {
     expect(
-      parseExportArgs(["25", "--location", "uae", "--remote", "--origin", "claude_routine", "--skip-probe", "--out-dir", "tmp/out"]),
+      parseExportArgs(["25", "--location", "uae", "--remote", "--origin", "routine_agent", "--skip-probe", "--out-dir", "tmp/out"]),
     ).toEqual({
       limit: 25,
       outDir: "tmp/out",
       locationTags: ["uae"],
       remoteOnly: true,
-      origin: "claude_routine",
+      origin: "routine_agent",
       skipProbe: true,
     });
   });
@@ -310,12 +310,12 @@ describe("jobLivenessAndEnrich", () => {
 });
 
 describe("scoring and ranking helpers", () => {
-  it("computes effective score for scraper vs claude_routine", () => {
+  it("computes effective score for scraper vs routine_agent", () => {
     expect(
       computeEffectiveScore({ origin: "scraper", overallScore: 0.82, aiScore: 0.8, manualScore: null }),
     ).toBe(0.82);
     expect(
-      computeEffectiveScore({ origin: "claude_routine", overallScore: null, aiScore: null, manualScore: 84 }),
+      computeEffectiveScore({ origin: "routine_agent", overallScore: null, aiScore: null, manualScore: 84 }),
     ).toBe(0.84);
   });
 
@@ -339,7 +339,7 @@ describe("scoring and ranking helpers", () => {
     const items = [
       { id: "shrug", origin: "scraper" as const, overallScore: 0.4, aiScore: 0.4, keywordScore: 0.9, manualScore: null, postedAt: "2026-11-16T00:00:00Z" },
       { id: "unscored", origin: "scraper" as const, overallScore: null, aiScore: null, keywordScore: 0.8, manualScore: null, postedAt: "2026-11-17T00:00:00Z" },
-      { id: "manual", origin: "claude_routine" as const, overallScore: null, aiScore: null, keywordScore: null, manualScore: 88, postedAt: "2026-11-10T00:00:00Z" },
+      { id: "manual", origin: "routine_agent" as const, overallScore: null, aiScore: null, keywordScore: null, manualScore: 88, postedAt: "2026-11-10T00:00:00Z" },
       { id: "mod", origin: "scraper" as const, overallScore: 0.6, aiScore: 0.6, keywordScore: 0.5, manualScore: null, postedAt: "2026-11-16T00:00:00Z" },
     ];
     const sorted = [...items].sort(compareMatchCandidates).map((x) => x.id);

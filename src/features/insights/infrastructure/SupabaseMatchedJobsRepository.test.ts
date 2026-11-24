@@ -160,7 +160,7 @@ describe("SupabaseMatchedJobsRepository", () => {
     ]);
   });
 
-  it("getManualMatchStats counts claude_routine jobs by day and finds the latest", async () => {
+  it("getManualMatchStats counts routine_agent jobs by day and finds the latest", async () => {
     const { client, builder } = mockSupabaseClient({
       data: [
         { first_seen_at: "2026-08-05T09:34:00Z" },
@@ -179,10 +179,10 @@ describe("SupabaseMatchedJobsRepository", () => {
         { date: "2026-08-05", count: 2, runCount: 2 },
       ],
     });
-    expect(builder.eq).toHaveBeenCalledWith("source", "claude_routine");
+    expect(builder.eq).toHaveBeenCalledWith("source", "routine_agent");
   });
 
-  it("getManualMatchStats returns zero/null defaults when there are no claude_routine jobs", async () => {
+  it("getManualMatchStats returns zero/null defaults when there are no routine_agent jobs", async () => {
     const { client } = mockSupabaseClient({ data: [], error: null });
     const repo = new SupabaseMatchedJobsRepository(client);
     const result = await repo.getManualMatchStats();

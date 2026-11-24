@@ -10,9 +10,9 @@ import { useDashboardNavigation } from "./DashboardNavigationProvider";
 export function OriginToggle() {
   const { navigate } = useDashboardNavigation();
   const searchParams = useSearchParams();
-  const origin = searchParams.get("origin") === "claude_routine" ? "claude_routine" : "scraper";
+  const origin = searchParams.get("origin") === "routine_agent" ? "routine_agent" : "scraper";
 
-  function setOrigin(value: "scraper" | "claude_routine") {
+  function setOrigin(value: "scraper" | "routine_agent") {
     const params = new URLSearchParams(searchParams.toString());
     if (value === "scraper") {
       params.delete("origin");
@@ -35,8 +35,8 @@ export function OriginToggle() {
       <Button
         type="button"
         size="sm"
-        variant={origin === "claude_routine" ? "default" : "ghost"}
-        onClick={() => setOrigin("claude_routine")}
+        variant={origin === "routine_agent" ? "default" : "ghost"}
+        onClick={() => setOrigin("routine_agent")}
       >
         Claude routine
       </Button>

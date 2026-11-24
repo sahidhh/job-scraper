@@ -126,7 +126,7 @@ function byOverallScoreDescThenPostedAt(a: JobWithScore, b: JobWithScore): numbe
 }
 
 // Claude-routine rows never have a job_scores row (overallScore always
-// null), so origin='claude_routine' ranks by manualScore instead -- same
+// null), so origin='routine_agent' ranks by manualScore instead -- same
 // null-handling/tiebreaker shape as byOverallScoreDescThenPostedAt above.
 function byManualScoreDescThenPostedAt(a: JobWithScore, b: JobWithScore): number {
   if (a.manualScore !== b.manualScore) {
@@ -438,7 +438,7 @@ export class SupabaseJobRepository implements JobRepository {
     // entered the done-set above, so every run re-fetched it, re-ran the gate,
     // re-wrote the same null, and bumped retry_count -- forever. Now that the
     // verdict is persisted at ingest, those jobs never enter the queue at all.
-    // claude_routine jobs are never touched by the automated scrape/score
+    // routine_agent jobs are never touched by the automated scrape/score
     // pipeline (AD-65/AD-66, supabase/migrations/20260803000001_manual_job_
     // matches.sql) -- they're ranked by manual_score, not overall_score, and
     // have no job_scores row by design, so without this filter they'd be
@@ -448,7 +448,7 @@ export class SupabaseJobRepository implements JobRepository {
       .select("id")
       .eq("is_active", true)
       .is("ineligible_reason", null)
-      .neq("source", "claude_routine")
+      .neq("source", "routine_agent")
       .or(roleFilter);
     if (candidateError) throw toAppError(candidateError);
 
@@ -507,13 +507,13 @@ export class SupabaseJobRepository implements JobRepository {
     if (filters.sources && filters.sources.length > 0) {
       query = query.in("source", filters.sources);
     }
-    // Default/'scraper' excludes claude_routine rows (today's behavior,
-    // unchanged); 'claude_routine' shows only those rows (docs/tasks/
+    // Default/'scraper' excludes routine_agent rows (today's behavior,
+    // unchanged); 'routine_agent' shows only those rows (docs/tasks/
     // manual-job-matches.md §3).
-    if (filters.origin === "claude_routine") {
-      query = query.eq("source", "claude_routine");
+    if (filters.origin === "routine_agent") {
+      query = query.eq("source", "routine_agent");
     } else {
-      query = query.neq("source", "claude_routine");
+      query = query.neq("source", "routine_agent");
     }
     if (filters.remoteOnly) {
       // Narrow to postings tagged remote. ANDs with any locationTags filter
@@ -592,7 +592,7 @@ export class SupabaseJobRepository implements JobRepository {
     if (error) throw toAppError(error);
 
     const comparator =
-      filters.origin === "claude_routine" ? byManualScoreDescThenPostedAt : byOverallScoreDescThenPostedAt;
+      filters.origin === "routine_agent" ? byManualScoreDescThenPostedAt : byOverallScoreDescThenPostedAt;
     const ranked = (data ?? []).map(toDashboardJob).sort(comparator);
 
     // Stats are computed over the whole filtered set (`ranked`), not the page
@@ -616,7 +616,7 @@ export class SupabaseJobRepository implements JobRepository {
     // three reasons: it keeps the `!left` join (a `gte` on the embedded
     // job_scores resource forces `!inner`, which would also drop every
     // unscored row, a different filter than the one asked for); it lets the
-    // one cut serve both origins, since claude_routine rows carry
+    // one cut serve both origins, since routine_agent rows carry
     // manual_score and no ai_score at all (AD-65); and `minAiScore` stays
     // what the user typed, not something the page silently pre-set.
     //

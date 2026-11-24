@@ -37,7 +37,7 @@ export const AI_SCORE_SHRUG = 0.4;
 
 /**
  * Whether a score represents a real positive judgement rather than the
- * scorer's shrug. `score` is on the 0-1 AI scale; `claude_routine` rows must
+ * scorer's shrug. `score` is on the 0-1 AI scale; `routine_agent` rows must
  * normalise their 0-100 `manual_score` before calling (the same normalisation
  * `manualScoreBadgeVariant` already does).
  *

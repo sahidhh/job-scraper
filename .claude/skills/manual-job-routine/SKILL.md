@@ -1,6 +1,6 @@
 ---
 name: manual-job-routine
-description: Run the ad hoc "Claude routine" job search and import its matches into job-scraper's dashboard as source=claude_routine rows. Use when asked to search/find/curate job matches manually, run "the Claude routine", or import manual job matches.
+description: Run the ad hoc "Claude routine" job search and import its matches into job-scraper's dashboard as source=routine_agent rows. Use when asked to search/find/curate job matches manually, run "the Claude routine", or import manual job matches.
 ---
 
 # Manual (Claude-Routine) Job Matches
@@ -58,7 +58,7 @@ of (or in addition to) that repo's browser-localStorage `state.json`.
      specifically so that's never necessary. Confirm the connector is
      pointed at job-scraper's Supabase project before running the SQL.
 
-   Both paths upsert each entry as a `jobs` row with `source='claude_routine'`,
+   Both paths upsert each entry as a `jobs` row with `source='routine_agent'`,
    `manual_score`/`manual_standout`/`manual_verify`/`manual_requirements`
    populated, and `location_tags` derived from `location` the same way the
    automated scrapers do (both call `mapManualMatch`/`tagLocations` — no
@@ -74,7 +74,7 @@ of (or in addition to) that repo's browser-localStorage `state.json`.
 
 - No env vars beyond what the repo already requires — the script reuses
   `SUPABASE_SERVICE_ROLE_KEY`, already scoped to `scripts/` (`design/security.md` §3).
-- `claude_routine` is intentionally excluded from source-health checks and
+- `routine_agent` is intentionally excluded from source-health checks and
   `/analytics`'s per-source probe table (same treatment as `careers_url`) —
   it's a manual entry point, not a polled source.
 - A malformed entry (missing `id`/`title`/`company`) fails the whole import

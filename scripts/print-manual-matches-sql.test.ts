@@ -4,7 +4,7 @@ import { buildUpsertSql, sqlLocationTagArray, sqlString } from "./print-manual-m
 
 function makeJob(overrides: Partial<NormalizedJob> = {}): NormalizedJob {
   return {
-    source: "claude_routine",
+    source: "routine_agent",
     sourceJobId: "job-1",
     companyId: null,
     companyName: "Acme",
@@ -52,12 +52,12 @@ describe("buildUpsertSql", () => {
 
     expect(sql).toContain("on conflict (source, source_job_id) do update set");
     expect(sql).toContain("'Dev''s Role'");
-    expect(sql).toContain("'claude_routine'");
+    expect(sql).toContain("'routine_agent'");
   });
 
   it("includes one VALUES row per job", () => {
     const sql = buildUpsertSql([makeJob({ sourceJobId: "job-1" }), makeJob({ sourceJobId: "job-2" })]);
 
-    expect(sql.match(/\('claude_routine'/g)).toHaveLength(2);
+    expect(sql.match(/\('routine_agent'/g)).toHaveLength(2);
   });
 });

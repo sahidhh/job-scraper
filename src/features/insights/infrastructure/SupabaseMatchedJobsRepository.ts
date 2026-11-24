@@ -249,7 +249,7 @@ export class SupabaseMatchedJobsRepository implements MatchedJobsRepository {
     const { data, error } = await this.client
       .from("jobs")
       .select("first_seen_at")
-      .eq("source", "claude_routine")
+      .eq("source", "routine_agent")
       .returns<{ first_seen_at: string }[]>();
     if (error) throw toAppError(error);
 

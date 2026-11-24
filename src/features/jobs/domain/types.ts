@@ -62,7 +62,7 @@ export interface Job {
   // Conflict resolution metadata (Phase 4 Task 1): tracks if the user
   // manually edited the job's status or metadata, and when.
   // Claude-routine fields (docs/tasks/manual-job-matches.md): only set when
-  // source='claude_routine'. Null for every automated-pipeline row --
+  // source='routine_agent'. Null for every automated-pipeline row --
   // never written by scrape.ts/score.ts.
   manualScore: number | null;
   manualStandout: string | null;
@@ -113,7 +113,7 @@ export interface NormalizedJob {
   // from classifyEligibility, not by the scraper.
   ineligibleReason?: IneligibleReason | null;
   // Claude-routine fields (docs/tasks/manual-job-matches.md). Optional on
-  // input; only set by mapManualMatch.ts for source='claude_routine' rows.
+  // input; only set by mapManualMatch.ts for source='routine_agent' rows.
   manualScore?: number | null;
   manualStandout?: string | null;
   manualVerify?: string | null;
@@ -189,7 +189,7 @@ export interface JobFilters {
   // i.e. postings it was asked about and declined to rate. Distinct from
   // includeLowMatch, which is about jobs the AI was never asked about at all.
   // Hidden by default, same inverted sense as includeIneligible/
-  // includeLowMatch (AD-69). For claude_routine rows the cut is applied to
+  // includeLowMatch (AD-69). For routine_agent rows the cut is applied to
   // manual_score normalised to 0-1, since those never carry an ai_score.
   includeWeakMatch?: boolean;
   minAiScore?: number;
@@ -221,11 +221,11 @@ export interface JobFilters {
   excludeKeywords?: string[];
   // Which data origin the dashboard is viewing (docs/tasks/manual-job-
   // matches.md §3/§4.3). 'scraper' (default, absent) excludes
-  // source='claude_routine'; 'claude_routine' shows only those rows. Not
+  // source='routine_agent'; 'routine_agent' shows only those rows. Not
   // expressed via `sources` -- 'scraper' is a negative filter (every source
   // except one), which `sources`' positive `.in()` list can't express
   // without enumerating every other enum value.
-  origin?: "scraper" | "claude_routine";
+  origin?: "scraper" | "routine_agent";
 }
 
 // Job joined with its score for the active role_selection. Omits

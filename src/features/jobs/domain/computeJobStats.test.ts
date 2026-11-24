@@ -129,14 +129,14 @@ describe("computeJobStats weak-match counting (AD-69)", () => {
     expect(computeJobStats([row({ keywordScore: 0.05 })], 0.25, 3).weakMatchCount).toBe(0);
   });
 
-  it("judges a claude_routine row by its manual_score on the 0-100 scale", () => {
+  it("judges a routine_agent row by its manual_score on the 0-100 scale", () => {
     // These never carry an ai_score (AD-67), so without the normalisation they
     // would read as unscored and escape the cut entirely.
     expect(computeJobStats([row({ manualScore: 40 })], 0.25, 3).weakMatchCount).toBe(1);
     expect(computeJobStats([row({ manualScore: 70 })], 0.25, 3).weakMatchCount).toBe(0);
   });
 
-  it("counts a claude_routine row as scored, not as queued or ineligible", () => {
+  it("counts a routine_agent row as scored, not as queued or ineligible", () => {
     const stats = computeJobStats([row({ manualScore: 88 })], 0.25, 3);
     expect(stats.scoredCount).toBe(1);
     expect(stats.awaitingAiCount).toBe(0);

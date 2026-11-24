@@ -43,10 +43,10 @@ function ScoreBadge({
   keywordScore: number | null;
   overallScoreReasons: string[] | null;
 }) {
-  // claude_routine rows never enter the AI queue (AD-67) -- manual_score is
+  // routine_agent rows never enter the AI queue (AD-67) -- manual_score is
   // the truth for them, not "Pending" (which would imply AI scoring is
   // coming; it never runs for this source).
-  if (source === "claude_routine") {
+  if (source === "routine_agent") {
     return manualScore === null ? (
       <Badge variant="outline" className="font-normal text-muted-foreground">—</Badge>
     ) : (
@@ -293,7 +293,7 @@ export function JobRow({
         <TableRow>
           <TableCell colSpan={COLUMN_COUNT} className="space-y-4 whitespace-normal p-4 text-sm">
             <div className="text-muted-foreground">
-              {job.source === "claude_routine"
+              {job.source === "routine_agent"
                 ? job.manualStandout ?? "No standout notes from the Claude routine for this match."
                 : job.aiReasoning ?? "AI review pending — keyword match score shown above."}
             </div>

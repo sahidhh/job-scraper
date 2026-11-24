@@ -89,7 +89,7 @@ export interface MatchedJobsRepository {
   getScrapeRunStats(): Promise<ScrapeRunStatRow[]>;
 
   /**
-   * Count + recency of source='claude_routine' jobs, keyed off first_seen_at
+   * Count + recency of source='routine_agent' jobs, keyed off first_seen_at
    * (AD-66/67). The one place this source is surfaced in /analytics --
    * everywhere else it's deliberately excluded (AD-65 point 4).
    */
