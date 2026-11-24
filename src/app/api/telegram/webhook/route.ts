@@ -4,6 +4,7 @@ import type { SalaryPeriod } from "@/features/jobs/domain/extractSalary";
 import { SupabaseDigestSessionRepository } from "@/features/notifications/infrastructure/SupabaseDigestSessionRepository";
 import type { LocationTag } from "@/shared/domain/enums";
 import { createSupabaseServiceClient } from "@/shared/infrastructure/supabaseClient";
+import { escapeHtml } from "@/shared/infrastructure/text";
 import {
   PAGE_SIZE,
   answerCallbackQuery,
@@ -21,11 +22,25 @@ import {
 //
 // Supported callback_data:
 //   "wr:N" — show page N (0-indexed, PAGE_SIZE jobs each) of the worth-reviewing list
+//   "st:<applied|skipped|closed>:<jobId>" — update job status/active state and edit card in place
+
+const STATUS_CALLBACK_RE = /^st:(applied|skipped|closed):([0-9a-f-]{36})$/i;
+
+const STATUS_LABELS: Record<"applied" | "skipped", string> = {
+  applied: "Applied",
+  skipped: "Not Interested",
+};
+
+const CARD_BADGES: Record<"applied" | "skipped" | "closed", string> = {
+  applied: "\n\n✅ Marked as <b>Applied</b>",
+  skipped: "\n\n⏭️ Marked as <b>Skipped</b>",
+  closed: "\n\n🚫 Marked as <b>Closed</b>",
+};
 
 interface TelegramCallbackQuery {
   id: string;
   data?: string;
-  message?: { message_id: number; chat: { id: number } };
+  message?: { message_id: number; chat: { id: number }; text?: string };
 }
 
 interface TelegramUpdate {
@@ -68,6 +83,70 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     messageId: cq?.message?.message_id,
     chatId: cq?.message?.chat?.id,
   });
+
+  if (cq?.data?.startsWith("st:")) {
+    const match = STATUS_CALLBACK_RE.exec(cq.data);
+    if (!match) {
+      try {
+        await answerCallbackQuery(cq.id, "Invalid action");
+      } catch (err) {
+        console.error("[webhook] answerCallbackQuery failed", err);
+      }
+      return new NextResponse("OK", { status: 200 });
+    }
+
+    const action = match[1].toLowerCase() as "applied" | "skipped" | "closed";
+    const jobId = match[2];
+
+    try {
+      await answerCallbackQuery(cq.id, "Updating...");
+      const client = createSupabaseServiceClient();
+
+      if (action === "closed") {
+        const { error: closeErr } = await client
+          .from("jobs")
+          .update({ is_active: false, inactive_reason: "closed" })
+          .eq("id", jobId);
+        if (closeErr) {
+          console.error("[webhook] failed to close job", { jobId, error: closeErr.message });
+          return new NextResponse("OK", { status: 200 });
+        }
+      } else {
+        const targetLabel = STATUS_LABELS[action];
+        const { data: statusRow, error: statusErr } = await client
+          .from("job_statuses")
+          .select("id")
+          .eq("name", targetLabel)
+          .single();
+
+        if (statusErr || !statusRow) {
+          console.error("[webhook] job_statuses lookup failed", { targetLabel, error: statusErr?.message });
+          return new NextResponse("OK", { status: 200 });
+        }
+
+        const { error: upsertErr } = await client
+          .from("job_state")
+          .upsert(
+            { job_id: jobId, status_id: statusRow.id, updated_at: new Date().toISOString() },
+            { onConflict: "job_id" },
+          );
+        if (upsertErr) {
+          console.error("[webhook] job_state upsert failed", { jobId, error: upsertErr.message });
+          return new NextResponse("OK", { status: 200 });
+        }
+      }
+
+      if (cq.message?.message_id) {
+        const baseText = escapeHtml(cq.message.text ?? "");
+        await editMessage(cq.message.message_id, `${baseText}${CARD_BADGES[action]}`, []);
+      }
+
+      return new NextResponse("OK", { status: 200 });
+    } catch (err) {
+      console.error("[webhook] unexpected error handling status callback", err);
+      return new NextResponse("OK", { status: 200 });
+    }
+  }
 
   if (!cq || !cq.data?.startsWith("wr:")) {
     // Non-pagination update — ack and ignore. A failed ack must not crash
