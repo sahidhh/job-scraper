@@ -1,0 +1,16 @@
+[Unit]
+Description=Job Scraper daily pipeline (scrape -> score -> notify)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/job-scraper
+EnvironmentFile=/opt/job-scraper/.env
+ExecStart=/bin/bash -lc 'npm run scrape && npm run score && npm run notify'
+StandardOutput=journal
+StandardError=journal
+TimeoutStartSec=30min
+
+[Install]
+WantedBy=multi-user.target
