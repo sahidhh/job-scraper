@@ -818,7 +818,9 @@ export type Database = {
         | "jsearch"
         | "adzuna"
         | "careers_url"
-        | "claude_routine"
+        | "routine_agent"
+        | "naukri"
+        | "naukrigulf"
       location_tag: "india" | "singapore" | "uae" | "remote"
       role_map_source: "seed" | "ai"
       scrape_run_status: "success" | "partial" | "failed"
@@ -962,7 +964,9 @@ export const Constants = {
         "jsearch",
         "adzuna",
         "careers_url",
-        "claude_routine",
+        "routine_agent",
+        "naukri",
+        "naukrigulf",
       ],
       location_tag: ["india", "singapore", "uae", "remote"],
       role_map_source: ["seed", "ai"],
