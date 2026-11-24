@@ -34,16 +34,16 @@ The `design/` vs `docs/` split, and which files in each are current vs. historic
 ## 3. Pipeline Overview
 
 ```
-scrape.ts → score.ts → notify.ts     (GitHub Actions, scrape.yml)
+scrape.ts → score.ts → notify.ts     (DietPi systemd timer 08:30 IST; manual GH Actions dispatch)
 ```
 
-1. **Scrape** — per active company (Greenhouse/Lever/Ashby) plus RemoteOK/Wellfound/MyCareersFuture feeds, normalize to `RawJob[]`, filter by the active role selection's expanded roles, tag geography (`tagLocations`), drop untagged jobs, dedup cross-source by deterministic fingerprint (`computeFingerprint.ts`), upsert into `jobs`.
-2. **Score** — for each unscored job matching the active role: cheap keyword overlap score always; if it clears `KEYWORD_THRESHOLD`, one gated OpenRouter AI call for a 0–1 relevance score + reasoning.
-3. **Notify** — jobs with `ai_score >= NOTIFY_THRESHOLD` not already in `notifications_log`, optionally narrowed by `NotificationPreferences` (include filters: role/skill/location/experience/source; exclude filters: blocked companies/employment types — v1.2), formatted as a Telegram message (individual or digest mode) with "why this job" highlight badges, sent, then marked notified.
+1. **Scrape** — across `app_settings.enabled_sources` (Greenhouse/Lever/Ashby/MyCareersFuture/JSearch/Adzuna/Remotive/Himalayas/Wellfound/RemoteOK; `#197` added `NaukriScraper` and stubbed `NaukriGulfScraper`, though Naukri API is currently blocked at HTTP `406 recaptcha required`), normalize to `RawJob[]`, filter by title against active expanded roles + drop `minYears > 3`, tag geography (`tagLocations`), dedup cross-source by fingerprint (`computeFingerprint.ts`), upsert into `jobs`.
+2. **Score** — for each unscored job matching the active role: cheap keyword overlap score always; if it clears `KEYWORD_THRESHOLD`, one gated OpenRouter AI call for a 0–1 relevance score + reasoning (`mistralai/mistral-small-3.2-24b-instruct` live on DietPi at `OPENROUTER_MAX_TOKENS=300`).
+3. **Notify** — jobs with `ai_score >= NOTIFY_THRESHOLD` not already in `notifications_log`, optionally narrowed by `NotificationPreferences`, sent as Telegram cards (`NOTIFY_MODE=cards` with inline `st:*` status callbacks) or digests, then marked notified.
 
-Full diagrams: `design/architecture.md` §3–7. Full data-flow sequence diagrams: `design/technical-design.md` §6.
+Full diagrams: `design/architecture.md` §3–7. Full data-flow sequence diagrams: `design/technical-design.md` §6. Operational rollout record: `docs/operations/dietpi-deployment-and-model-eval.md`.
 
-**Current live cadence:** `scrape.yml`'s `schedule:` is **active** (`cron: "0 6,14 * * *"` — twice daily, 06:00/14:00 UTC = 11:30/19:30 IST) alongside `workflow_dispatch`. The earlier 6-hourly cadence was cut to two runs a day on measured yield (AD-70): every run re-fetched ~950 postings to insert a median of 4 new ones. The doc drift that used to be tracked here and in `TECHNICAL_DEBT.md` #1 ("2 hours" / "commented out pending approval") is resolved — every cadence claim in `design/`, `docs/` and the root markdown now reads 12h. **`SOURCE_STALE_HOURS` (default 36 = 3x cadence) has to be re-derived with any future cadence change.**
+**Current live cadence:** Automated `scrape.yml` schedule is commented out (`1c1e21c`); the daily pipeline runs at `08:30 IST` (`03:00 UTC`) on DietPi (`/opt/job-scraper`, `deploy/job-scraper.timer`). `.github/workflows/scrape.yml` remains enabled for manual `workflow_dispatch`. **`SOURCE_STALE_HOURS` (default 36 = 3x cadence) must be re-derived with any future cadence change.**
 
 ## 4. Supported Sources
 
@@ -78,7 +78,7 @@ See `OPERATIONS.md` for the full command reference and troubleshooting. Quick or
 
 ## 9. Deployment Flow
 
-Vercel (Next.js web app) + Supabase (Postgres/Auth/Storage) + GitHub Actions (cron + CI + migration push). Full step-by-step: `docs/deployment.md`. `migrate.yml` auto-runs `supabase db push` on every push to `main` — schema migrations apply automatically on merge, they are not a manual step the operator must remember (see `OPERATIONS.md` §Migrations for the nuance this corrects relative to older docs).
+Vercel (Next.js web app) + Supabase (Postgres/Auth/Storage) + DietPi (`/opt/job-scraper`, `08:30 IST` daily systemd timer) + GitHub Actions (CI + `migrate.yml` + weekly validation + manual `workflow_dispatch`). Full setup notes: `deploy/README.md` and `docs/deployment.md`. `migrate.yml` auto-runs `supabase db push --remote --yes` on every push to `main` (explicit `--remote` required for Supabase CLI v3). Env config supports `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` / `SUPABASE_SECRET_KEY` with fallback to legacy `ANON_KEY` / `SERVICE_ROLE_KEY`.
 
 ## 10. Database Overview
 
