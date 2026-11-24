@@ -39,19 +39,21 @@ interface NaukriSearchResponse {
   noOfJobs?: number;
 }
 
+export type ScraperEnv = Readonly<Record<string, string | undefined>>;
+
 export interface NaukriScraperDeps {
   fetchFn?: typeof fetch;
-  readCookiesFn?: (env: NodeJS.ProcessEnv) => Promise<string>;
+  readCookiesFn?: (env: ScraperEnv) => Promise<string>;
   delayFn?: (ms: number) => Promise<void>;
   randomFn?: () => number;
-  env?: NodeJS.ProcessEnv;
+  env?: ScraperEnv;
 }
 
 function defaultDelay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function parseMaxPages(env: NodeJS.ProcessEnv): number {
+function parseMaxPages(env: ScraperEnv): number {
   const raw = env.NAUKRI_MAX_PAGES;
   if (!raw) return DEFAULT_MAX_PAGES;
   const parsed = Number.parseInt(raw, 10);
@@ -80,7 +82,7 @@ function extractMinYears(entry: NaukriJobEntry): number | null {
     (typeof entry.experience === "string" ? entry.experience : "") ||
     extractPlaceholder(entry.placeholders, "experience");
   const match = expLabel.match(/(\d+)\s*[-–to]?\s*\d*\s*(?:yrs?|years?)/i) ?? expLabel.match(/^(\d+)/);
-  if (match) {
+  if (match && match[1]) {
     const parsed = Number.parseInt(match[1], 10);
     return Number.isFinite(parsed) ? parsed : null;
   }
@@ -149,12 +151,12 @@ export function createNaukriScraper(deps: NaukriScraperDeps = {}): JobSourceScra
       const seen = new Map<string, RawJob>();
       let requestsMade = 0;
 
-      for (let i = 0; i < terms.length && requestsMade < maxPages; i++) {
+      for (const term of terms) {
+        if (requestsMade >= maxPages) break;
         if (requestsMade > 0) {
           await delayFn(computeJitterMs(randomFn));
         }
 
-        const term = terms[i];
         const url = buildSearchUrl(term, 1);
         requestsMade++;
 

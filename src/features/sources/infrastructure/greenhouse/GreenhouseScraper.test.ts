@@ -38,7 +38,7 @@ describe("greenhouseScraper", () => {
         jobs: [
           {
             id: 12345,
-            title: "  Senior   React Developer  ",
+            title: "  React   Developer  ",
             location: { name: "Remote - India" },
             content: "<p>Build great things.</p><p>Apply now.</p>",
             absolute_url: "https://boards.greenhouse.io/acme/jobs/12345",
@@ -57,7 +57,7 @@ describe("greenhouseScraper", () => {
         sourceJobId: "12345",
         companyId: "company-1",
         companyName: "Acme",
-        title: "Senior React Developer",
+        title: "React Developer",
         locationRaw: "Remote - India",
         description: "Build great things.\nApply now.",
         url: "https://boards.greenhouse.io/acme/jobs/12345",
@@ -100,7 +100,7 @@ describe("greenhouseScraper", () => {
         jobs: [
           {
             id: 1,
-            title: "Senior React Developer",
+            title: "React Developer",
             location: { name: "Remote - India" },
             content: "<p>Build UI.</p>",
             absolute_url: "https://boards.greenhouse.io/acme/jobs/1",

@@ -62,7 +62,7 @@ export async function ingestJobs(
     const eligibility = classifyEligibility(job);
     return {
       ...job,
-      minYears: parseMinYears(text),
+      minYears: job.minYears ?? parseMinYears(text),
       contactEmail: contact?.email ?? null,
       contactEmailCategory: contact?.category ?? null,
       contactEmailConfidence: contact?.confidence ?? null,

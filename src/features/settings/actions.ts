@@ -62,20 +62,6 @@ export async function setSkipUnsponsoredForeignJobsAction(enabled: boolean): Pro
   }
 }
 
-export async function setEnabledSourcesAction(sources: JobSource[]): Promise<ActionResult> {
-  try {
-    const client = await createSupabaseServerClient();
-    const settingsRepository = new SupabaseSettingsRepository(client);
-    await setEnabledSources(sources, { settingsRepository });
-
-    revalidatePath("/settings");
-    revalidatePath("/dashboard");
-    return { ok: true, data: undefined };
-  } catch (error) {
-    return { ok: false, error: errorMessage(error) };
-  }
-}
-
 // Toggles whether the dashboard's per-job status control is an interactive
 // dropdown/sheet or a read-only badge (quick-action buttons remain either way).
 export async function setShowStatusDropdownAction(enabled: boolean): Promise<ActionResult> {
@@ -83,20 +69,6 @@ export async function setShowStatusDropdownAction(enabled: boolean): Promise<Act
     const client = await createSupabaseServerClient();
     const settingsRepository = new SupabaseSettingsRepository(client);
     await setShowStatusDropdown(enabled, { settingsRepository });
-
-    revalidatePath("/settings");
-    revalidatePath("/dashboard");
-    return { ok: true, data: undefined };
-  } catch (error) {
-    return { ok: false, error: errorMessage(error) };
-  }
-}
-
-export async function setEnabledSourcesAction(sources: JobSource[]): Promise<ActionResult> {
-  try {
-    const client = await createSupabaseServerClient();
-    const settingsRepository = new SupabaseSettingsRepository(client);
-    await setEnabledSources(sources, { settingsRepository });
 
     revalidatePath("/settings");
     revalidatePath("/dashboard");

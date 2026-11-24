@@ -29,7 +29,7 @@ describe("SupabaseMatchedJobsRepository", () => {
     ]);
     expect(builder.eq).toHaveBeenCalledWith("job_scores.role_selection_id", "role-1");
     expect(builder.or).toHaveBeenCalledWith(
-      "title.ilike.%React Developer%,description.ilike.%React Developer%",
+      "title.ilike.%React Developer%",
     );
   });
 

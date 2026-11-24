@@ -138,12 +138,12 @@ describe("computeSourceHealthSummary", () => {
         makeRun({ runAt: "2026-01-01T00:00:00Z", status: "success" }),
         makeRun({ runAt: "2025-12-31T00:00:00Z", status: "success" }),
       ];
-      const now = new Date("2026-01-02T16:00:00Z"); // 40h later, past the default 36h threshold
+      const now = new Date("2026-01-03T04:00:00Z"); // 52h later, past the default 48h threshold
       const result = computeSourceHealthSummary("greenhouse", runs, now);
-      expect(result.hoursSinceLastRun).toBeCloseTo(40, 5);
+      expect(result.hoursSinceLastRun).toBeCloseTo(52, 5);
       expect(result.isStale).toBe(true);
       expect(result.recommendation).toContain("Stale");
-      expect(result.recommendation).toContain("40h");
+      expect(result.recommendation).toContain("52h");
     });
 
     it("stale recommendation takes priority over a failing-streak recommendation", () => {

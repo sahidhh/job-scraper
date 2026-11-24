@@ -35,12 +35,12 @@ describe("getSourceHealthReport", () => {
 
     const report = await getSourceHealthReport(scrapeRunRepository);
 
-    expect(report).toHaveLength(10);
+    expect(report).toHaveLength(12);
     expect(report.map((r) => r.source).sort()).toEqual(
-      ["adzuna", "ashby", "greenhouse", "himalayas", "jsearch", "lever", "mycareersfuture", "remoteok", "remotive", "wellfound"].sort(),
+      ["adzuna", "ashby", "greenhouse", "himalayas", "jsearch", "lever", "mycareersfuture", "naukri", "naukrigulf", "remoteok", "remotive", "wellfound"].sort(),
     );
     expect(scrapeRunRepository.listRecentBySource).toHaveBeenCalledWith("greenhouse", 20);
-    expect(scrapeRunRepository.listRecentBySource).toHaveBeenCalledTimes(10);
+    expect(scrapeRunRepository.listRecentBySource).toHaveBeenCalledTimes(12);
   });
 
   it("honors a custom run window", async () => {

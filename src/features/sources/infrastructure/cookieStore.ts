@@ -8,9 +8,11 @@ interface JsonCookie {
   value?: unknown;
 }
 
+export type CookieStoreEnv = Readonly<Record<string, string | undefined>>;
+
 export function resolveCookieFilePath(
   source: Extract<JobSource, "naukri" | "naukrigulf">,
-  env: NodeJS.ProcessEnv = process.env,
+  env: CookieStoreEnv = process.env,
 ): string {
   const specific = source === "naukri" ? env.NAUKRI_COOKIE_FILE : env.NAUKRIGULF_COOKIE_FILE;
   if (specific && specific.trim().length > 0) {
@@ -58,7 +60,7 @@ export function parseCookieStoreContent(
 
 export async function readSourceCookieHeader(
   source: Extract<JobSource, "naukri" | "naukrigulf">,
-  env: NodeJS.ProcessEnv = process.env,
+  env: CookieStoreEnv = process.env,
 ): Promise<string> {
   const filePath = resolveCookieFilePath(source, env);
   let raw: string;

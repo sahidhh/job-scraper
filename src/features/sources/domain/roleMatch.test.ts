@@ -52,8 +52,9 @@ describe("jobMatchesRoles", () => {
   });
 
   it("ignores unsafe filter characters when sanitizing role terms", () => {
-    expect(jobMatchesRoles(job, ["Backend Engineer (Remote)*"])).toBe(false);
-    expect(jobMatchesRoles(job, ["Backend Engineer*"])).toBe(true);
+    const cloudJob = { title: "Cloud Engineer", description: "" };
+    expect(jobMatchesRoles(cloudJob, ["Cloud Engineer (Remote)*"])).toBe(false);
+    expect(jobMatchesRoles(cloudJob, ["Cloud Engineer*"])).toBe(true);
   });
 
   it("preserves dots in .net so it does not false-match Kubernetes or Network", () => {

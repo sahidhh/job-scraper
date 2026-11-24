@@ -271,7 +271,7 @@ describe("SupabaseJobRepository", () => {
       expect(candidatesBuilder.select).toHaveBeenCalledWith("id");
       expect(candidatesBuilder.eq).toHaveBeenCalledWith("is_active", true);
       expect(candidatesBuilder.or).toHaveBeenCalledWith(
-        "title.ilike.%React Developer%,description.ilike.%React Developer%,title.ilike.%Frontend Engineer%,description.ilike.%Frontend Engineer%",
+        "title.ilike.%React Developer%,title.ilike.%Frontend Engineer%",
       );
       expect(candidatesBuilder.not).not.toHaveBeenCalled();
 
@@ -376,7 +376,7 @@ describe("SupabaseJobRepository", () => {
       expect(builders).toHaveLength(2);
       const candidatesBuilder = builders[1] as Record<string, ReturnType<typeof vi.fn>>;
       expect(candidatesBuilder.or).toHaveBeenCalledWith(
-        "title.ilike.%Engineer Backend Remote%,description.ilike.%Engineer Backend Remote%",
+        "title.ilike.%Engineer Backend Remote%",
       );
     });
 
@@ -384,7 +384,7 @@ describe("SupabaseJobRepository", () => {
       const { client, builders } = queuedSupabaseClient([]);
       const repo = new SupabaseJobRepository(client);
 
-      expect(await repo.findUnscored("role-selection-1", ["(),.%*"], 1, 0.25, 3)).toEqual([]);
+      expect(await repo.findUnscored("role-selection-1", ["(),%*"], 1, 0.25, 3)).toEqual([]);
       expect(builders).toHaveLength(0);
     });
 

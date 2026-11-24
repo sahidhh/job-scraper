@@ -13,6 +13,7 @@ export interface RawJob {
   description: string; // plain text, HTML stripped
   url: string;
   postedAt: string | null; // ISO 8601, or null if source doesn't provide it
+  minYears?: number | null; // optional structured experience parsed by source adapter
 }
 
 // scrape_runs observability log (docs/operations/observability.md).
