@@ -44,18 +44,18 @@ These are explicitly banned by the project rules (CLAUDE.md):
 | Variable | Description |
 |---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL (exposed to browser) |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key (exposed to browser; RLS enforced) |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase publishable key (`sb_publishable_...`, exposed to browser; RLS enforced). Falls back to legacy `NEXT_PUBLIC_SUPABASE_ANON_KEY` (`src/shared/infrastructure/supabase/env.ts`) |
 | `OPENROUTER_API_KEY` | OpenRouter account key (server-side only). Powers job scoring/role expansion AND, by default, `llmClient.ts` (resume suggestions/application drafts/careers extraction) — decisions.md AD-42. No second LLM key required unless `LLM_PROVIDER` is switched to `gemini`/`anthropic` (see Optional below) |
-| `OPENROUTER_MODEL` | Model ID e.g. `anthropic/claude-3.5-sonnet` (job scoring/role expansion only — `llmClient.ts`'s OpenRouter calls default to `google/gemini-2.5-flash`, overridable via `LLM_MODEL`) |
+| `OPENROUTER_MODEL` | Model ID e.g. `mistralai/mistral-small-3.2-24b-instruct` (job scoring/role expansion; `llmClient.ts` OpenRouter calls default to `google/gemini-2.5-flash` unless overridden via `LLM_MODEL`) |
 
-### Required — Cron Scripts (GitHub Actions Secrets)
+### Required — Pipeline Scripts (DietPi Box `/opt/job-scraper/.env` + GitHub Actions Manual Dispatch)
 
 | Variable | Description |
 |---|---|
 | `SUPABASE_URL` | Same project URL (server-side) |
-| `SUPABASE_SERVICE_ROLE_KEY` | Service role key — bypasses RLS; **never use in app/** |
-| `OPENROUTER_API_KEY` | Same key (also needed for AI scoring) |
-| `OPENROUTER_MODEL` | Same model |
+| `SUPABASE_SECRET_KEY` | Elevated Supabase secret key (`sb_secret_...`) — bypasses RLS; **never use in app/**. Falls back to legacy `SUPABASE_SERVICE_ROLE_KEY` (`src/shared/infrastructure/supabase/env.ts`) |
+| `OPENROUTER_API_KEY` | Same key (or dedicated pipeline key; needed for AI scoring) |
+| `OPENROUTER_MODEL` | Non-reasoning instruct model with `structured_outputs` support (e.g. `mistralai/mistral-small-3.2-24b-instruct`, `$0.075/$0.200`; live on DietPi since `2026-11-24`) |
 | `TELEGRAM_BOT_TOKEN` | Token from @BotFather |
 | `TELEGRAM_CHAT_ID` | Chat / channel ID for alerts |
 
@@ -65,11 +65,12 @@ These are explicitly banned by the project rules (CLAUDE.md):
 |---|---|---|
 | `KEYWORD_THRESHOLD` | `0.25` | Minimum keyword score to trigger AI scoring |
 | `NOTIFY_THRESHOLD` | `0.75` | Minimum AI score to send Telegram notification |
-| `NOTIFY_MODE` | `individual` | Notification delivery mode: `individual` (one message per job), `digest` (MVP digest with inline buttons), or `digest_legacy` (old grouped-text format) |
+| `NOTIFY_MODE` | `individual` | Notification delivery mode: `cards` (per-job HTML card + `st:*` inline buttons, set on DietPi and manual `scrape.yml`), `individual`, `digest`, or `digest_legacy` |
+| `COOKIES_DIR` | _(unset)_ | Directory holding synced cookie JSON files on DietPi (e.g. `/home/dietpi/.cookies`) |
 | `APP_URL` | _(unset)_ | Base URL of the deployed app, e.g. `https://app.example.com`; enables Worth Reviewing and Dashboard buttons in digest mode |
-| `TELEGRAM_CALLBACK_SECRET` | _(unset)_ | Shared secret for signing worth-reviewing callback URLs in digest mode; must also be set in Vercel |
+| `TELEGRAM_CALLBACK_SECRET` | _(unset)_ | Shared secret for signing Telegram callback requests |
 | `WELLFOUND_FEED_URL` | _(unset)_ | Wellfound custom feed URL; see docs/sources/wellfound.md |
-| `OPENROUTER_MAX_TOKENS` | `300` | Maximum output tokens for stage-2 AI response; see docs/scoring.md §5 |
+| `OPENROUTER_MAX_TOKENS` | `300` | Maximum output tokens for stage-2 AI response; requires pure non-reasoning instruct models because hybrid reasoning models exhaust `300` tokens before emitting JSON (`malformed_response`). See docs/scoring.md §5 and `docs/operations/dietpi-deployment-and-model-eval.md` |
 | `OPENROUTER_MAX_RESUME_PROMPT_CHARS` | `4000` | Caps resume text sent in the AI prompt (Phase 3 Task 11-12 cost control) |
 | `OPENROUTER_MAX_DESCRIPTION_PROMPT_CHARS` | `2000` | Caps job description text sent in the AI prompt (Phase 3 Task 11-12 cost control) |
 | `OPENROUTER_COST_PER_1K_TOKENS` | _(unset)_ | Blended per-1k-token rate for the active model (e.g. `0.0008` for $0.80/1M); enables cost logging and `estimated_cost_usd` in `job_scores` |
@@ -86,7 +87,7 @@ These are explicitly banned by the project rules (CLAUDE.md):
 | `MAX_AI_RETRIES` | `3` | Failed AI-scoring attempts before a job is dropped from the retry queue (AD-52). A failed AI call is the only skip reason that spends tokens on every attempt, so this is the spend bound; raise it if your failures are mostly transient rate limits |
 | `SOURCE_STALE_HOURS` | `6` | Hours since a source's last scrape_runs row (of any status) before it's flagged `isStale` on `/analytics` -- distinct from an actively-failing source |
 | `JOB_EXPIRATION_DAYS` | `14` | Days since `last_seen_at` before `scrape.ts` soft-deactivates a job (`is_active = false`, `inactive_reason = 'expired'`) |
-| `REMOTEOK_DISABLED` | _(unset)_ | Set `true` or `1` to explicitly disable RemoteOK ingestion (set in `scrape.yml` — RemoteOK's near-zero yield made it not worth probing on every run, see `docs/remoteok-evaluation.md`) |
+| `REMOTEOK_DISABLED` | _(unset)_ | Set `true` or `1` to explicitly disable RemoteOK ingestion (set in DietPi `.env` / `scrape.yml` — RemoteOK's near-zero yield made it not worth probing on every run, see `docs/remoteok-evaluation.md`) |
 | `REMOTIVE_DISABLED` | _(unset)_ | Set `true` or `1` to explicitly disable Remotive ingestion (remote-global board, public JSON API) |
 | `HIMALAYAS_DISABLED` | _(unset)_ | Set `true` or `1` to explicitly disable Himalayas ingestion (remote-global board, public JSON API) |
 | `LLM_PROVIDER` | `openrouter` | `llmClient.ts` provider switch: `openrouter` (default, routes through `OPENROUTER_API_KEY`/`openrouterClient.ts`), `gemini`, or `anthropic` (decisions.md AD-32, AD-42 — supersedes AD-32's Gemini-default for the default case; direct Gemini/Anthropic REST stays available for anyone who wants a different key/provider than scoring) |
@@ -94,7 +95,7 @@ These are explicitly banned by the project rules (CLAUDE.md):
 | `GEMINI_API_KEY` | _(unset)_ | Google AI Studio key for `llmClient.ts`'s direct-Gemini path; required only when `LLM_PROVIDER=gemini` (decisions.md AD-42 — no longer required by default) |
 | `ANTHROPIC_API_KEY` | _(unset)_ | Anthropic key for `llmClient.ts`'s direct-Anthropic path; required only when `LLM_PROVIDER=anthropic` |
 
-**Note on NOTIFY_MODE:** The code default is `individual`, but the scheduled production workflow `.github/workflows/scrape.yml` overrides this to `digest` by default via `NOTIFY_MODE: ${{ vars.NOTIFY_MODE || 'digest' }}` (line 71). This is intentional—digest mode is the production-recommended setting per `docs/reviews/project-completion-audit.md`.
+**Note on scheduling and NOTIFY_MODE:** The automated `.github/workflows/scrape.yml` `schedule:` is commented out (`1c1e21c`); scheduled daily runs execute on the DietPi box at `08:30 IST` via `deploy/job-scraper.timer` with `NOTIFY_MODE=cards` (`scrape.yml` `workflow_dispatch` also defaults to `cards`, while code defaults to `individual`).
 
 ## 4. Runtime Targets
 

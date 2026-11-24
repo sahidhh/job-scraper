@@ -65,7 +65,7 @@ src/features/<feature>/
 flowchart TB
     subgraph vercel ["💻 Vercel — Next.js 15"]
         Browser["🌐 Browser\n(RSC + Client)"]
-        Actions["Server Actions\n(use server)"]
+        Actions["Server Actions\n+ Telegram Webhook"]
         Browser <--> Actions
     end
 
@@ -75,23 +75,28 @@ flowchart TB
         Storage["Storage\n(resumes bucket)"]
     end
 
-    subgraph gha ["⏱️ GitHub Actions"]
-        Validate["scripts/validate-sources.ts"]
+    subgraph dietpi ["🍓 DietPi Box (08:30 IST systemd timer)"]
         Scrape["scripts/scrape.ts"]
         Score["scripts/score.ts"]
         Notify["scripts/notify.ts"]
         Scrape --> Score --> Notify
     end
 
-    Actions <-->|"anon key\n+ session cookies"| PG
+    subgraph gha ["⏱️ GitHub Actions (CI / weekly / manual)"]
+        Validate["scripts/validate-sources.ts"]
+        Migrate["supabase db push --remote --yes"]
+    end
+
+    Actions <-->|"publishable/anon key\n+ session cookies"| PG
     Actions --> Auth
-    Scrape -->|"service role key"| PG
-    Score -->|"service role key"| PG
-    Notify -->|"service role key"| PG
+    Scrape -->|"SUPABASE_SECRET_KEY\n(fallback service_role)"| PG
+    Score -->|"SUPABASE_SECRET_KEY"| PG
+    Notify -->|"SUPABASE_SECRET_KEY"| PG
 
     Score -->|"AI scoring"| OpenRouter["🤖 OpenRouter API"]
-    Notify -->|"push alerts"| Telegram["📱 Telegram Bot API"]
-    Scrape -->|"board APIs"| ATS["📋 ATS APIs\n(Greenhouse/Lever/Ashby/…)"]
+    Notify -->|"cards + st:* callbacks"| Telegram["📱 Telegram Bot API"]
+    Telegram -->|"callback_query"| Actions
+    Scrape -->|"API / ATS boards"| ATS["📋 Job Sources"]
     Validate -->|"board probe"| ATS
     Actions --> Storage
 ```

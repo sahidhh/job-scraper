@@ -3,7 +3,12 @@
 ## 1. Data & Coverage
 
 ### 1.1 Job Source Coverage
-Eight sources run on the normal scrape cron (Greenhouse, Lever, Ashby, Wellfound, RemoteOK, MyCareersFuture, JSearch, Adzuna -- merge-workspace Phase 5 added the last two), plus one manual-trigger-only source (the static careers-URL fetcher, `careers_url`, §1.1a). LinkedIn, Indeed, and Glassdoor listings do reach the platform indirectly through JSearch (which indexes Google for Jobs), but there is still no direct integration with those sites or with Naukri -- they have no public API for direct access, require authentication, or prohibit scraping in their ToS.
+Sources are gated by `enabled_sources` in `app_settings` (`/settings`) plus env disables. Built-in adapters include Greenhouse, Lever, Ashby, Wellfound, RemoteOK, MyCareersFuture, JSearch, Adzuna, Remotive, Himalayas, Naukri (`#197`), and NaukriGulf (`#197`), plus one manual-trigger source (`careers_url`, §1.1a). LinkedIn, Indeed, and Glassdoor listings still reach the platform only indirectly via JSearch.
+
+**Naukri / NaukriGulf runtime block (verified `2026-11-24`):**
+- `NaukriScraper` calls `https://www.naukri.com/jobapi/v3/search` using synced Chrome cookies (`/home/dietpi/.cookies/naukri.json`). Even from a residential DietPi IP with 20 valid session cookies (`chmod 600`), the endpoint rejects direct HTTP requests with HTTP `406` (`{"message":"recaptcha required","statusCode":406,"validationErrors":[],"data":null}`). Direct API scraping of Naukri is therefore blocked by Akamai WAF + invisible reCAPTCHA challenges.
+- `NaukriGulfScraper` is a placeholder stub (`TODO`) and returns a stubbed failure.
+- Production `enabled_sources` should use working API/ATS sources rather than relying on `naukri`/`naukrigulf` unless a real user-operated browser session solves challenges manually.
 
 Of the 38 ATS company boards currently configured, **13 are confirmed healthy** and **25 are broken** as of the June 2026 validation run (run ID 27865212149). Three DB migrations (`20260620000001–3`) are code-complete and will raise the healthy count to ≥ 20 once applied. See `reports/source-validation-2026-06-22.md` for the full breakdown and `docs/research/source-strategy-review.md` for the expansion plan.
 
@@ -22,7 +27,7 @@ Both are remote-global boards fetched once per run with no server-side keyword s
 The Wellfound adapter requires a custom feed URL (`WELLFOUND_FEED_URL`) because Wellfound has no documented public API. If the URL is not configured, the adapter auto-disables and returns zero results. `WELLFOUND_DISABLED=true` is set explicitly in `scrape.yml` to suppress any residual log noise. Users without a Wellfound feed receive no Wellfound data. See `docs/sources/wellfound.md` for setup instructions.
 
 ### 1.3 Scrape Cadence
-Jobs are fetched twice daily, at 06:00 and 14:00 UTC (11:30 / 19:30 IST). A new posting may therefore be up to ~16 hours old before it appears in the dashboard — the gap between the evening run and the next morning's. This is a deliberate trade (AD-70): at the previous 6-hourly cadence a run inserted a median of 4 new jobs against ~950 re-fetched ones, so the extra runs bought freshness nobody was watching for at 4x the aggregator quota. There is no webhook or push mechanism from any ATS source; `workflow_dispatch` is the manual escape hatch when freshness matters on a given day.
+Since `#197` (`2026-11-24`), automated scraping runs once daily at `08:30 IST` (`03:00 UTC`) via the DietPi systemd timer (`deploy/job-scraper.timer` -> `job-scraper.service`), chaining `scrape -> score -> notify`. `.github/workflows/scrape.yml` has its `schedule:` trigger commented out and remains available as a manual `workflow_dispatch` fallback. There is no webhook or push mechanism from any ATS source.
 
 ### 1.4 Geographic Coverage
 Location tagging is hardcoded to four tags: India, Singapore, UAE, Remote. Jobs from other geographies are dropped during filtering. Expanding to new regions requires a database migration (extending the `location_tag` enum) and code changes.
@@ -159,16 +164,16 @@ There are no per-user data partitions (no `user_id` columns). All data is shared
 ### 6.2 Supabase Dependency
 The platform is tightly coupled to Supabase (Postgres, Auth, Storage). There is no abstraction layer to swap in a different managed database or storage provider without significant refactoring.
 
-### 6.3 No Self-Hosted Cron
-Cron jobs are managed by GitHub Actions. Teams or individuals without access to GitHub Actions (or equivalent CI runner) cannot run the background pipelines.
+### 6.3 DietPi Self-Hosted Cron vs GitHub Actions
+The daily scrape/score/notify pipeline runs via systemd on a self-hosted DietPi worker box (`/opt/job-scraper`, `08:30 IST` daily) rather than GitHub Actions `schedule:`. GitHub Actions still handles CI, remote Supabase migrations (`migrate.yml` via `supabase db push --remote --yes`), weekly source validation (`validate-sources.yml`), maintenance, and manual `workflow_dispatch` runs.
 
 ### 6.4 Cold Start Latency
 Vercel serverless functions experience cold starts, which can add 1–3 seconds to the first request after a period of inactivity.
 
 The app now loads one webfont, IBM Plex Sans, which adds a font file to that first paint. It is kept deliberately cheap — self-hosted by `next/font` (no third-party connection to open), latin subset only, and the variable cut so one file covers every weight the design system uses — and `display: "swap"` means text paints immediately in a metric-adjusted fallback rather than waiting on it. A **second** family would double that cost and should not be added without re-measuring (`design/tech-stack.md` §8).
 
-### 6.5 Service Role Key Exposure Risk
-If `SUPABASE_SERVICE_ROLE_KEY` is ever accidentally added to Vercel env vars (instead of GitHub Actions secrets only), it could be exposed in Next.js server bundles. The CI boundary check (`check:service-role-boundary`) mitigates this for app/ code, but Vercel env var configuration must be managed carefully.
+### 6.5 Elevated Secret Key Exposure Risk
+If `SUPABASE_SECRET_KEY` (or legacy `SUPABASE_SERVICE_ROLE_KEY`) is ever accidentally added to Vercel env vars, it could be exposed in Next.js server bundles. The CI boundary check (`check:service-role-boundary`) blocks references to both key names in app code, but Vercel env var configuration must still be managed carefully.
 
 ---
 
@@ -210,14 +215,8 @@ The Telegram reminder for draft applications (`notifyPendingDrafts`) is stateles
 
 ## 10. UI & Design System
 
-### 10.1 Settings → Sources Does Not Manage Sources (`docs/decisions.md` AD-57)
-
-The tab is named "Sources" but manages **companies and their ATS board tokens**. The aggregator
-sources (JSearch, Adzuna, Remotive, Himalayas, RemoteOK, MyCareersFuture) cannot be enabled or
-disabled from the UI at all — a source runs if its env key is configured and doesn't if it isn't, a
-deployment concern rather than a user setting. Per-source toggles would need somewhere to persist
-enablement, a read of it in `scrape.ts`, and a decision about what disabling does to already-scraped
-jobs; deferred rather than built. Read-only source health *is* surfaced, on `/analytics/sources`.
+### 10.1 Settings → Sources (`app_settings.enabled_sources`, `#197`)
+Historically, Settings → Sources managed only ATS company board tokens (AD-57). Since `#197`, `/settings` also reads and persists `app_settings.enabled_sources`, allowing aggregator and board sources to be enabled/disabled in DB alongside env flags (`REMOTEOK_DISABLED`, `WELLFOUND_DISABLED`, etc.). Read-only source health remains on `/analytics/sources`.
 
 ### 10.2 Error Boundaries Are Not Built From Design Tokens — Resolved
 

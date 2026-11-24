@@ -10,7 +10,7 @@ The platform uses **Supabase Auth** (email + password) for the single user accou
 | Session refresh | `middleware.ts` refreshes session on every request |
 | Route protection | Middleware redirects unauthenticated requests to `/login` |
 | Middleware exclusions | `/api` (self-authenticating, §9), Next's static assets, any `.svg`/`.png`/`.jpg`/`.jpeg`/`.gif`/`.webp` path, and `/manifest.webmanifest`. Everything excluded here is public by design and carries no user data — the icons are brand artwork and the manifest is the app's name, colours, and icon list. All of it is fetched by the browser *before* there is a session, so redirecting it to `/login` breaks the feature (no install prompt, no tab icon) without protecting anything |
-| Token exposure | Anon key is public (safe — RLS enforces access); service role key is never in client-reachable Next.js code (one server-only route handler exception, §3/AD-29) |
+| Token exposure | Publishable/anon key (`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` / legacy `NEXT_PUBLIC_SUPABASE_ANON_KEY`) is public (safe — RLS enforces access); elevated key (`SUPABASE_SECRET_KEY` / legacy `SUPABASE_SERVICE_ROLE_KEY`) is never in client-reachable Next.js code (one server-only route handler exception, §3/AD-29) |
 | No JWT manipulation | Supabase handles all token lifecycle; no custom JWT logic |
 
 ---
@@ -60,16 +60,16 @@ critical-severity failure. Run via `npm run verify:production` / `npm run diagno
 
 ## 3. Service Role Boundary
 
-The `SUPABASE_SERVICE_ROLE_KEY` bypasses RLS entirely. It is permitted only in `scripts/`, in the service-client factory itself, and in one formally-approved exception — never anywhere else in `src/app/` or `src/features/`. See AD-29 (`docs/decisions.md`) for the exception's rationale.
+The elevated server key (`SUPABASE_SECRET_KEY`, with legacy fallback `SUPABASE_SERVICE_ROLE_KEY`) bypasses RLS entirely. It is permitted only in `scripts/`, in the service-client factory itself, and in one formally-approved exception — never anywhere else in `src/app/` or `src/features/`. See AD-29 (`docs/decisions.md`) for the exception's rationale.
 
 ### Enforcement
 
 **CI gate:** `npm run check:service-role-boundary`
-(`scripts/checkServiceRoleBoundary.ts`) — statically scans `src/` and `scripts/` for any import of the service client or reference to `SERVICE_ROLE_KEY`, exempting `scripts/**` and the paths in its `ALLOWED_FILES` set. Fails the CI build if found outside those.
+(`scripts/checkServiceRoleBoundary.ts`) — statically scans `src/` and `scripts/` for any import of the service client or reference to `SERVICE_ROLE_KEY` or `SUPABASE_SECRET_KEY`, exempting `scripts/**` and the paths in its `ALLOWED_FILES` set. Fails the CI build if found outside those.
 
-**Convention:** The service client factory is `src/shared/infrastructure/supabaseClient.ts` (`createSupabaseServiceClient`). It is imported by `scripts/scrape.ts`, `scripts/score.ts`, `scripts/notify.ts`, `scripts/discover-career-pages.ts`, and `scripts/import-manual-matches.ts` (docs/tasks/manual-job-matches.md, AD-65 — same `scripts/`-only boundary as every other one-off script, no new exception), and by one allowlisted exception: `src/app/api/telegram/webhook/route.ts` (AD-29) — a server-only Next.js route handler, never reachable from the browser bundle, gated on the `X-Telegram-Bot-Api-Secret-Token` header rather than Supabase Auth, which needs cross-RLS read access to serve "Worth Reviewing" pagination to an authenticated Telegram callback.
+**Convention:** The service client factory is `src/shared/infrastructure/supabaseClient.ts` (`createSupabaseServiceClient`). It is imported by `scripts/scrape.ts`, `scripts/score.ts`, `scripts/notify.ts`, `scripts/cleanup-bloat.ts`, `scripts/discover-career-pages.ts`, and `scripts/import-manual-matches.ts` (docs/tasks/manual-job-matches.md, AD-65 — same `scripts/`-only boundary as every other one-off script, no new exception), and by one allowlisted exception: `src/app/api/telegram/webhook/route.ts` (AD-29) — a server-only Next.js route handler, never reachable from the browser bundle, gated on the `X-Telegram-Bot-Api-Secret-Token` header rather than Supabase Auth, which needs cross-RLS access to handle pagination and `st:*` status callbacks.
 
-**Deployment:** `SUPABASE_SERVICE_ROLE_KEY` is set only as a GitHub Actions secret — not as a Vercel env var. This prevents it from appearing in any server-side Next.js bundle.
+**Deployment:** `SUPABASE_SECRET_KEY` (and legacy `SUPABASE_SERVICE_ROLE_KEY`) is set only on DietPi (`/opt/job-scraper/.env`, mode `0600`) and GitHub Actions secrets — never as a Vercel env var. This prevents it from appearing in any server-side Next.js bundle.
 
 ---
 
@@ -87,17 +87,18 @@ Resume files are stored with their sha256 content hash as the path (`<hash>.pdf`
 
 | Secret | Where Stored | Used By |
 |---|---|---|
-| `SUPABASE_SERVICE_ROLE_KEY` | GitHub Actions secrets only | Cron scripts |
-| `OPENROUTER_API_KEY` | GitHub Actions secrets + Vercel env | Scripts + server actions (role expansion, job scoring, and — since AD-42 — the default `llmClient.ts` provider backing resume suggestions/application drafts/careers extraction) |
+| `SUPABASE_SECRET_KEY` (legacy `SUPABASE_SERVICE_ROLE_KEY`) | DietPi `/opt/job-scraper/.env` (`0600`) + GitHub Actions secrets only | Cron scripts |
+| `OPENROUTER_API_KEY` | DietPi `.env` + GitHub Actions secrets + Vercel env | Scripts + server actions (role expansion, job scoring, and — since AD-42 — the default `llmClient.ts` provider backing resume suggestions/application drafts/careers extraction) |
 | `GEMINI_API_KEY` / `ANTHROPIC_API_KEY` | Vercel env only (no cron script uses them); optional, only needed if `LLM_PROVIDER` is set to `gemini`/`anthropic` (AD-42 — `openrouter` is now the default and needs neither) | Server actions (resume suggestions, `src/shared/infrastructure/llmClient.ts`) — same pattern as `OPENROUTER_API_KEY`'s server-action usage: read server-side only, never exposed via `NEXT_PUBLIC_*` |
-| `TELEGRAM_BOT_TOKEN` | GitHub Actions secrets only | Notify script |
-| `TELEGRAM_CHAT_ID` | GitHub Actions secrets only | Notify script |
-| `RAPIDAPI_KEY` | GitHub Actions secrets only | Scrape script (`JSearchScraper.ts`) — not a Supabase key, but scoped to cron/scripts the same way `TELEGRAM_BOT_TOKEN` is; never needed by `src/app/` |
-| `ADZUNA_APP_ID` / `ADZUNA_APP_KEY` | GitHub Actions secrets only | Scrape script (`AdzunaScraper.ts`) — same scoping rationale as `RAPIDAPI_KEY` |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Vercel env (public) | Client-side Supabase calls |
+| `TELEGRAM_BOT_TOKEN` | DietPi `.env` + GitHub Actions secrets + Vercel webhook route | Notify script + Telegram webhook |
+| `TELEGRAM_CHAT_ID` | DietPi `.env` + GitHub Actions secrets | Notify script + scrape alerts |
+| `RAPIDAPI_KEY` | DietPi `.env` + GitHub Actions secrets | Scrape script (`JSearchScraper.ts`) |
+| `ADZUNA_APP_ID` / `ADZUNA_APP_KEY` | DietPi `.env` + GitHub Actions secrets | Scrape script (`AdzunaScraper.ts`) |
+| Naukri cookie JSON (`/home/dietpi/.cookies/naukri.json`) | DietPi host only (`0700` dir, `0600` file, gitignored) | `NaukriScraper` (when enabled) |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (legacy `NEXT_PUBLIC_SUPABASE_ANON_KEY`) | Vercel env (public) | Client-side Supabase calls |
 | `NEXT_PUBLIC_SUPABASE_URL` | Vercel env (public) | Client-side Supabase calls |
 
-`NEXT_PUBLIC_*` variables are intentionally public — they are scoped to the anon role which requires authentication for any data access.
+`NEXT_PUBLIC_*` variables are intentionally public — they carry the publishable/anon key, which requires an authenticated user session for any data access via RLS.
 
 ---
 

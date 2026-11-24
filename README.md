@@ -10,10 +10,10 @@
 
 | Step | Description |
 |---|---|
-| 🔍 **Scrape** | Pulls fresh postings twice daily (06:00 / 14:00 UTC) from Greenhouse, Lever, Ashby, Wellfound, RemoteOK & MyCareersFuture |
-| 📍 **Filter** | Tags jobs by geography (India / Singapore / UAE / Remote) and drops irrelevant ones |
-| 🎯 **Score** | Runs a two-stage pipeline — cheap keyword match first, then AI scoring via OpenRouter |
-| 🔔 **Notify** | Sends a structured Telegram digest with inline Apply buttons for high-score matches |
+| 🔍 **Scrape** | Pulls fresh postings daily (`08:30 IST` via DietPi systemd timer, manual fallback on GH Actions) across configured `enabled_sources` |
+| 📍 **Filter** | Tags jobs by geography (India / Singapore / UAE / Remote) and drops `minYears > 3` / ineligible postings |
+| 🎯 **Score** | Runs a two-stage pipeline — cheap keyword match first, then AI scoring via OpenRouter (`mistralai/mistral-small-3.2-24b-instruct` live on DietPi) |
+| 🔔 **Notify** | Sends structured Telegram job cards (with inline `Applied` / `Skipped` / `Closed` callbacks) or digests |
 | 📊 **Insights** | Shows skill gaps, skill demand, and analytics charts on a clean dashboard |
 
 ---
@@ -22,17 +22,15 @@
 
 ```mermaid
 flowchart LR
-    subgraph cron ["⏱️ GitHub Actions (every 2h)"]
+    subgraph cron ["⏱️ DietPi Timer (08:30 IST daily)"]
         S1[scrape.ts] --> S2[score.ts] --> S3[notify.ts]
     end
 
-    subgraph sources ["📡 Job Sources"]
-        GH[Greenhouse]
-        LV[Lever]
-        AS[Ashby]
-        WF[Wellfound]
-        RO[RemoteOK]
+    subgraph sources ["📡 Job Sources (enabled_sources)"]
+        ATS[Greenhouse / Lever / Ashby]
+        AG[JSearch / Adzuna / Remotive / Himalayas]
         MC[MyCareersFuture]
+        NK[Naukri *blocked 406*]
     end
 
     subgraph ext ["🌐 External APIs"]
@@ -44,7 +42,7 @@ flowchart LR
     S1 -->|upsert| DB[(🗄️ Supabase)]
     S2 -->|AI score| OR
     S2 -->|upsert scores| DB
-    S3 -->|alert| TG
+    S3 -->|cards / alert| TG
     S3 -->|mark sent| DB
 
     subgraph web ["💻 Vercel — Next.js 15"]
@@ -104,7 +102,7 @@ flowchart LR
 | Database | Supabase (Postgres 14.5 + Auth + Storage) |
 | AI | OpenRouter API (model configurable) |
 | Notifications | Telegram Bot API |
-| Cron | GitHub Actions |
+| Cron | DietPi systemd timer (`08:30 IST` daily) + GitHub Actions (CI / migrations / manual) |
 | Tests | Vitest |
 
 > **Not used:** Prisma, Drizzle, Zustand, Redux, React Query — see [CLAUDE.md](CLAUDE.md) for why.
@@ -133,14 +131,14 @@ npm install
 
 # 3. Configure environment
 cp .env.example .env.local
-# Fill in NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY,
+# Fill in NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
 # OPENROUTER_API_KEY, OPENROUTER_MODEL
 
 # 4. Run locally
 npm run dev
 
-# 5. Add GitHub Actions secrets for cron
-#    SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
+# 5. Add DietPi /dev box .env & GitHub Actions secrets for pipeline scripts
+#    SUPABASE_URL, SUPABASE_SECRET_KEY (or legacy SUPABASE_SERVICE_ROLE_KEY),
 #    OPENROUTER_API_KEY, OPENROUTER_MODEL,
 #    TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
 ```
@@ -148,9 +146,9 @@ npm run dev
 ### First Run
 1. Log in → upload your PDF resume at `/resume`
 2. Set your target role at `/roles`
-3. Add company board tokens at `/settings`
+3. Enable active sources and company board tokens at `/settings`
 4. **Optional:** validate boards before scraping via Actions → `Validate sources` → `Run workflow`
-5. Trigger the scrape workflow manually via GitHub Actions → `workflow_dispatch`
+5. Daily scraping runs via `deploy/job-scraper.timer` on DietPi (`08:30 IST`), or manually via GitHub Actions → `workflow_dispatch`
 
 ---
 
@@ -159,17 +157,19 @@ npm run dev
 | Variable | Where | Required |
 |---|---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | Vercel | ✅ |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Vercel | ✅ |
-| `OPENROUTER_API_KEY` | Vercel + GH Actions | ✅ |
-| `OPENROUTER_MODEL` | Vercel + GH Actions | ✅ |
-| `SUPABASE_URL` | GH Actions | ✅ |
-| `SUPABASE_SERVICE_ROLE_KEY` | GH Actions only | ✅ |
-| `TELEGRAM_BOT_TOKEN` | GH Actions | ✅ |
-| `TELEGRAM_CHAT_ID` | GH Actions | ✅ |
-| `KEYWORD_THRESHOLD` | GH Actions | ⬜ default `0.25` |
-| `NOTIFY_THRESHOLD` | GH Actions | ⬜ default `0.75` |
-| `WELLFOUND_FEED_URL` | GH Actions | ⬜ Wellfound feed URL (see [docs/sources/wellfound.md](docs/sources/wellfound.md)) |
-| `WELLFOUND_DISABLED` | GH Actions | ⬜ Set `true` to disable Wellfound without a config warning |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Vercel (legacy `NEXT_PUBLIC_SUPABASE_ANON_KEY` fallback) | ✅ |
+| `OPENROUTER_API_KEY` | Vercel + DietPi + GH Actions | ✅ |
+| `OPENROUTER_MODEL` | Vercel + DietPi + GH Actions | ✅ |
+| `SUPABASE_URL` | DietPi + GH Actions | ✅ |
+| `SUPABASE_SECRET_KEY` | DietPi + GH Actions only (legacy `SUPABASE_SERVICE_ROLE_KEY` fallback) | ✅ |
+| `TELEGRAM_BOT_TOKEN` | DietPi + GH Actions + Vercel | ✅ |
+| `TELEGRAM_CHAT_ID` | DietPi + GH Actions | ✅ |
+| `KEYWORD_THRESHOLD` | DietPi + GH Actions | ⬜ default `0.25` |
+| `NOTIFY_THRESHOLD` | DietPi + GH Actions | ⬜ default `0.75` |
+| `NOTIFY_MODE` | DietPi + GH Actions | ⬜ `cards` / `digest` / `individual` |
+| `COOKIES_DIR` | DietPi | ⬜ default `/home/dietpi/.cookies` |
+| `WELLFOUND_FEED_URL` | DietPi + GH Actions | ⬜ Wellfound feed URL (see [docs/sources/wellfound.md](docs/sources/wellfound.md)) |
+| `WELLFOUND_DISABLED` | DietPi + GH Actions | ⬜ Set `true` to disable Wellfound without a config warning |
 
 ---
 

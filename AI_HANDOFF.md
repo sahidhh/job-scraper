@@ -12,7 +12,7 @@ Read this first. It's the minimum needed to be productive in this repo without r
 ## Non-negotiable conventions (verified, not guessed)
 
 - **Every feature is `src/features/<name>/{domain,application,infrastructure}` + `actions.ts`.** Domain has zero imports from other layers. Application takes injected deps, no I/O. Infrastructure implements domain interfaces. Never call Supabase directly from a use-case.
-- **Service role key only in `scripts/`.** Enforced by CI (`npm run check:service-role-boundary`) — if you're writing app/feature code and need `SUPABASE_SERVICE_ROLE_KEY`, you're in the wrong layer.
+- **Elevated key (`SUPABASE_SECRET_KEY` / legacy `SUPABASE_SERVICE_ROLE_KEY`) only in `scripts/`.** Enforced by CI (`npm run check:service-role-boundary`) — if you're writing app/feature code and need it, you're in the wrong layer.
 - **Deterministic over AI, always.** Every job-signal extractor (salary, contact email, employment type/seniority/etc.) is a pure regex function, not an AI call — copy `extractSalary.ts`'s shape for a new one, don't reach for OpenRouter.
 - **New DB columns:** add a forward-only migration in `supabase/migrations/` (never edit a merged one) **and** manually update `supabase/database.types.ts` to match — there is no live Supabase project in this environment to run `supabase gen types` against, so the generated-types file is hand-maintained. Also update `design/erd.md` (the canonical schema doc — **not** `docs/database.md`, which is stale, marked as such at its own top).
 - **Verify before calling anything done:** `npm run verify` (typecheck + full test suite + production build). This is the single command; use it, don't run the three separately and forget one.
@@ -35,8 +35,8 @@ Read this first. It's the minimum needed to be productive in this repo without r
 
 ## Gotchas that will burn you if you skip them
 
-- **The cron pipeline is live**, running twice daily at 06:00/14:00 UTC (`scrape.yml`'s `schedule:` is active; cadence set from measured yield, AD-70). Changes to `scripts/scrape.ts`/`score.ts`/`notify.ts` affect a running production pipeline, not a staged one.
-- **Migrations auto-apply on merge to `main`** via `migrate.yml` (`supabase db push`). A migration you write and merge takes effect automatically — it is not a manual step someone remembers to run later.
+- **The scrape/score/notify pipeline runs daily at `08:30 IST` on the DietPi box** (`/opt/job-scraper`, `deploy/job-scraper.timer`); `.github/workflows/scrape.yml`'s `schedule:` is commented out (manual `workflow_dispatch` only). See `docs/operations/dietpi-deployment-and-model-eval.md` for live findings (Naukri `406 recaptcha required` block, OpenRouter `300`-token constraint).
+- **Migrations auto-apply on merge to `main`** via `migrate.yml` (`supabase db push --remote --yes`, explicit `--remote` required by Supabase CLI v3). A migration you write and merge takes effect automatically — it is not a manual step someone remembers to run later.
 - **No live Supabase/Telegram credentials exist in this sandboxed environment.** You cannot browser-test the app or run a real cron script end-to-end here. Verification is `tsc --noEmit` + `vitest run` (mocked Supabase client) + `next build`. Say so explicitly if asked to "verify it works" — don't imply live verification happened when it didn't.
 - **`filterMatches.ts` and `scoreJob.ts` must use the same text source** (`title + "\n" + description`) when matching skills — a real bug (fixed in v1.2) where they diverged and silently dropped valid matches. If you touch either, check the other.
 - **`JobWithScore` deliberately omits several `Job` fields** (description, fingerprint, salary_*, contact_email_*, and the v1.2 job-attribute fields) — this is intentional (never rendered by the dashboard today), not an oversight. Don't "fix" it without a UI reason to add the field back.
