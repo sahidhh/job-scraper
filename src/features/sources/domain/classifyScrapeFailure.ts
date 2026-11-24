@@ -1,3 +1,5 @@
+import { SourceAuthExpiredError, SourceBlockedError } from "./errors";
+
 // Failure taxonomy for scrape_runs (Phase 1 Task 5/7). Deterministic
 // keyword/status-code heuristics on the thrown error's message -- no AI, no
 // network re-inspection. "selector" and "captcha" are extension points: no
@@ -50,6 +52,9 @@ const KEYWORD_RULES: [RegExp, FailureCategory][] = [
  * matches -- never throws.
  */
 export function classifyScrapeFailure(error: unknown): FailureCategory {
+  if (error instanceof SourceAuthExpiredError) return "authentication";
+  if (error instanceof SourceBlockedError) return "blocked";
+
   const message = error instanceof Error ? error.message : String(error);
 
   const statusMatch = message.match(/\b(\d{3})\b/);

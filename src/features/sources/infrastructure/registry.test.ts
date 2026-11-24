@@ -15,7 +15,17 @@ describe("sourceScrapers registry", () => {
 
     expect(new Set(withCompanyConfig)).toEqual(new Set(["greenhouse", "lever", "ashby"]));
     expect(new Set(withoutCompanyConfig)).toEqual(
-      new Set(["wellfound", "remoteok", "remotive", "himalayas", "mycareersfuture", "jsearch", "adzuna"]),
+      new Set([
+        "wellfound",
+        "remoteok",
+        "remotive",
+        "himalayas",
+        "mycareersfuture",
+        "jsearch",
+        "adzuna",
+        "naukri",
+        "naukrigulf",
+      ]),
     );
   });
 });

@@ -6,6 +6,8 @@ import { himalayasScraper } from "./himalayas/HimalayasScraper";
 import { jsearchScraper } from "./jsearch/JSearchScraper";
 import { leverScraper } from "./lever/LeverScraper";
 import { myCareersFutureScraper } from "./mycareersfuture/MyCareersFutureScraper";
+import { naukriScraper } from "./naukri/NaukriScraper";
+import { naukriGulfScraper } from "./naukrigulf/NaukriGulfScraper";
 import { remoteokScraper } from "./remoteok/RemoteOkScraper";
 import { remotiveScraper } from "./remotive/RemotiveScraper";
 import { wellfoundScraper } from "./wellfound/WellfoundScraper";
@@ -27,4 +29,6 @@ export const sourceScrapers: readonly JobSourceScraper[] = [
   myCareersFutureScraper,
   jsearchScraper,
   adzunaScraper,
+  naukriScraper,
+  naukriGulfScraper,
 ];

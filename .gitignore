@@ -17,3 +17,6 @@ supabase/.temp/*
 .claude/settings.local.json
 .claude/worktrees/
 .agent/
+.cookies/
+*cookies*.json
+!*.fixture.json
