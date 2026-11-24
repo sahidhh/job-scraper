@@ -1,3 +1,5 @@
+import type { JobSource } from "@/shared/domain/enums";
+
 // Editable, user-facing app settings (P2) -- distinct from the read-only env
 // thresholds (KEYWORD_THRESHOLD/NOTIFY_THRESHOLD). Backed by the app_settings
 // key/value table. Kept narrow to the one setting in use; add methods per
@@ -21,4 +23,10 @@ export interface SettingsRepository {
    */
   getShowStatusDropdown(): Promise<boolean>;
   setShowStatusDropdown(enabled: boolean): Promise<void>;
+  /**
+   * Sources enabled for scheduled scraping. Defaults to ["naukri", "naukrigulf"]
+   * when unset or invalid.
+   */
+  getEnabledSources(): Promise<JobSource[]>;
+  setEnabledSources(sources: JobSource[]): Promise<void>;
 }

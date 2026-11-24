@@ -124,4 +124,44 @@ describe("SupabaseSettingsRepository", () => {
       expect(upsertCall[1]).toEqual({ onConflict: "key" });
     });
   });
+
+  describe("getEnabledSources", () => {
+    it("defaults to ['naukri', 'naukrigulf'] when no row exists", async () => {
+      const { client, builder } = mockSupabaseClient({ data: null, error: null });
+      const repo = new SupabaseSettingsRepository(client);
+
+      expect(await repo.getEnabledSources()).toEqual(["naukri", "naukrigulf"]);
+      expect(builder.eq).toHaveBeenCalledWith("key", "enabled_sources");
+    });
+
+    it("defaults to ['naukri', 'naukrigulf'] when stored value is not an array", async () => {
+      const { client } = mockSupabaseClient({ data: { value: "naukri" }, error: null });
+      const repo = new SupabaseSettingsRepository(client);
+
+      expect(await repo.getEnabledSources()).toEqual(["naukri", "naukrigulf"]);
+    });
+
+    it("filters out invalid or manual sources from the stored array", async () => {
+      const { client } = mockSupabaseClient({
+        data: { value: ["naukri", "careers_url", "unknown", "greenhouse"] },
+        error: null,
+      });
+      const repo = new SupabaseSettingsRepository(client);
+
+      expect(await repo.getEnabledSources()).toEqual(["naukri", "greenhouse"]);
+    });
+  });
+
+  describe("setEnabledSources", () => {
+    it("upserts on conflict of key", async () => {
+      const { client, builder } = mockSupabaseClient({ data: null, error: null });
+      const repo = new SupabaseSettingsRepository(client);
+
+      await repo.setEnabledSources(["naukri", "greenhouse"]);
+
+      const upsertCall = builder.upsert!.mock.calls[0] as unknown[];
+      expect(upsertCall[0]).toMatchObject({ key: "enabled_sources", value: ["naukri", "greenhouse"] });
+      expect(upsertCall[1]).toEqual({ onConflict: "key" });
+    });
+  });
 });

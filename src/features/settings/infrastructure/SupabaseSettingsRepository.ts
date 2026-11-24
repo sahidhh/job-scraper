@@ -1,10 +1,14 @@
 import type { SettingsRepository } from "@/features/settings/domain/SettingsRepository";
+import { JOB_SOURCES, type JobSource } from "@/shared/domain/enums";
 import type { TypedSupabaseClient } from "@/shared/infrastructure/supabaseClient";
 import { toAppError } from "@/shared/infrastructure/supabaseError";
 
 const DESIRED_EXPERIENCE_KEY = "desired_experience_years";
 const SKIP_UNSPONSORED_FOREIGN_KEY = "skip_unsponsored_foreign_jobs";
 const SHOW_STATUS_DROPDOWN_KEY = "show_status_dropdown";
+const ENABLED_SOURCES_KEY = "enabled_sources";
+const DEFAULT_ENABLED_SOURCES: JobSource[] = ["naukri", "naukrigulf"];
+const VALID_JOB_SOURCES = new Set<string>(JOB_SOURCES);
 
 export class SupabaseSettingsRepository implements SettingsRepository {
   constructor(private readonly client: TypedSupabaseClient) {}
@@ -77,6 +81,31 @@ export class SupabaseSettingsRepository implements SettingsRepository {
       .from("app_settings")
       .upsert(
         { key: SHOW_STATUS_DROPDOWN_KEY, value: enabled, updated_at: new Date().toISOString() },
+        { onConflict: "key" },
+      );
+    if (error) throw toAppError(error);
+  }
+
+  async getEnabledSources(): Promise<JobSource[]> {
+    const { data, error } = await this.client
+      .from("app_settings")
+      .select("value")
+      .eq("key", ENABLED_SOURCES_KEY)
+      .maybeSingle();
+    if (error) throw toAppError(error);
+
+    if (!Array.isArray(data?.value)) {
+      return [...DEFAULT_ENABLED_SOURCES];
+    }
+
+    return data.value.filter((item): item is JobSource => typeof item === "string" && VALID_JOB_SOURCES.has(item));
+  }
+
+  async setEnabledSources(sources: JobSource[]): Promise<void> {
+    const { error } = await this.client
+      .from("app_settings")
+      .upsert(
+        { key: ENABLED_SOURCES_KEY, value: sources, updated_at: new Date().toISOString() },
         { onConflict: "key" },
       );
     if (error) throw toAppError(error);

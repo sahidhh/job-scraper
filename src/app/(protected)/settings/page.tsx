@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CompaniesTable } from "@/components/settings/CompaniesTable";
 import { CompanyFormDialog } from "@/components/settings/CompanyFormDialog";
+import { EnabledSourcesCard } from "@/components/settings/EnabledSourcesCard";
 import { ExperienceCard } from "@/components/settings/ExperienceCard";
 import { RankingPreferencesCard } from "@/components/settings/RankingPreferencesCard";
 import { SponsorshipCard } from "@/components/settings/SponsorshipCard";
@@ -21,12 +22,14 @@ export default async function SettingsSourcesPage() {
   const rankingPreferencesRepository = new SupabaseRankingPreferencesRepository(client);
   const settingsRepository = new SupabaseSettingsRepository(client);
 
-  const [companies, desiredExperience, rankingPreferences, skipUnsponsoredForeignJobs] = await Promise.all([
-    companyRepository.list(),
-    settingsRepository.getDesiredExperienceYears(),
-    rankingPreferencesRepository.getPreferences(),
-    settingsRepository.getSkipUnsponsoredForeignJobs(),
-  ]);
+  const [companies, desiredExperience, rankingPreferences, skipUnsponsoredForeignJobs, enabledSources] =
+    await Promise.all([
+      companyRepository.list(),
+      settingsRepository.getDesiredExperienceYears(),
+      rankingPreferencesRepository.getPreferences(),
+      settingsRepository.getSkipUnsponsoredForeignJobs(),
+      settingsRepository.getEnabledSources(),
+    ]);
 
   const keywordThreshold = optionalEnv("KEYWORD_THRESHOLD", "0.25");
   const notifyThreshold = optionalEnv("NOTIFY_THRESHOLD", "0.75");
@@ -42,6 +45,7 @@ export default async function SettingsSourcesPage() {
           <CompaniesTable companies={companies} />
         </CardContent>
       </Card>
+      <EnabledSourcesCard current={enabledSources} />
       <ExperienceCard current={desiredExperience} />
       <SponsorshipCard current={skipUnsponsoredForeignJobs} />
       <ThresholdsCard keywordThreshold={keywordThreshold} notifyThreshold={notifyThreshold} />

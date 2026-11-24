@@ -11,6 +11,8 @@ function makeRepository(): SettingsRepository {
     setSkipUnsponsoredForeignJobs: vi.fn().mockResolvedValue(undefined),
     getShowStatusDropdown: vi.fn(),
     setShowStatusDropdown: vi.fn().mockResolvedValue(undefined),
+    getEnabledSources: vi.fn(),
+    setEnabledSources: vi.fn().mockResolvedValue(undefined),
   };
 }
 

@@ -16,7 +16,7 @@ export const SOURCE_HEALTH_CONFIG = {
   // there after the cadence halved would have marked every source stale
   // between two healthy runs.
   staleAfterHours: parseInt(
-    process.env.SOURCE_STALE_HOURS ?? "36",
+    process.env.SOURCE_STALE_HOURS ?? "48",
     10,
   ),
 } as const;
