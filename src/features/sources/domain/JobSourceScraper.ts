@@ -23,4 +23,7 @@ export interface JobSourceScraper {
   // array means "no role filter" -- adapters return everything fetched, the
   // pre-existing behavior (safe default, scrapers.md §2).
   fetchJobs(companies: Company[], roles: readonly string[]): Promise<RawJob[]>;
+
+  /** Optional pre-flight gate; returns a skip reason string when the source should not run, or null. */
+  shouldSkip?(now?: Date): string | null;
 }

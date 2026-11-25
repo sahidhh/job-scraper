@@ -189,4 +189,28 @@ describe("runScrapePipeline", () => {
 
     consoleErrorSpy.mockRestore();
   });
+
+  it("skips a source cleanly when scraper.shouldSkip() returns a reason", async () => {
+    const naukriScraper: JobSourceScraper = {
+      source: "naukri",
+      requiresCompanyConfig: false,
+      shouldSkip: vi.fn().mockReturnValue("off-day for India (Sat/Sun IST)"),
+      fetchJobs: vi.fn().mockResolvedValue([makeRawJob({ source: "naukri" })]),
+    };
+
+    const deps = makeDeps({
+      scrapers: [naukriScraper],
+      settingsRepository: {
+        getSkipUnsponsoredForeignJobs: vi.fn().mockResolvedValue(false),
+        getEnabledSources: vi.fn().mockResolvedValue(["naukri"]),
+      },
+    });
+
+    await runScrapePipeline(deps);
+
+    expect(naukriScraper.shouldSkip).toHaveBeenCalledTimes(1);
+    expect(naukriScraper.fetchJobs).not.toHaveBeenCalled();
+    expect(deps.scrapeRunRepository.recordRun).not.toHaveBeenCalled();
+    expect(deps.telegramSender?.sendMessage).not.toHaveBeenCalled();
+  });
 });

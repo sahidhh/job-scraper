@@ -41,3 +41,16 @@ Rule for future model swaps: choose a non-reasoning instruct model supporting `s
   - `notify`: `0 card(s)`.
 - Why real Chrome works while `NaukriScraper` fails: Akamai WAF + invisible JS/reCAPTCHA challenges pass transparently in an interactive Chrome session, but direct `fetch` calls to `naukri.com/jobapi/v3/search` trigger a `406 recaptcha required` block even from a residential IP with valid cookies.
 - Project boundary note: automated CAPTCHA bypass or unattended stealth scraping is not supported; recovering Naukri would require an interactive user-attended browser session or disabling `naukri`/`naukrigulf` in `/settings` (`enabled_sources`) in favor of working API/ATS sources (`jsearch`, `adzuna`, `remotive`, `himalayas`, `greenhouse`, `lever`, `ashby`, `mycareersfuture`).
+
+## 5. Apify Migration for Naukri & NaukriGulf (Plan A, 2026-11-25)
+
+- **Actor**: `muhammetakkurtt/naukri-job-scraper` handles both India (Naukri) and GCC (NaukriGulf) in one actor under the `$5/mo` Apify Free plan, with no browser cookies required.
+- **Schedule & Rotation** (`maxTotalChargeUsd=0.10` safety cap per call):
+  - `naukri` (India): Mon–Fri, 4 keywords rotating 2/day, `fetchDetails=false`, `maxJobs=50` (~`$0.076/run` -> ~`$3.34/mo`).
+  - `naukrigulf` (GCC): Sun–Fri, 3 keywords rotating 2/day, `fetchDetails=true` for visa/candidate profile (~`$0.98/mo`).
+  - Combined estimate: ~`$4.32/mo`, staying inside the `$5/mo` free credit.
+- **DietPi Activation**:
+  1. Add `APIFY_TOKEN=...` to `/opt/job-scraper/.env`.
+  2. Pull latest `main` in `/opt/job-scraper`.
+  3. Enable `naukri` and `naukrigulf` in `/settings`.
+  4. Run `npm run doctor` and `npm run scrape`.

@@ -93,6 +93,12 @@ export async function runScrapePipeline({
       continue;
     }
 
+    const skipReason = scraper.shouldSkip?.();
+    if (skipReason) {
+      console.log(`[scrape] ${scraper.source}: skipping (${skipReason})`);
+      continue;
+    }
+
     const companies = scraper.requiresCompanyConfig ? await companyRepository.listActiveHealthy(scraper.source) : [];
 
     if (scraper.requiresCompanyConfig && companies.length === 0) {

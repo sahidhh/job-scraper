@@ -44,6 +44,7 @@ async function main(): Promise<void> {
     checkOptionalVar("NOTIFY_MODE", "defaults to individual"),
     checkOptionalVar("APP_URL", "digest \"open dashboard\" links will be omitted"),
     checkOptionalVar("WELLFOUND_FEED_URL", "Wellfound adapter auto-disables"),
+    checkOptionalVar("APIFY_TOKEN", "Naukri & NaukriGulf Apify scrapers auto-skip"),
   ];
   printResults("Optional (deliberate defaults exist)", optional);
 

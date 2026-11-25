@@ -1,230 +1,198 @@
 import type { Company } from "@/features/companies/domain/types";
-import { SourceAuthExpiredError, SourceBlockedError } from "@/features/sources/domain/errors";
 import type { JobSourceScraper } from "@/features/sources/domain/JobSourceScraper";
 import { hasRoleFilter, jobMatchesRoles } from "@/features/sources/domain/roleMatch";
 import type { RawJob } from "@/features/sources/domain/types";
 import { normalizeWhitespace, stripHtml } from "@/shared/infrastructure/text";
-import { readSourceCookieHeader } from "../cookieStore";
+import {
+  dedupeByCompanyAndTitle,
+  getWorkweekSkipReason,
+  parseKeywordList,
+  parsePositiveInt,
+  runApifyNaukriActor,
+  selectRotatedKeywords,
+  type ScraperEnv,
+} from "../apify/apifyNaukriClient";
 import { toIsoOrNull } from "../normalize";
 
-const NAUKRI_API_URL = "https://www.naukri.com/jobapi/v3/search";
 const NAUKRI_JOB_BASE = "https://www.naukri.com";
-const DEFAULT_MAX_PAGES = 3;
-const MIN_JITTER_MS = 3000;
-const MAX_JITTER_MS = 8000;
-const DEFAULT_SEARCH_TERMS = [".NET", "C#", "Full Stack", "Software Engineer"];
-const USER_AGENT =
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
 
-export interface NaukriPlaceholder {
-  type?: string;
-  label?: string;
-}
+export const DEFAULT_KEYWORDS = [
+  ".NET Developer",
+  "Full Stack .NET Developer",
+  "Full Stack Developer",
+  "AI Full Stack Developer",
+] as const;
+export const DEFAULT_KEYWORDS_PER_RUN = 2;
+export const DEFAULT_MAX_JOBS = 50;
+export const DEFAULT_EXPERIENCE = "2";
+export const DEFAULT_FRESHNESS = "3";
 
-export interface NaukriJobEntry {
+export interface ApifyNaukriItem {
   jobId?: string | number;
   title?: string;
   companyName?: string;
+  location?: string;
   jdURL?: string;
-  jobDescription?: string;
   createdDate?: string | number;
+  minimumExperience?: string | number;
   experience?: string | number;
-  minExp?: number;
-  placeholders?: NaukriPlaceholder[];
-  tagsAndSkills?: string;
+  experienceText?: string;
+  salary?: string;
+  tagsAndSkills?: string | string[];
+  jobDescription?: string;
 }
-
-interface NaukriSearchResponse {
-  jobDetails?: NaukriJobEntry[];
-  noOfJobs?: number;
-}
-
-export type ScraperEnv = Readonly<Record<string, string | undefined>>;
 
 export interface NaukriScraperDeps {
   fetchFn?: typeof fetch;
-  readCookiesFn?: (env: ScraperEnv) => Promise<string>;
-  delayFn?: (ms: number) => Promise<void>;
-  randomFn?: () => number;
   env?: ScraperEnv;
+  nowFn?: () => Date;
 }
 
-function defaultDelay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+function formatLocationRaw(location: unknown): string {
+  const loc = normalizeWhitespace(typeof location === "string" ? location : "");
+  if (!loc) return "India";
+  return /\b(india|remote)\b/i.test(loc) ? loc : `${loc}, India`;
 }
 
-function parseMaxPages(env: ScraperEnv): number {
-  const raw = env.NAUKRI_MAX_PAGES;
-  if (!raw) return DEFAULT_MAX_PAGES;
-  const parsed = Number.parseInt(raw, 10);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_MAX_PAGES;
+function buildDescription(entry: ApifyNaukriItem): string {
+  const parts: string[] = [];
+  const body = stripHtml(typeof entry.jobDescription === "string" ? entry.jobDescription : "");
+  if (body) {
+    parts.push(body);
+  }
+
+  const rawTags = Array.isArray(entry.tagsAndSkills)
+    ? entry.tagsAndSkills.join(", ")
+    : typeof entry.tagsAndSkills === "string"
+      ? entry.tagsAndSkills
+      : "";
+  const tags = normalizeWhitespace(rawTags);
+  if (tags) {
+    parts.push(`Skills: ${tags}`);
+  }
+
+  const salary = normalizeWhitespace(typeof entry.salary === "string" ? entry.salary : "");
+  if (salary && !/not disclosed/i.test(salary)) {
+    parts.push(`Salary: ${salary}`);
+  }
+
+  return parts.join("\n");
 }
 
-function computeJitterMs(randomFn: () => number): number {
-  const r = Math.min(Math.max(randomFn(), 0), 1);
-  return Math.floor(MIN_JITTER_MS + r * (MAX_JITTER_MS - MIN_JITTER_MS));
+function toAbsoluteUrl(jdURL: unknown, jobId: string): string {
+  const trimmed = typeof jdURL === "string" ? jdURL.trim() : "";
+  if (!trimmed) return `${NAUKRI_JOB_BASE}/job-listings-${jobId}`;
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) return trimmed;
+  return `${NAUKRI_JOB_BASE}${trimmed.startsWith("/") ? "" : "/"}${trimmed}`;
 }
 
-function extractPlaceholder(placeholders: NaukriPlaceholder[] | undefined, type: string): string {
-  if (!Array.isArray(placeholders)) return "";
-  const match = placeholders.find((p) => p.type === type && typeof p.label === "string");
-  return match?.label ? normalizeWhitespace(match.label) : "";
+function parsePostedAt(createdDate: unknown): string | null {
+  if (typeof createdDate === "number") {
+    return Number.isFinite(createdDate) ? toIsoOrNull(createdDate) : null;
+  }
+  if (typeof createdDate !== "string") return null;
+  const trimmed = createdDate.trim();
+  if (!trimmed) return null;
+
+  // Naukri's Apify output returns IST timestamps like "2026-11-23 10:48:28" without an offset.
+  if (/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}$/.test(trimmed)) {
+    return toIsoOrNull(`${trimmed.replace(" ", "T")}+05:30`);
+  }
+  return toIsoOrNull(trimmed);
 }
 
-function extractMinYears(entry: NaukriJobEntry): number | null {
-  if (typeof entry.minExp === "number" && Number.isFinite(entry.minExp)) {
-    return entry.minExp;
+function extractMinYears(entry: ApifyNaukriItem): number | null {
+  if (typeof entry.minimumExperience === "number" && Number.isFinite(entry.minimumExperience)) {
+    return entry.minimumExperience;
+  }
+  if (typeof entry.minimumExperience === "string" && entry.minimumExperience.trim()) {
+    const parsed = Number.parseInt(entry.minimumExperience.trim(), 10);
+    if (Number.isFinite(parsed)) return parsed;
   }
   if (typeof entry.experience === "number" && Number.isFinite(entry.experience)) {
     return entry.experience;
   }
-  const expLabel =
+
+  const expText =
     (typeof entry.experience === "string" ? entry.experience : "") ||
-    extractPlaceholder(entry.placeholders, "experience");
-  const match = expLabel.match(/(\d+)\s*[-–to]?\s*\d*\s*(?:yrs?|years?)/i) ?? expLabel.match(/^(\d+)/);
-  if (match && match[1]) {
+    (typeof entry.experienceText === "string" ? entry.experienceText : "");
+  const match = expText.match(/(\d+)/);
+  if (match?.[1]) {
     const parsed = Number.parseInt(match[1], 10);
     return Number.isFinite(parsed) ? parsed : null;
   }
   return null;
 }
 
-function toAbsoluteUrl(jdURL: string | undefined, jobId: string): string {
-  if (!jdURL) return `${NAUKRI_JOB_BASE}/job-listings-${jobId}`;
-  if (jdURL.startsWith("http://") || jdURL.startsWith("https://")) return jdURL;
-  return `${NAUKRI_JOB_BASE}${jdURL.startsWith("/") ? "" : "/"}${jdURL}`;
-}
+function toRawJob(item: unknown): RawJob | null {
+  if (!item || typeof item !== "object") return null;
+  const entry = item as ApifyNaukriItem;
 
-function toRawJob(entry: NaukriJobEntry): RawJob | null {
   if (entry.jobId === undefined || entry.jobId === null) return null;
   const sourceJobId = String(entry.jobId).trim();
   if (!sourceJobId) return null;
-
-  const locationRaw = extractPlaceholder(entry.placeholders, "location") || "India";
-  const postedAt =
-    typeof entry.createdDate === "number"
-      ? toIsoOrNull(new Date(entry.createdDate).toISOString())
-      : toIsoOrNull(entry.createdDate ?? null);
 
   return {
     source: "naukri",
     sourceJobId,
     companyId: null,
-    companyName: normalizeWhitespace(entry.companyName ?? ""),
-    title: normalizeWhitespace(entry.title ?? ""),
-    locationRaw,
-    description: stripHtml(entry.jobDescription ?? ""),
+    companyName: normalizeWhitespace(typeof entry.companyName === "string" ? entry.companyName : ""),
+    title: normalizeWhitespace(typeof entry.title === "string" ? entry.title : ""),
+    locationRaw: formatLocationRaw(entry.location),
+    description: buildDescription(entry),
     url: toAbsoluteUrl(entry.jdURL, sourceJobId),
-    postedAt,
+    postedAt: parsePostedAt(entry.createdDate),
     minYears: extractMinYears(entry),
   };
 }
 
-function buildSearchUrl(keyword: string, pageNo: number): string {
-  const params = new URLSearchParams({
-    noOfResults: "20",
-    urlType: "search_by_keyword",
-    searchType: "adv",
-    keyword,
-    experience: "2",
-    location: "india,remote",
-    pageNo: String(pageNo),
-  });
-  return `${NAUKRI_API_URL}?${params.toString()}`;
-}
-
+/** Creates an Apify-backed Naukri India scraper with keyword rotation and workweek gating. */
 export function createNaukriScraper(deps: NaukriScraperDeps = {}): JobSourceScraper {
   const fetchFn = deps.fetchFn ?? fetch;
-  const readCookiesFn = deps.readCookiesFn ?? ((env) => readSourceCookieHeader("naukri", env));
-  const delayFn = deps.delayFn ?? defaultDelay;
-  const randomFn = deps.randomFn ?? Math.random;
   const env = deps.env ?? process.env;
+  const nowFn = deps.nowFn ?? (() => new Date());
 
   return {
     source: "naukri",
     requiresCompanyConfig: false,
 
+    shouldSkip(now?: Date): string | null {
+      return getWorkweekSkipReason("naukri", now ?? nowFn(), env);
+    },
+
     async fetchJobs(_companies: Company[], roles: readonly string[]): Promise<RawJob[]> {
-      const cookieHeader = await readCookiesFn(env);
-      const maxPages = parseMaxPages(env);
-      const terms = DEFAULT_SEARCH_TERMS;
-      const seen = new Map<string, RawJob>();
-      let requestsMade = 0;
+      const keywords = parseKeywordList(env.NAUKRI_KEYWORDS, DEFAULT_KEYWORDS);
+      const perRun = parsePositiveInt(env.NAUKRI_KEYWORDS_PER_RUN, DEFAULT_KEYWORDS_PER_RUN);
+      const selected = selectRotatedKeywords(keywords, perRun, nowFn());
+      const maxJobs = parsePositiveInt(env.NAUKRI_MAX_JOBS, DEFAULT_MAX_JOBS);
+      const experience = env.NAUKRI_EXPERIENCE?.trim() || DEFAULT_EXPERIENCE;
+      const freshness = env.NAUKRI_FRESHNESS?.trim() || DEFAULT_FRESHNESS;
 
-      for (const term of terms) {
-        if (requestsMade >= maxPages) break;
-        if (requestsMade > 0) {
-          await delayFn(computeJitterMs(randomFn));
-        }
-
-        const url = buildSearchUrl(term, 1);
-        requestsMade++;
-
-        const response = await fetchFn(url, {
-          redirect: "manual",
-          headers: {
-            appid: "109",
-            systemid: "109",
-            clientid: "d3skt0p",
-            accept: "application/json",
-            "User-Agent": USER_AGENT,
-            Cookie: cookieHeader,
+      const rawJobs: RawJob[] = [];
+      for (const keyword of selected) {
+        const items = await runApifyNaukriActor(
+          {
+            jobBoard: "naukri",
+            keyword,
+            maxJobs,
+            experience,
+            freshness,
+            fetchDetails: false,
+            walkin: false,
           },
-        });
+          { env, fetchFn },
+        );
 
-        if (response.status === 401) {
-          throw new SourceAuthExpiredError("naukri", 401, "Naukri API returned 401 Unauthorized");
-        }
-        if (response.status === 403) {
-          throw new SourceBlockedError("naukri", 403, "Naukri API returned 403 Forbidden");
-        }
-        if (response.status >= 300 && response.status < 400) {
-          const location = response.headers.get("location") ?? "";
-          throw new SourceAuthExpiredError(
-            "naukri",
-            response.status,
-            `Naukri API redirected (${response.status})${location ? ` to ${location}` : ""}`,
-          );
-        }
-        if (response.redirected && response.url.toLowerCase().includes("login")) {
-          throw new SourceAuthExpiredError("naukri", response.status, `Redirected to login: ${response.url}`);
-        }
-        if (!response.ok) {
-          throw new SourceBlockedError("naukri", response.status, `Naukri API returned ${response.status}`);
-        }
-
-        const contentType = response.headers.get("content-type") ?? "";
-        if (contentType.includes("text/html")) {
-          throw new SourceAuthExpiredError("naukri", response.status, "Naukri API returned HTML instead of JSON");
-        }
-
-        let body: unknown;
-        try {
-          body = await response.json();
-        } catch {
-          throw new SourceAuthExpiredError("naukri", response.status, "Naukri API returned non-JSON response");
-        }
-
-        const parsed = body as NaukriSearchResponse | null;
-        const entries = Array.isArray(parsed?.jobDetails) ? parsed.jobDetails : [];
-        if (entries.length === 0 && requestsMade === 1) {
-          throw new SourceBlockedError(
-            "naukri",
-            response.status,
-            `Naukri API returned unexpected 0-job payload for "${term}"`,
-          );
-        }
-
-        for (const entry of entries) {
-          const raw = toRawJob(entry);
-          if (raw && !seen.has(raw.sourceJobId)) {
-            seen.set(raw.sourceJobId, raw);
+        for (const item of items) {
+          const raw = toRawJob(item);
+          if (raw) {
+            rawJobs.push(raw);
           }
         }
       }
 
-      const jobs = Array.from(seen.values());
-      return hasRoleFilter(roles) ? jobs.filter((job) => jobMatchesRoles(job, roles)) : jobs;
+      const deduped = dedupeByCompanyAndTitle(rawJobs);
+      return hasRoleFilter(roles) ? deduped.filter((job) => jobMatchesRoles(job, roles)) : deduped;
     },
   };
 }
