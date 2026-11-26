@@ -34,3 +34,13 @@ describe("isUnsponsoredForeignOnsite", () => {
     expect(isUnsponsoredForeignOnsite({ locationTags: ["uae"] })).toBe(false);
   });
 });
+
+describe("isUnsponsoredForeignOnsite -- Saudi Arabia and Qatar (#226)", () => {
+  it.each(["saudi", "qatar"] as const)("matches a %s onsite job that explicitly refuses sponsorship", (tag) => {
+    expect(isUnsponsoredForeignOnsite({ locationTags: [tag], visaSponsorship: false })).toBe(true);
+  });
+
+  it.each(["saudi", "qatar"] as const)("keeps a %s job that never mentions sponsorship", (tag) => {
+    expect(isUnsponsoredForeignOnsite({ locationTags: [tag], visaSponsorship: null })).toBe(false);
+  });
+});

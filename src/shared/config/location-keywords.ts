@@ -31,6 +31,15 @@ export const LOCATION_KEYWORD_RULES: readonly LocationKeywordRule[] = [
     keywords: ["uae", "dubai", "abu dhabi", "united arab emirates", "sharjah"],
   },
   {
+    // Word-boundary match (tagLocations), so "ksa" never hits inside a word.
+    tag: "saudi",
+    keywords: ["saudi arabia", "saudi", "ksa", "riyadh", "jeddah", "dammam", "khobar"],
+  },
+  {
+    tag: "qatar",
+    keywords: ["qatar", "doha"],
+  },
+  {
     tag: "remote",
     keywords: ["remote", "work from home", "wfh", "anywhere", "distributed"],
   },

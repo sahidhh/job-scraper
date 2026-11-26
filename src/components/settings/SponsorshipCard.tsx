@@ -47,7 +47,7 @@ export function SponsorshipCard({ current }: { current: boolean }) {
             className="mt-0.5 size-4 accent-primary"
           />
           <span>
-            Skip UAE/Singapore onsite jobs that say they won&rsquo;t sponsor a visa.
+            Skip Gulf (UAE/Saudi/Qatar) and Singapore onsite jobs that say they won&rsquo;t sponsor a visa.
             <span className="mt-1 block text-muted-foreground">
               Only postings that explicitly rule sponsorship out are dropped. Most employers never mention it, and
               those are kept &mdash; as are all India and remote jobs, which need no sponsorship.

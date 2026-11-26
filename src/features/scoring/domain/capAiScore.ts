@@ -29,12 +29,12 @@ export interface AiScoreCapResult {
 // is handled separately by classifyEligibility's geo-lock, so neither belongs
 // here. Derived from the LocationTag union deliberately (not a free string) so
 // adding a new tag forces a review of this list.
-const FOREIGN_SPONSORSHIP_TAGS: readonly LocationTag[] = ["singapore", "uae"];
+const FOREIGN_SPONSORSHIP_TAGS: readonly LocationTag[] = ["singapore", "uae", "saudi", "qatar"];
 
 /**
  * Deterministic eligibility cap on the AI score (AD-53). Applies only when the
  * job is (a) onsite/hybrid -- i.e. NOT tagged `remote` -- and (b) in a foreign
- * market that needs sponsorship (Singapore/UAE) with no India fallback tag, and
+ * market that needs sponsorship (Singapore/UAE/Saudi/Qatar) with no India fallback tag, and
  * (c) the posting did not confirm sponsorship. In every other case
  * (remote, India-onsite, sponsorship confirmed, or an already-low score) the AI
  * score passes through untouched. Pure; no I/O.

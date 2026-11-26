@@ -70,3 +70,34 @@ describe("tagLocations", () => {
     expect(result?.locationTags).toEqual(["india"]);
   });
 });
+
+describe("tagLocations -- Saudi Arabia and Qatar (#226)", () => {
+  it("tags Saudi cities, the country name, and KSA as saudi", () => {
+    const raws = ["Riyadh", "Jeddah, Saudi Arabia", "Dammam - KSA", "Al Khobar", "Saudi"];
+    const result = tagLocations(raws.map((locationRaw, i) => makeRawJob({ sourceJobId: String(i), locationRaw })));
+
+    for (const job of result) expect(job.locationTags).toEqual(["saudi"]);
+  });
+
+  it("tags Doha and Qatar as qatar", () => {
+    const result = tagLocations([
+      makeRawJob({ sourceJobId: "1", locationRaw: "Doha" }),
+      makeRawJob({ sourceJobId: "2", locationRaw: "Doha, Qatar" }),
+    ]);
+
+    expect(result[0]?.locationTags).toEqual(["qatar"]);
+    expect(result[1]?.locationTags).toEqual(["qatar"]);
+  });
+
+  it("tags a multi-country Gulf posting with every matching tag", () => {
+    const [result] = tagLocations([makeRawJob({ locationRaw: "Dubai, UAE / Riyadh, KSA / Doha, Qatar" })]);
+
+    expect(result?.locationTags).toEqual(["uae", "saudi", "qatar"]);
+  });
+
+  it("does not match the keywords inside other words", () => {
+    const [result] = tagLocations([makeRawJob({ locationRaw: "Kansas City, USA (Dohanyi Ave, Saudiville)" })]);
+
+    expect(result?.locationTags).toEqual([]);
+  });
+});

@@ -14,6 +14,8 @@ export const CANDIDATE_CONSTRAINTS = {
   // prompt so a target-location role isn't penalised for its geography.
   targetLocations: [
     "UAE (Abu Dhabi / Dubai)",
+    "Saudi Arabia",
+    "Qatar",
     "Singapore",
     "remote roles open to India",
   ],

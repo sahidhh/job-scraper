@@ -821,7 +821,7 @@ export type Database = {
         | "routine_agent"
         | "naukri"
         | "naukrigulf"
-      location_tag: "india" | "singapore" | "uae" | "remote"
+      location_tag: "india" | "singapore" | "uae" | "saudi" | "qatar" | "remote"
       role_map_source: "seed" | "ai"
       scrape_run_status: "success" | "partial" | "failed"
       source_health_status: "active" | "unhealthy" | "disabled"
@@ -968,7 +968,7 @@ export const Constants = {
         "naukri",
         "naukrigulf",
       ],
-      location_tag: ["india", "singapore", "uae", "remote"],
+      location_tag: ["india", "singapore", "uae", "saudi", "qatar", "remote"],
       role_map_source: ["seed", "ai"],
       scrape_run_status: ["success", "partial", "failed"],
     },

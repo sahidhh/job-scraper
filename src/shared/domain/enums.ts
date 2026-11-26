@@ -46,12 +46,14 @@ export const JOB_SOURCES: readonly JobSource[] = [
   "naukrigulf",
 ];
 
-export type LocationTag = "india" | "singapore" | "uae" | "remote";
+export type LocationTag = "india" | "singapore" | "uae" | "saudi" | "qatar" | "remote";
 
 export const LOCATION_TAGS: readonly LocationTag[] = [
   "india",
   "singapore",
   "uae",
+  "saudi",
+  "qatar",
   "remote",
 ];
 

@@ -3,7 +3,7 @@ import type { LocationTag } from "@/shared/domain/enums";
 // Abroad, relative to the India-based candidate. `remote` and `india` are
 // the other two allowed LocationTags (hasAllowedLocation) and neither
 // requires a work visa, so neither can ever be "foreign onsite".
-const FOREIGN_LOCATION_TAGS: readonly LocationTag[] = ["uae", "singapore"];
+const FOREIGN_LOCATION_TAGS: readonly LocationTag[] = ["uae", "saudi", "qatar", "singapore"];
 
 type SponsorshipJob = {
   locationTags: readonly LocationTag[];

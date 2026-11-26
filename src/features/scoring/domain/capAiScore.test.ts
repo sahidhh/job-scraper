@@ -83,3 +83,19 @@ describe("capAiScoreForEligibility -- foreign-only scope (#226)", () => {
     expect(capAiScoreForEligibility(job(["uae"]), 0.85, true).score).toBe(0.85);
   });
 });
+
+describe("capAiScoreForEligibility -- Saudi Arabia and Qatar (#226)", () => {
+  it.each<LocationTag>(["saudi", "qatar"])("caps an onsite %s job without confirmed sponsorship", (tag) => {
+    const result = capAiScoreForEligibility(job([tag]), 0.85, false);
+    expect(result.score).toBe(UNCONFIRMED_SPONSORSHIP_AI_CEILING);
+    expect(result.capReason).toContain(tag);
+  });
+
+  it.each<LocationTag>(["saudi", "qatar"])("does not cap an onsite %s job when sponsorship is confirmed", (tag) => {
+    expect(capAiScoreForEligibility(job([tag]), 0.85, true).score).toBe(0.85);
+  });
+
+  it.each<LocationTag>(["saudi", "qatar"])("does not cap a remote %s job", (tag) => {
+    expect(capAiScoreForEligibility(job([tag, "remote"]), 0.85, false).score).toBe(0.85);
+  });
+});
