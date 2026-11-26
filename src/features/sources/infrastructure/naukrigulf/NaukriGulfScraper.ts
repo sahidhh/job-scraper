@@ -22,6 +22,34 @@ export const DEFAULT_MAX_JOBS = 50;
 export const DEFAULT_EXPERIENCE = "2";
 export const DEFAULT_FRESHNESS = "3";
 export const DEFAULT_FETCH_DETAILS = true;
+export const DEFAULT_LOCATIONS = ["UAE", "Saudi Arabia", "Qatar"] as const;
+
+// NaukriGulf `country` codes from the Apify actor input schema
+// (muhammetakkurtt/naukri-job-scraper). One run accepts several codes.
+const GULF_COUNTRY_CODES: Readonly<Record<string, string>> = {
+  uae: "17",
+  "united arab emirates": "17",
+  "saudi arabia": "14",
+  saudi: "14",
+  ksa: "14",
+  qatar: "13",
+};
+
+/** Maps NAUKRIGULF_LOCATIONS names (or raw numeric codes) to actor country codes; throws on unknown names. */
+export function resolveGulfCountryCodes(raw: string | undefined): string[] {
+  const names = parseKeywordList(raw, DEFAULT_LOCATIONS);
+  const codes = names.map((name) => {
+    if (/^\d+$/.test(name)) return name;
+    const code = GULF_COUNTRY_CODES[name.toLowerCase()];
+    if (!code) {
+      throw new Error(
+        `NAUKRIGULF_LOCATIONS: unknown country "${name}". Use one of: ${Object.keys(GULF_COUNTRY_CODES).join(", ")}, or a numeric actor country code.`,
+      );
+    }
+    return code;
+  });
+  return Array.from(new Set(codes));
+}
 
 export interface NaukriGulfScraperDeps {
   fetchFn?: typeof fetch;
@@ -213,6 +241,7 @@ export function createNaukriGulfScraper(deps: NaukriGulfScraperDeps = {}): JobSo
       const experience = env.NAUKRIGULF_EXPERIENCE?.trim() || DEFAULT_EXPERIENCE;
       const freshness = env.NAUKRIGULF_FRESHNESS?.trim() || DEFAULT_FRESHNESS;
       const fetchDetails = parseFetchDetails(env.NAUKRIGULF_FETCH_DETAILS);
+      const country = resolveGulfCountryCodes(env.NAUKRIGULF_LOCATIONS);
 
       const rawJobs: RawJob[] = [];
       for (const keyword of selected) {
@@ -224,6 +253,7 @@ export function createNaukriGulfScraper(deps: NaukriGulfScraperDeps = {}): JobSo
             experience,
             freshness,
             fetchDetails,
+            country,
           },
           { env, fetchFn },
         );

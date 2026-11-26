@@ -12,6 +12,8 @@ export interface ApifyNaukriRunInput {
   freshness: string;
   fetchDetails: boolean;
   walkin?: boolean;
+  /** NaukriGulf-only actor `country` filter (numeric codes, multi-value). */
+  country?: readonly string[];
 }
 
 export interface ApifyClientConfig {

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { SourceAuthExpiredError, SourceBlockedError } from "@/features/sources/domain/errors";
-import { createNaukriGulfScraper, naukriGulfScraper } from "./NaukriGulfScraper";
+import { createNaukriGulfScraper, naukriGulfScraper, resolveGulfCountryCodes } from "./NaukriGulfScraper";
 
 const DETAILED_VAN_OORD_FIXTURE = {
   jobId: "201126000019",
@@ -145,6 +145,7 @@ describe("NaukriGulfScraper", () => {
       experience: "2",
       freshness: "3",
       fetchDetails: true,
+      country: ["17", "14", "13"],
     });
 
     const falseFetch = vi.fn().mockResolvedValue(makeJsonResponse([]));
@@ -169,6 +170,23 @@ describe("NaukriGulfScraper", () => {
       jobBoard: "naukrigulf",
       fetchDetails: false,
     });
+  });
+
+  it("maps NAUKRIGULF_LOCATIONS to actor country codes and rejects unknown names", async () => {
+    expect(resolveGulfCountryCodes(undefined)).toEqual(["17", "14", "13"]);
+    expect(resolveGulfCountryCodes("United Arab Emirates, KSA, 13")).toEqual(["17", "14", "13"]);
+    expect(resolveGulfCountryCodes("UAE,uae")).toEqual(["17"]);
+    expect(() => resolveGulfCountryCodes("Jordan")).toThrow(/unknown country "Jordan"/);
+
+    const fetchFn = vi.fn().mockResolvedValue(makeJsonResponse([]));
+    const scraper = createNaukriGulfScraper({
+      fetchFn: fetchFn as unknown as typeof fetch,
+      env: { APIFY_TOKEN: "tok_test", NAUKRIGULF_LOCATIONS: "Qatar", NAUKRIGULF_KEYWORDS_PER_RUN: "1" },
+      nowFn: () => new Date("2026-11-23T06:00:00.000Z"),
+    });
+    await scraper.fetchJobs([], []);
+    const body = JSON.parse((fetchFn.mock.calls[0]?.[1] as RequestInit).body as string) as Record<string, unknown>;
+    expect(body.country).toEqual(["13"]);
   });
 
   it("shouldSkip() runs Sun-Fri IST (including Sunday), skips Saturday IST, and skips when APIFY_TOKEN is missing", () => {
