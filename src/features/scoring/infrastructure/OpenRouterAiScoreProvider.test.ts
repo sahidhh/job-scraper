@@ -417,6 +417,20 @@ describe("OpenRouterAiScoreProvider", () => {
     expect(systemPrompt).toContain("does not confirm sponsorship");
   });
 
+  it("scopes the 0.40 sponsorship cap to onsite roles outside India (India jobs need no sponsorship, #226)", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(chatResponse({ score: 0.8, reasoning: "ok", sponsorshipConfirmed: false }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await new OpenRouterAiScoreProvider().score({ job, resume });
+
+    const body = JSON.parse((fetchMock.mock.calls[0]![1] as RequestInit).body as string);
+    const systemPrompt = body.messages[0].content as string;
+    expect(systemPrompt).toContain("An onsite posting outside India that is silent on sponsorship: the score MUST NOT exceed 0.40");
+    expect(systemPrompt).toContain("This cap NEVER applies to a role located in India");
+    expect(systemPrompt).toContain("Needs no visa or sponsorship for any role located in India");
+    expect(systemPrompt).not.toContain("Requires visa sponsorship for any onsite role --");
+  });
+
   it("does not truncate text within the default caps", async () => {
     const fetchMock = vi.fn().mockResolvedValue(chatResponse({ score: 0.8, reasoning: "ok" }));
     vi.stubGlobal("fetch", fetchMock);

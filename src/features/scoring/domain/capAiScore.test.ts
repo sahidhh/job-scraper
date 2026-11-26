@@ -65,3 +65,21 @@ describe("capAiScoreForEligibility", () => {
     expect(result.capReason).toBeNull();
   });
 });
+
+describe("capAiScoreForEligibility -- foreign-only scope (#226)", () => {
+  it("does not cap an onsite India job without confirmed sponsorship", () => {
+    const result = capAiScoreForEligibility(job(["india"]), 0.85, false);
+    expect(result.score).toBe(0.85);
+    expect(result.capReason).toBeNull();
+  });
+
+  it("keeps the cap on an onsite Gulf (UAE) job without confirmed sponsorship", () => {
+    const result = capAiScoreForEligibility(job(["uae"]), 0.85, false);
+    expect(result.score).toBe(UNCONFIRMED_SPONSORSHIP_AI_CEILING);
+    expect(result.capReason).toContain("uae");
+  });
+
+  it("does not cap an onsite Gulf (UAE) job when sponsorship is confirmed", () => {
+    expect(capAiScoreForEligibility(job(["uae"]), 0.85, true).score).toBe(0.85);
+  });
+});
