@@ -17,7 +17,7 @@ describe("SupabaseNotificationRepository", () => {
           min_years: 3,
           posted_at: "2026-04-16T10:00:00Z",
           job_scores: [{ ai_score: 0.85, overall_score: 0.87, ai_reasoning: "Strong match" }],
-          notifications_log: [],
+          notifications_log: null,
         },
         {
           id: "job-2",
@@ -30,7 +30,7 @@ describe("SupabaseNotificationRepository", () => {
           min_years: null,
           posted_at: null,
           job_scores: [{ ai_score: 0.9, overall_score: 0.9, ai_reasoning: "Great fit" }],
-          notifications_log: [{ id: "notif-1" }],
+          notifications_log: { id: "notif-1" },
         },
         {
           id: "job-3",
@@ -103,7 +103,7 @@ describe("SupabaseNotificationRepository", () => {
           min_years: 2,
           posted_at: "2026-04-10T00:00:00Z",
           job_scores: [{ ai_score: 0.85, overall_score: 0.85, ai_reasoning: null }],
-          notifications_log: [],
+          notifications_log: null,
         },
         {
           id: "job-fresh",
@@ -116,7 +116,7 @@ describe("SupabaseNotificationRepository", () => {
           min_years: 2,
           posted_at: "2026-04-16T20:00:00Z",
           job_scores: [{ ai_score: 0.85, overall_score: 0.85, ai_reasoning: null }],
-          notifications_log: [],
+          notifications_log: null,
         },
       ],
       error: null,
@@ -124,6 +124,30 @@ describe("SupabaseNotificationRepository", () => {
     const repo = new SupabaseNotificationRepository(client);
     const result = await repo.findUnnotifiedMatches("role-selection-1", 0.8, 2, new Date("2026-04-17T00:00:00Z"));
     expect(result.map((r) => r.jobId)).toEqual(["job-fresh", "job-old"]);
+  });
+
+  it("findUnnotifiedMatches excludes a job with a to-one notifications_log object and keeps a null embed (#229)", async () => {
+    const base = {
+      company_name: "Acme",
+      location_tags: ["uae"],
+      source: "naukrigulf",
+      url: "https://example.com/jobs/x",
+      description: "Role.",
+      min_years: 3,
+      posted_at: "2026-11-27T00:00:00Z",
+      job_scores: [{ ai_score: 0.9, overall_score: 0.9, ai_reasoning: null }],
+    };
+    const { client } = mockSupabaseClient({
+      data: [
+        { ...base, id: "job-notified", title: "Notified", notifications_log: { id: "notif-1" } },
+        { ...base, id: "job-new", title: "New", notifications_log: null },
+        { ...base, id: "job-legacy-array", title: "Array shape", notifications_log: [{ id: "notif-2" }] },
+      ],
+      error: null,
+    });
+    const repo = new SupabaseNotificationRepository(client);
+    const result = await repo.findUnnotifiedMatches("role-selection-1", 0.8, 2, new Date("2026-11-28T00:00:00Z"));
+    expect(result.map((r) => r.jobId)).toEqual(["job-new"]);
   });
 
   it("markNotified upserts onConflict 'job_id' ignoring duplicates", async () => {

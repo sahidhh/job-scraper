@@ -8,7 +8,8 @@ import { toAppError } from "@/shared/infrastructure/supabaseError";
 // Shape returned by the embedded select in findUnnotifiedMatches --
 // `job_scores!inner` narrows to jobs with a matching score row, and
 // `notifications_log` is embedded (left join) so we can filter out jobs
-// already notified.
+// already notified. notifications_log.job_id is UNIQUE, so PostgREST returns
+// a to-one embed: an object when a log row exists, null otherwise (#229).
 interface UnnotifiedMatchRow {
   id: string;
   title: string;
@@ -26,7 +27,7 @@ interface UnnotifiedMatchRow {
   salary_period: string | null;
   posted_at: string | null;
   job_scores: { ai_score: number | null; overall_score: number | null; ai_reasoning: string | null }[];
-  notifications_log: { id: string }[] | null;
+  notifications_log: { id: string } | { id: string }[] | null;
 }
 
 // Shape returned by the embedded select in listRecent -- `jobs` is a
@@ -36,6 +37,11 @@ interface NotificationLogRow {
   job_id: string;
   sent_at: string;
   jobs: { title: string; company_name: string; source: JobSource } | null;
+}
+
+// Tolerates the array shape too, in case the embed is ever not to-one.
+function isNotified(log: UnnotifiedMatchRow["notifications_log"]): boolean {
+  return Array.isArray(log) ? log.length > 0 : log != null;
 }
 
 // repositories.md §6.
@@ -62,7 +68,7 @@ export class SupabaseNotificationRepository implements NotificationRepository {
     if (error) throw toAppError(error);
 
     return (data ?? [])
-      .filter((row) => (row.notifications_log?.length ?? 0) === 0)
+      .filter((row) => !isNotified(row.notifications_log))
       .map((row) => {
         // non-null: `job_scores!inner` guarantees at least one matching row.
         const score = row.job_scores[0]!;
